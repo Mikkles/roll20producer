@@ -1,14 +1,15 @@
 /*
-Roll20 Creation Helper
+Roll20 Prod Wizard
 By Mik
 */
 on("ready", function() {
-    sendChat("Roll20 Creation Helper", "<b>Helper is active!</b><br>Use '!r20c tokenPage' or '!r20c mapSizer' to begin!", null, {
+    scriptName = "Prod Wizard"
+    sendChat(scriptName, "<b>Prod Wizard appears!</b><br>Use '!prod tokenPage' or '!prod mapSizer' to begin!", null, {
         noarchive: true
     });
 });
 on("chat:message", function(msg) {
-    if (msg.type == "api" && msg.content.indexOf("!r20c") === 0) {
+    if (msg.type == "api" && msg.content.indexOf("!prod") === 0) {
         var args = msg.content.split(" ");
         var command = args[1];
         if (command = "tokenPage") {
@@ -16,7 +17,7 @@ on("chat:message", function(msg) {
             let pageName = page.get("name");
             //log(pageName);
             if (pageName != "Token Page") {
-                sendChat("Roll20 Creation Helper", "For safety, the page with the player ribbon must be named Token Page! Double check you're on the right page!", null, {
+                sendChat("Prod Wizard", "For safety, the page with the player ribbon must be named Token Page! Double check you're on the right page!", null, {
                     noarchive: true
                 });
                 return;
@@ -94,13 +95,13 @@ on("chat:message", function(msg) {
                     tallestHeight = 0;
                 }
             })
-            sendChat("Roll20 Creation Helper", "Tokens should be sorted! If they're not, there's a problem!", null, {
+            sendChat(scriptName, "Tokens should be sorted! If they're not, there's a problem!", null, {
                 noarchive: true
             });
         } else if (command = "mapSizer") {
             log("Map Sizer Selected");
         } else {
-            sendChat("Roll20 Creation Helper", "Your command wasn't recognized. Use tokenPage or mapSizer.", null, {
+            sendChat(scriptName, "Your command wasn't recognized. Use tokenPage or mapSizer.", null, {
                 noarchive: true
             });
         }
