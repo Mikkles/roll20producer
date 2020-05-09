@@ -32,7 +32,7 @@ on("chat:message", function(msg) {
                 star.remove();
             })
             var x = 70;
-            var y = 0;
+            var y = 70;
             var tallestHeight = 0;
             var pageWidth = page.get("width") * 70;
             var pageHeight = page.get("height") * 70;
