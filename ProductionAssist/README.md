@@ -25,8 +25,8 @@ If you need to add/remove tokens later, simply delete them from the page and run
 
 **To categorize tokens, add a colour status marker to each token of that category.**
 Categories will sort by what colour marker is on a token, begining with tokens that have no markers, then tokens with red markers, blue markers, etc. 
--To set colors on multiple tokens at once, select all tokens you'd like to categorize and use `!token-mod --set statusmarkers|red` (or whatever colour you'd like).
--To remove a certain color from multiple tokens, select the tokens and use `token-mod --set statusmarkers|-red` (or whatever colour)
--To remove all markers from multiple tokens, select the tokens and use `token-mod --set statusmarkers|=dead|-dead`
+- To set colors on multiple tokens at once, select all tokens you'd like to categorize and use `!token-mod --set statusmarkers|red` (or whatever colour you'd like).
+- To remove a certain color from multiple tokens, select the tokens and use `token-mod --set statusmarkers|-red` (or whatever colour)
+- To remove all markers from multiple tokens, select the tokens and use `token-mod --set statusmarkers|=dead|-dead`
 
 **IMPORTANT NOTE**: This adds an additional step at the end of development. You will need to go to the token page, select all tokens (use ctrl+a), and use the remove all markers command above. It is suggested you do this near the end of development, in case last minute tokens are added/removed to the page, so as not to ruin categorization. If the script is run again without markers, they'll all be sorted into one category!
