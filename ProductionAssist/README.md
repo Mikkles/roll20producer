@@ -8,8 +8,8 @@ Many of the functions are expanded by use of the TokenMod script.
 Go to the APIs page and copy the raw text of this script into a New Script.
 Then, in the Roll20 game, type `!prod` and a command listed below.
 
-## Commands
-### Token Page Generator - `!prod tokenPage`
+# Commands
+## Token Page Generator - `!prod tokenPage`
 Using this command on a page will:
 - Categorize tokens (such as Named NPCs; Creatures; Shapeshifters, etc)
 - Sort tokens in categories alphabetically
@@ -30,3 +30,6 @@ Categories will sort by what colour marker is on a token, begining with tokens t
 - To remove all markers from multiple tokens, select the tokens and use `token-mod --set statusmarkers|=dead|-dead`
 
 **IMPORTANT NOTE**: This adds an additional step at the end of development. You will need to go to the token page, select all tokens (use ctrl+a), and use the remove all markers command above. It is suggested you do this near the end of development, in case last minute tokens are added/removed to the page, so as not to ruin categorization. If the script is run again without markers, they'll all be sorted into one category!
+
+## Map Resizer - `!prod mapSizer`
+This script isn't finished~
