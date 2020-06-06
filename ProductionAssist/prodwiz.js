@@ -56,10 +56,11 @@ const Roll20Pro = (() => {
 
         chatMenu = () => {
             menuText = "";
-            menuText += "**TOKEN PAGE CREATOR**<br />This tool allows you to quickly make Token Pages. It requires you to"
+            menuText += "These are tools to help in the creation of Roll20 modules! If you need any help, ask Mik! <br /><br />"
+            menuText += "**TOKEN PAGE CREATOR.** This tool allows you to quickly make Token Pages. It requires you to"
             + "have a page titled 'Token Page' with the player bookmark on it. <br />"
-            menuText += makeButton("Token Page Menu", "!prod tokenPage", styles.button);
-            makeAndSendMenu(menuText, scriptName, 'gm');
+            menuText += makeButton("Token Page Creator Menu", "!prod tokenPage", styles.button);
+            makeAndSendMenu(menuText, "Producer Tools", 'gm');
         },
 
         handleInput = (msg) => {
@@ -95,13 +96,15 @@ const Roll20Pro = (() => {
                     
                             menuText += makeButton("Change Token Category", "!prod tokenPage addSort ?{Category Number}", styles.button);
                             
-                            menuText += "<br />**Token Page Creator.** Once you've categorized everything, click this to sort tokens. If you "
-                            + "make changes to the tokens or recategorize anything, click this again to resort.<br />";
+                            menuText += "<br />**Token Page Creator.** Once you've categorized everything, click this to sort tokens. This will "
+                            + "organize tokens based on their categories, and will automatically add asterisks next to rollable tokens. This won't "
+                            + "automatically add any text labels for the categories, so you will need to do that manually. You are "
+                            + "free to add/change/recategorize tokens, just re-click this button after.<br />";
                             menuText += makeButton("Run Token Page Creator", "!prod tokenPage run", styles.button);
-                            menuText += "<br />**See Categories.** To view the categories of each token, click this. <br />";
+                            menuText += "<br />**See Categories.** To view the categories of all categorized tokens, click this. <br />";
                             menuText += makeButton("See Categories", "!prod tokenPage seeCats", styles.button);
                             menuText += "<br />**Reset Categories.** If you'd like to fully remove all category tags from all tokens, click this. This "
-                            + "is irreversable; you'll need to recategorize everything!"
+                            + "is irreversable; you'll need to recategorize everything, so use as a last resort! <br />"
                             menuText += makeButton("Reset Categories", "!prod tokenPage resetCats", styles.button);
                             menuText += "<br /><br />" + makeButton("Back", "!prod menu", styles.button);
                             makeAndSendMenu(menuText, "Token Page Creator", 'gm');
