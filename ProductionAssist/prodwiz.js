@@ -24,6 +24,83 @@ const Roll20Pro = (() => {
             fullWidth: 'width: 100%;',
             title: 'margin-bottom: 10px; text-transform: capitalize; border-bottom: 2px solid; '
         },
+        
+        html = {
+            battleMap: `
+                <h2>Battle Map Scale</h2>
+                <p>
+                    Map scale varies across the collection of battle maps within <i>PRODUCT NAME</i>. To make movement and token placement ideal, we have adjusted the grid on some of the maps so that tokens are easier to select and
+                    manipulate. Listed below are all the maps in this module and what scale they are currently set to.
+                </p>
+                <hr />
+                <h3 style="font-family: 'helvetica neue', 'helvetica', 'arial', sans-serif;">100 Foot Maps</h3>
+                <p style="font-family: 'helvetica neue', 'helvetica', 'arial', sans-serif;">Each grid square on the art is 100' with no Roll20 subdivisions. Medium/Small tokens are set to 1 to 1 units (technically 100' by 100') here.</p>
+                <p>
+                    If you wish to set it for scale accuracy, enable the Grid and set the Grid Size in Page Settings to 0.05 units. Token Sizing is as follows: Medium/Small/Tiny (0.05 unit by 0.05 unit), Large (0.1 unit by 0.1 unit), Huge (0.15 unit by
+                    0.15 unit), gargantuan (0.2 unit by 0.2 unit).
+                </p>
+                <p><br /></p>
+                <p>
+                    <b>100 Foot Maps in <i>CAMPAIGN NAME</i></b>
+                </p>
+                <ul>
+                    <li>MAP NAME</li>
+                </ul>
+                <hr />
+                <h3>20 Foot Maps</h3>
+                <p>
+                    Each grid square on the art is 20' with four subdivisions in the Roll20 grid (Grid Size set to 0.5 units). Each Roll20 grid square is 5'. Tokens are sized accordingly to Pathfinder Second Edition rules (5', 10', 15', 20'). No
+                    adjustments are needed for strategy accuracy.
+                </p>
+                
+                <p>
+                    <b>20 Foot Maps in <i>CAMPAIGN NAME</i></b>
+                </p>
+                <ul>
+                    <li>MAP NAME</li>
+                </ul>
+                <hr />
+                
+                <h3 style="font-family: 'helvetica neue', 'helvetica', 'arial', sans-serif;">5 Foot Maps</h3>
+                <p>Each grid square is 5' on the art as well as 5' on the Roll20 grid. No adjustments are needed.<br /></p>
+                <p>
+                    <br />
+                    <strong>5</strong><strong>&nbsp;Foot Maps in <i>CAMPAIGN NAME</i></strong><br />
+                </p>
+                <ul>
+                    <li>MAP NAME</li>
+                </ul>
+            `,
+            credits:`
+                <h2>Title</h2>
+                <p>
+                    Blurb
+                </p>
+                
+                <hr />
+                <h3>Roll20</h3>
+                <p><b>Roll20 Production Team: </b>Ashton Duncan, Todd Gizzi, Eve Crockett, Echo Diaz, Fulcrum, Mik Holmes, Jennawynn, Gabby Parker, Munky, Rachel Savicki, and Harry Whitelaw.</p>
+                <p>
+                    <b>Roll20 Staff: </b>Riley Dutton, Richard Zayas, Phil Behrenberg, Kristin Carlson, Dean Bigbee, Austin Kelly, Jeff Lamb, Trivia Fox, Nathanael Winget, Miles Procise, CeeJay Bachus, Soraya Een Hajji, Stephanie Bryant, Tyler Jackson,
+                    Kenton Hansen, Eric Levanduski, Vix, Cassie Levett, Olivia Lemmelin, Carlos Luna, Shawn Conlin, Sam Corder, William Elder, Bunny Hanlon, Jelisa Varnado, Amber Cook, Ashton Duncan, June Lalonde, Nicholas Robbins, Dylan Todd, Corey
+                    Jeffers, Jarrett Green, Morgan Buck, Todd Gizzi, Preston Wilson, and Nolan T. Jones.
+                </p>
+                <hr />
+            `,
+            thankYouPaizo:``,
+            thankYouWotc:``,
+            thankYouOther:``,
+            tablesAndMacros:``,
+            rollableTokens:``,
+            npcInitPF2:``,
+            npcInit5e:``,
+            npcInitBB:``,
+            gameSettings:``,
+            playingBurnBryte:``,
+            safetyDeck:``,
+            
+            
+        }
 
         makeTitle = (title) => {
             return '<h2 style="' + styles.title + '">' + title + '</h2>';
@@ -53,16 +130,38 @@ const Roll20Pro = (() => {
             });
             return newObj.id;
         },
+        
+        findAndMakeHandout = (title, text) => {
+            let check = findObjs({_type:'handout', name:title})
+            if (!check[0]){
+                let handout = createObj("handout", {
+                    name: title,
+                });
+                handout.set({notes:text}); 
+            }
+        }
+        
+        makeHandout = (title, text) => {
+            let handout = createObj("handout", {
+                name: title,
+            });
+            handout.set({notes:text}); 
+        }
+        
+        findHandout = function (title) {
+            let handout = findObjs({_type:'handout', name:title})
+            return handout
+        },  
 
         chatMenu = () => {
             menuText = "";
             menuText += "These are tools to help in the creation of Roll20 modules! If you need any help, ask Mik! <br /><br />"
-            menuText += "**TOKEN PAGE CREATOR.** This tool allows you to quickly make Token Pages. It requires you to"
-            + "have a page titled 'Token Page' with the player bookmark on it. <br />"
+            menuText += "**TOKEN PAGE CREATOR** <br />"
             menuText += makeButton("Token Page Creator Menu", "!prod tokenPage", styles.button);
-            menuText += "<br /><br />**TOKEN EDITOR TOOLS.** A suite of tools to quickly change properties of multiple tokens at once.<br />"
-            + "*Requires TokenMod API to be installed* <br />"
-            menuText += makeButton("Token Editor Tools","!prod tokenEditor", styles.button);
+            menuText += "<br /><br />**TOKEN EDITOR TOOLS** <br />"
+            menuText += makeButton("Token Editor Tools Menu","!prod tokenEditor", styles.button);
+            menuText += "<br /><br />**ASHTONMANCER** <br />"
+            menuText += makeButton("Ashtonmancer Menu","!prod ashtonmancer", styles.button);
             makeAndSendMenu(menuText, "Producer Tools", 'gm');
         },
 
@@ -74,8 +173,6 @@ const Roll20Pro = (() => {
 
                 switch (command) {
                     default:
-                        log("Error, no command found for Roll20 Production");
-
                     case "menu":
                         chatMenu();
                         break;
@@ -84,30 +181,9 @@ const Roll20Pro = (() => {
                     case "tokenPage":
                         if (!args[2]) {
                             menuText = "";
-                            menuText +=  "To begin, all tokens in the game should be dragged onto the page titled 'Token Page' in any order, "
-                            + "but grouped roughly by category so you can select them easily later. <br /><br />"
-                            
-                            + "**Categorizing.** "
-                            + "To categorize tokens into, for example, 'Named NPCs and Creatures' or 'NPC Spaceships'...<br /> "
-                            + "**1.** Decide the order of each category, and assign it a number; for example, Named NPCs are category 1, "
-                            + "NPC Spaceships are category 3, and so on. Lower numbered categories will be sorted first, and uncategorized "
-                            + "tokens will always be sorted last. <br />"
-                            + "**2.** Select tokens you want to put in a particular category. Then, click the 'Change Token Category' button "
-                            + "and enter the category number in the prompt. This will tag the selected tokens as " 
-                            + "belonging to that category. Repeat this for each category. <br />"
-                            
-                    
                             menuText += makeButton("Change Token Category", "!prod tokenPage addSort ?{Category Number}", styles.button);
-                            
-                            menuText += "<br />**Token Page Creator.** Once you've categorized everything, click this to sort tokens. This will "
-                            + "organize tokens based on their categories, and will automatically add asterisks next to rollable tokens. This won't "
-                            + "automatically add any text labels for the categories, so you will need to do that manually. You are "
-                            + "free to add/change/recategorize tokens, just re-click this button after.<br />";
                             menuText += makeButton("Run Token Page Creator", "!prod tokenPage run", styles.button);
-                            menuText += "<br />**See Categories.** To view the categories of all categorized tokens, click this. <br />";
                             menuText += makeButton("See Categories", "!prod tokenPage seeCats", styles.button);
-                            menuText += "<br />**Reset Categories.** If you'd like to fully remove all category tags from all tokens, click this. This "
-                            + "is irreversable; you'll need to recategorize everything, so use as a last resort! <br />"
                             menuText += makeButton("Reset Categories [IF SURE]", "!prod tokenPage resetCats", styles.button);
                             menuText += "<br /><br />" + makeButton("Back", "!prod menu", styles.button);
                             makeAndSendMenu(menuText, "Token Page Creator", 'gm');
@@ -275,18 +351,15 @@ const Roll20Pro = (() => {
                     case "tokenEditor":
                          if (!args[2]) {
                             menuText = "";
-                            menuText += "**Toggle Show Names.** For 4+ tokens of the same type, we turn off nameplates for all but one. Select "
-                            + "all you'd like to toggle on/off and click this.<br />";
+                            menuText += "**Toggle Show Names.**<br />";
                             menuText += makeButton("Toggle Show Names","!token-mod --flip showname",styles.button);
-                            menuText += "<br /><br />**Setup NPC Tokens for System.** These tools help setup tokens to our usual specifications, and assign them "
-                            + "as the default token to the character. You must fill out each token's Represents Character' before beginning this. <br />"
-                            + "Select any new tokens and click the button for the game's system. This will link their bars and set up lighting. "
-                            + "Then, click 'Clear Links' afterwards. Once all the tokens are done, click 'Reassign' to have the representing "
-                            + "characters auto-assign their respetive tokens as their default token. <br />"
-                            menuText += makeButton("5e D&D", "!token-mod --set bar1_link|hp bar2_link|npc_ac", styles.button);
-                            menuText += makeButton("Pathfinder 2e", "!token-mod --set bar1_link|hit_points bar2_link|armor_class", styles.button));
-                            menuText += makeButton("Starfinder", "!token-mod --set bar1_link|hp bar2_link|ac", styles.button))
-                            menuText += "<br />" + makeButton("Clear Links", "!token-mod --set bar1_link| bar2_link| bar3_link|", styles.button))
+                            menuText += "<br /><br />**Setup NPC Tokens for System.**<br />"
+                            menuText += makeButton("D&D 5e", "!token-mod --set bar1_link|hp bar2_link|npc_ac bar3| bar3_link| &#13;!token-mod --set bar1_link|", styles.button);
+                            menuText += makeButton("Pathfinder 2e", "!token-mod --set bar1_link|hit_points bar2_link|armor_class bar3| bar3_link| &#13;!token-mod --set bar1_link|", styles.button);
+                            menuText += makeButton("Starfinder", "!token-mod --set bar1_link|hp bar2_link|eac bar3_link|kac &#13;!token-mod --set bar1_link|", styles.button);
+                            menuText += makeButton("Pathfinder 1e", "!token-mod --set bar1_link|hp bar2_link|ac bar3| bar3_link| &#13;!token-mod --set bar1_link|", styles.button);
+                            
+                            menuText += "<br />" + makeButton("Reassign", "!token-mod --set defaulttoken", styles.button)
                             
                             
                             menuText += "<br /><br />" + makeButton("Back", "!prod menu", styles.button);
@@ -303,6 +376,38 @@ const Roll20Pro = (() => {
                         
                         }
                         break;
+                    case "ashtonmancer":
+                        if (!args[2]){
+                            menuText = "";
+                            menuText += "These scripts will create templates for our typical pages and handouts! This should probably "
+                            menuText += "only be used by a lead!<br /><br />**First Time Setup.** Run this once (or until Help Handouts are OFF).<br />"
+                            menuText += makeButton("First Time Setup", "!the-aaron --toggle-help-handouts&#13;!prod ashtonmancer first", styles.button);
+                            menuText += "<br /><br />"
+                            menuText += "**THE ASHTONMANCER IS NOT COMPLETE. PLEASE DO NOT USE UNTIL UPDATED** <br />"
+                            menuText += makeButton("Create Stock Handouts", "!prod ashtonmancer create", styles.button);
+
+                            makeAndSendMenu(menuText, "Ashtonmancer", 'gm');
+                        } else {
+                            switch (args[2]){
+                                default: 
+                                    makeAndSendMenu("Argument not found for Ashtonmancer; please contact Mik.", "Roll20 Producer Error", 'gm');
+                                    break;
+                                case "first":
+                                    var handout = findObjs({ type: 'handout', name: 'Help: TokenMod' });
+                                    if (handout && handout[0]){
+                                        handout[0].remove();
+                                    }
+                                    break;
+                                case "create":
+                                    
+                                    findAndMakeHandout("Battle Map Scale", html.battleMap);
+                                    findAndMakeHandout("Credits", html.credits);
+                                    
+                                    
+                                    
+                                    break;
+                            }
+                        }
                 }
             }
         }
