@@ -1,12 +1,18 @@
 # Prod Wizard
 This script is a suite of tools to help with creation of modules in Roll20. A menu with all of the tools can be accessed by typing or copypasting `!prod menu` into the game's chat. Safety measures have been added to ensure these tools can't mess up the game too much!
 
-#### Table of Contents
-1. [First Time Installation](#First Time Installation)
-2. [How to Use]
-3. [Features]
-  - [Token Page Creator]
-  - [Token Tools]
+- [Prod Wizard](#prod-wizard)
+      - [Table of Contents](#table-of-contents)
+  * [First Time Installation](#first-time-installation)
+  * [How to Use](#how-to-use)
+  * [Features](#features)
+    + [Token Page Creator](#token-page-creator)
+    + [Token Tools](#token-tools)
+      - [Toggle Show Names](#toggle-show-names)
+      - [Setup New Tokens](#setup-new-tokens)
+
+<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
+
 
 ## First Time Installation
 The creator of the game (probably Ashton!) needs to install some scripts into the API. You can be in the game in another tab safely.
