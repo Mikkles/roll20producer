@@ -1,6 +1,13 @@
 # Prod Wizard
 This script is a suite of tools to help with creation of modules in Roll20. A menu with all of the tools can be accessed by typing or copypasting `!prod menu` into the game's chat. Safety measures have been added to ensure these tools can't mess up the game too much!
 
+#### Table of Contents
+1. [First Time Installation]
+2. [How to Use]
+3. [Features]
+- [Token Page Creator]
+- [Token Tools]
+
 ## First Time Installation
 The creator of the game (probably Ashton!) needs to install some scripts into the API. You can be in the game in another tab safely.
 
@@ -23,13 +30,20 @@ This script will organize all the tokens on the Token Page, based on whatever ca
 To begin, all tokens in the game should be dragged onto a page titled "Token Page." They can be in any order, but you might want to roughly group them in piles based on categories so you can select each group easily.
 
 **Categorizing Tokens**
+
 1. Decide the order of each category and assign it a number. For example, you might decide Named NPCs are category 1, NPC Spaceships are category 3, and so on. Lower numbered categories will be sorted on top, and uncategorized tokens will be sorted at the bottom (as if in category 99).
 2. Select all of the tokens you'd like to be put in a particular category, then click "Change Token Category." In the following prompt, enter the number of the category you'd like to tag them. Repeat this for each category.
 
-**Categorizing
+If you want to change a token's category, simply select it and click the Change button again. If you'd like to see a list of each token that has been tagged and what category they're in, click "See Categories." 
+If you'd like to remove ALL tokens from ALL categories, click "Reset Categories." Make sure this is what you want before doing this, as it can't be undone! 
 
+**Running the Script**
 
+Once you have finished categorizing the tokens, you can click "Run Token Page Creator." This should sort all of the tokens into the appropriate categories! If you change anything, you can click Run again to re-sort. 
 
+When the script has moved everything, make sure to scroll through the page and double check everything for doubles, miscategorization, tokens that should be rollable but aren't, etc. If it looks good, then you can create text objects using Roll20's drawing tools to label the categories as normal, and add the typical "* means rollable" text.
+
+---
 ### Token Tools
 These are a suite of tools to help with token placement and setting up new tokens (such as for monsters that are custom to this game).
 
