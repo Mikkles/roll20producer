@@ -1,5 +1,5 @@
 # Prod Wizard
-This script is a suite of tools to help with creation of modules in Roll20. A menu with all of the tools can be accessed by typing or copypasting `!prod menu` into the game's chat. Safety measures have been added to ensure these tools can't mess up the game too much!
+This script is a suite of tools to help with creation of modules in Roll20. A menu with all of the tools can be accessed by typing or copypasting **`!prod`** into the game's chat. Safety measures have been added to ensure these tools can't mess up the game too much!
 
 - [Prod Wizard](#prod-wizard)
       - [Table of Contents](#table-of-contents)
@@ -15,18 +15,20 @@ This script is a suite of tools to help with creation of modules in Roll20. A me
 
 
 ## First Time Installation
-The creator of the game (probably Ashton!) needs to install some scripts into the API. You can be in the game in another tab safely.
+For each game, the creator of the game (probably Ashton!) needs to install some scripts into the API. You can be in the game in another tab safely.
 
 **1.** The_Aaron's Config (from 1-click)
 **2.** Token-Mod (from 1-click)
 **3.** This script! Copy the raw text of this script into a new script and click Save Script.
 
-Once they've finished compiling, go into the game and type/copypaste `!prod menu` and navigate to the Ashtonmancer. Click the "First Time Setup" button; this will configure Token-mod to our specifications.
+Once they've finished compiling, go into the game and type/copypaste `!prod` and navigate to the Ashtonmancer. 
+
+Click the "First Time Setup" button; this will configure Token-mod to our specifications. The chat should output "The creation of Help Handouts is now OFF." If it says "ON" instead, click it once more. 
+
+
 
 ## How to Use
-
-Go to the APIs page and copy the raw text of this script into a New Script.
-Then, in the Roll20 game, type `!prod menu` for the menu!
+Once installed, simply type/copypaste `!prod`
 
 ## Features
 
