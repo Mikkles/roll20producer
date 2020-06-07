@@ -60,6 +60,9 @@ const Roll20Pro = (() => {
             menuText += "**TOKEN PAGE CREATOR.** This tool allows you to quickly make Token Pages. It requires you to"
             + "have a page titled 'Token Page' with the player bookmark on it. <br />"
             menuText += makeButton("Token Page Creator Menu", "!prod tokenPage", styles.button);
+            menuText += "<br /><br />**TOKEN EDITOR TOOLS.** A suite of tools to quickly change properties of multiple tokens at once.<br />"
+            + "*Requires TokenMod API to be installed* <br />"
+            menuText += makeButton("Token Editor Tools","!prod tokenEditor", styles.button);
             makeAndSendMenu(menuText, "Producer Tools", 'gm');
         },
 
@@ -105,7 +108,7 @@ const Roll20Pro = (() => {
                             menuText += makeButton("See Categories", "!prod tokenPage seeCats", styles.button);
                             menuText += "<br />**Reset Categories.** If you'd like to fully remove all category tags from all tokens, click this. This "
                             + "is irreversable; you'll need to recategorize everything, so use as a last resort! <br />"
-                            menuText += makeButton("Reset Categories", "!prod tokenPage resetCats", styles.button);
+                            menuText += makeButton("Reset Categories [IF SURE]", "!prod tokenPage resetCats", styles.button);
                             menuText += "<br /><br />" + makeButton("Back", "!prod menu", styles.button);
                             makeAndSendMenu(menuText, "Token Page Creator", 'gm');
 
@@ -266,6 +269,39 @@ const Roll20Pro = (() => {
                             }
                         }
 
+                        break;
+                        
+                    ////TOKEN MOD BOOKMARKS
+                    case "tokenEditor":
+                         if (!args[2]) {
+                            menuText = "";
+                            menuText += "**Toggle Show Names.** For 4+ tokens of the same type, we turn off nameplates for all but one. Select "
+                            + "all you'd like to toggle on/off and click this.<br />";
+                            menuText += makeButton("Toggle Show Names","!token-mod --flip showname",styles.button);
+                            menuText += "<br /><br />**Setup NPC Tokens for System.** These tools help setup tokens to our usual specifications, and assign them "
+                            + "as the default token to the character. You must fill out each token's Represents Character' before beginning this. <br />"
+                            + "Select any new tokens and click the button for the game's system. This will link their bars and set up lighting. "
+                            + "Then, click 'Clear Links' afterwards. Once all the tokens are done, click 'Reassign' to have the representing "
+                            + "characters auto-assign their respetive tokens as their default token. <br />"
+                            menuText += makeButton("5e D&D", "!token-mod --set bar1_link|hp bar2_link|npc_ac", styles.button);
+                            menuText += makeButton("Pathfinder 2e", "!token-mod --set bar1_link|hit_points bar2_link|armor_class", styles.button));
+                            menuText += makeButton("Starfinder", "!token-mod --set bar1_link|hp bar2_link|ac", styles.button))
+                            menuText += "<br />" + makeButton("Clear Links", "!token-mod --set bar1_link| bar2_link| bar3_link|", styles.button))
+                            
+                            
+                            menuText += "<br /><br />" + makeButton("Back", "!prod menu", styles.button);
+                            makeAndSendMenu(menuText, "Token Editor", 'gm');
+
+                        } else {
+                            switch (args[2]){
+                                default: 
+                                    makeAndSendMenu("Argument not found for Token Tool; please contact Mik.", "Roll20 Producer Error", 'gm');
+                                    break;
+                                
+                                
+                            }
+                        
+                        }
                         break;
                 }
             }
