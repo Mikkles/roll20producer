@@ -6,9 +6,11 @@ const Roll20Pro = (() => {
         state.Roll20Pro = {};
         state.Roll20Pro.sortCats = {};
     }
+    let tokenModInstall;
+    let theAaronConfigInstall;
 
     const scriptName = "Roll20 Producer Wizard",
-        version = "0.5",
+        version = "0.6",
 
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -390,7 +392,10 @@ const Roll20Pro = (() => {
         chatMenu = () => {
             menuText = "";
             menuText += "These are tools to help in the creation of Roll20 modules! If you need any help, ask Mik! <br />" +
-                "For documentation <a href='https://github.com/Mikkles/roll20producer/tree/master/ProductionAssist'>**Click Here**</a><br /><br />"
+                "For documentation <a href='https://github.com/Mikkles/roll20producer/tree/master/ProductionAssist'>**Click Here**</a><br /><br />";
+            menuText += (!tokenModInstall) ? "TOKEN MOD IS NOT INSTALLED.<br />":"";
+            menuText += (!theAaronConfigInstall) ? "THE AARON CONFIG IS NOT INSTALLED.<br />":"" ;
+            //menuText += (!dog) ? "DOG IS NOT INSTALLED.<br />":"";
             menuText += "**TOKEN PAGE CREATOR** <br />"
             menuText += makeButton("Token Page Creator Menu", "!prod tokenPage", styles.button);
             menuText += "<br /><br />**TOKEN EDITOR TOOLS** <br />"
@@ -661,6 +666,33 @@ const Roll20Pro = (() => {
                                 })
                             })
                             
+                        } else if (args[2] == "linking"){
+                            let handouts = findObjs({
+                                type: "handout",
+                            })
+                            let chars = findObjs({
+                                type: "character",
+                            })
+                            let text = "";
+                            objs = filterObjs(function(obj) {
+                                if (obj.get('type') == 'handout' || obj.get('type') == 'character') return true;
+                                
+                            });
+                            
+                            _.each(objs, function(obj){
+                                //let objID = obj.id
+                                //let object = getObj(obj);
+                                text += "[" + obj.get("name") + "] <br />";
+                            });
+                            /*
+                            _.each(links, function(obj){
+                                let objID = obj.id
+                                let object = getObj(obj);
+                                text += "[" + object.get("name") + "] <br />";
+                            })*/
+                            let title = "!!Linking";
+                            findAndMakeHandout(title, text);
+                            makeAndSendMenu("Linking handout created. Delete handout if you'd like to rebuild.", "Handout Created", 'gm');
                         }
                         break;
 
@@ -875,6 +907,15 @@ const Roll20Pro = (() => {
         on('chat:message', handleInput);
     };
     
+    const checkInstalls = function(){
+       
+        tokenModInstall = (state.TokenMod) ? true : false;
+        theAaronConfigInstall = (state.TheAaron) ? true : false;
+        //dog = (state.dog) ? true : false;
+        
+        
+    };
+    
     function Semaphore(callback, initial, context) {
         var args = (arguments.length === 1 ? [arguments[0]] : Array.apply(null, arguments));
     
@@ -903,6 +944,7 @@ const Roll20Pro = (() => {
 
     on("ready", () => {
         registerEventHandlers();
+        checkInstalls();
         
     });
 })();
