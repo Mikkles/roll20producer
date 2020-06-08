@@ -1,20 +1,7 @@
 # Prod Wizard
 This script is a suite of tools to help with creation of modules in Roll20. A menu with all of the tools can be accessed by typing or copypasting **`!prod`** into the game's chat. Safety measures have been added to ensure these tools can't mess up the game too much!
 
-- [Prod Wizard](#prod-wizard)
-      - [Table of Contents](#table-of-contents)
-  * [First Time Installation](#first-time-installation)
-  * [How to Use](#how-to-use)
-  * [Features](#features)
-    + [Token Page Creator](#token-page-creator)
-    + [Token Tools](#token-tools)
-      - [Toggle Show Names](#toggle-show-names)
-      - [Setup New Tokens](#setup-new-tokens)
-
-<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
-
-
-## First Time Installation
+## Installation to Game
 For each game, the creator of the game (probably Ashton!) needs to install some scripts into the API. You can be in the game in another tab safely.
 
 **1.** The_Aaron's Config (from 1-click)
@@ -25,10 +12,8 @@ Once they've finished compiling, go into the game and type/copypaste `!prod` and
 
 Click the "First Time Setup" button; this will configure Token-mod to our specifications. The chat should output "The creation of Help Handouts is now OFF." If it says "ON" instead, click it once more. 
 
-
-
 ## How to Use
-Once installed, simply type/copypaste `!prod`
+Once installed, simply type/copypaste `!prod` into chat!
 
 ## Features
 
@@ -64,3 +49,44 @@ These buttons will help set tokens to our usual specifications, and update their
 Select any new tokens you'd like to setup and click the button for the game's system. This will link their bars according to our specifications, including removing linking of bar1. **Note!** If you're making PC tokens, you'll have to manually turn bar1 BACK to HP!
 
 Once this is done, with the tokens still selected, click 'Reassign' to have the characters update their default tokens. **Note!** If you change other aspects of the token, like its name, auras, light radius, etc, the 'Reassign' button will include those to the default token too!
+
+---
+### Map / Dynamic Lighting Tools
+A suite of tools to help with setting up maps, and creating/testing Dynamic Lighting.
+**For safety, with all of these tools, you must place the Player Bookmark on the page you're working on.**
+
+#### Resize Map and Page
+This tool allows you to quickly resize both the map image and the page size, based on the pixel dimensions of the map jpg. Primarily used right after uploading the map to Roll20. 
+
+Upload the map jpg to the map layer, then select the map 'token' and hit Resize Map and Page.
+You will be prompted to enter the pixel dimensions of the width and height of the page. Enter these, and the map should resize and center itself automatically.
+
+#### Quick Change Page Settings
+These are simple quick buttons to be used while setting up pages. Each button will change an element of the page or grid.
+
+#### Create DL Buddy
+This will create or delete a token for testing Dynamic Lighting. The token has a light radius of 100'. 
+
+---
+### Art Handout Linker
+This tool will go through all selected tokens and attempt to add a "Picture: Handout: (Name)" link to their bio page. 
+
+When you run the tool, it will search for a handout titled exactly like the character that the token represents. It will check if the character's bio has the text "Picture:" in it. If the bio does not, then it will check if there is a handout titled "Handout: " plus the character's name. If it finds a handout, it will add "Picture: Handout: (name)" to the top of the bio.
+
+Note that this searches for exact title matches, so creatures named something different will not automatically link. For example, Elite Cauthooj will not find Handout: Cauthooj. These will still need to be added manually.
+
+---
+### Ashtonmancer
+A suite of tools to help the creator of the game get some basic tasks out of the way.
+
+#### First Time Setup
+When first installing this script, as well as Token-Mod and The Aaron Config, you will need to click this button once. An output saying "(From TheAaron): The creation of Help Handouts is now OFF." should appear. If it says "ON," simply click it again.
+
+#### Handout Creation
+These buttons will automatically create basic handout templates, typically for "Roll20 Information." Please note that the API has no access to the journal's folder structure, so the handouts will be created at base level, requiring you to drag them into a Roll20 Information folder.
+
+Each handout is named based on what it contains. References to products or titles are replaced with "PRODUCT NAME" or similar.
+* Thank You For Purchasing (Paizo) and (WoTC) will create a handout titled "Thank you for purchasing", requiring you to enter the product name automatically. These include the links to our Paizo and WotC marketplaces respectively.
+* Buttons labeled (PF2) or (5e) have the variations based on those settings. 
+* Credits will place the Roll20 Credits, with slots for copying in the product's official credits.
+Unfortunately, these handout templates will need to manually updated in the script code when they change. Mik can handle that!
