@@ -10,7 +10,7 @@ const Roll20Pro = (() => {
     let theAaronConfigInstall;
 
     const scriptName = "Roll20 Producer Wizard",
-        version = "0.6",
+        version = "0.5",
 
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -388,7 +388,35 @@ const Roll20Pro = (() => {
             })
             return handout
         },
-
+        
+        autoLinker = function(str){
+            log("autolinker called + " + str);
+             var m = str.match(/\`\`[^\`]*?\|[^\`]*?\`\`/g);
+             if (m) {
+                 log("Found something in ``s!!")
+                  //For each piped wikilink in the list
+                  for (var i = 0; i < m.length; i++) {
+                       var n_arr = m[i].toString().match(/\`\`[ ]*([^\`]*?)\|[ ]*([^\`]*?)\`\`/);
+                       var n = n_arr[0]; // Contains the entire piped link
+                       var a = n_arr[1]; // Contains everything before pipe
+                       var b = n_arr[2]; // Contains everything after pipe
+                       
+                       log(n + " " + a + " " + b)
+                       
+                       handoutName = findObjs({_type: "handout", name: a});
+                       if (_.isArray(handoutName) && handoutName[0]){
+                           log(handoutName + " omg " + handoutName[0]);
+                           hId = handoutName[0].get("id");
+                           newstr = str.replace(n, "<a href='http://journal.roll20.net/handout/" + hId + "'>" + b + "</a>")
+                           log ("NEW STRING FROM AUTOLINKER is:" + newstr)
+                       } else {
+                           log("No handout found");
+                       }
+                  }
+             }
+            return newstr;
+        }
+        
         chatMenu = () => {
             menuText = "";
             menuText += "These are tools to help in the creation of Roll20 modules! If you need any help, ask Mik! <br />" +
@@ -420,6 +448,25 @@ const Roll20Pro = (() => {
                     default:
                     case "menu":
                         chatMenu();
+                        break;
+                        
+                    case "autoLinker":
+                        var ho = findHandout('TestHandout');
+                        
+                        if (_.isArray(ho) && ho[0]) {
+                            
+                            var str = ho[0].get("notes", function(bioText) {
+                                log("Bio Text is: " + bioText);
+                                let newString = autoLinker(bioText);
+                                log("new String is :" + newString);
+                                ho[0].set("notes", newString);
+                                
+                                
+                            })
+                            
+                        } else {
+                            log("not found bro");
+                        }
                         break;
 
                         ///////////TOKEN PAGE MAKER//////////////
@@ -908,8 +955,8 @@ const Roll20Pro = (() => {
     };
     
     const checkInstalls = function(){
-       
-        tokenModInstall = (state.TokenMod) ? true : false;
+        
+        tokenModInstall = ('undefined' !== typeof TokenMod) ? true : false;
         theAaronConfigInstall = (state.TheAaron) ? true : false;
         //dog = (state.dog) ? true : false;
         
