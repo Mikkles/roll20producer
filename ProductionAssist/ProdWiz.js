@@ -325,8 +325,6 @@ const Roll20Pro = (() => {
                 </p>`,
 
         },
-        
-        
 
         makeTitle = (title) => {
             return '<h2 style="' + styles.title + '">' + title + '</h2>';
@@ -388,43 +386,99 @@ const Roll20Pro = (() => {
             })
             return handout
         },
+
+        runAutoLinkTester = function(obj, field) {
+            if (!eventChangeLockout) {
+                
+                eventChangeLockout = true;
+                let type = obj.get("_type");
+                let name = obj.get("name");
+                log("Auto Linker running on: " + name + " - " + field);
+                obj.get(field, function(str){
+                    let newText = autoLink(str, name)
+                    obj.set(field, newText)
+            })
+            } else {
+                eventChangeLockout = false;
+            }
+            
+            
+        },
+
+        autoLink = function(str, callerName) {
+            let newStr = ""
+            if (str == null) {str = ""};
+            let m = str.match(/&lt;&lt;[^|]*?\|[^|]*?&gt;&gt;/g);
+            if (m) {
+                for (let i = 0; i < m.length; i++) {
+                    let n_arr = m[i].toString().match(/&lt;&lt;([^|]*?)\|([^|]*?)&gt;&gt;/);
+                    let n = n_arr[0]; // Contains the entire piped link
+                    let a = n_arr[1]; // Contains everything before pipe
+                    let b = n_arr[2]; // Contains everything after pipe
+                    let spell = a.split(":")
+                    log("a: " + a + " spell: " + spell);
+
+                    switch (spell[0]) {
+                        default:
+                            let targetObj = findObjs({
+                                name: a
+                            });
         
-        autoLinker = function(str){
-            log("autolinker called + " + str);
-             var m = str.match(/\`\`[^\`]*?\|[^\`]*?\`\`/g);
-             if (m) {
-                 log("Found something in ``s!!")
-                  //For each piped wikilink in the list
-                  for (var i = 0; i < m.length; i++) {
-                       var n_arr = m[i].toString().match(/\`\`[ ]*([^\`]*?)\|[ ]*([^\`]*?)\`\`/);
-                       var n = n_arr[0]; // Contains the entire piped link
-                       var a = n_arr[1]; // Contains everything before pipe
-                       var b = n_arr[2]; // Contains everything after pipe
-                       
-                       log(n + " " + a + " " + b)
-                       
-                       handoutName = findObjs({_type: "handout", name: a});
-                       if (_.isArray(handoutName) && handoutName[0]){
-                           log(handoutName + " omg " + handoutName[0]);
-                           hId = handoutName[0].get("id");
-                           newstr = str.replace(n, "<a href='http://journal.roll20.net/handout/" + hId + "'>" + b + "</a>")
-                           log ("NEW STRING FROM AUTOLINKER is:" + newstr)
-                       } else {
-                           log("No handout found");
-                       }
-                  }
-             }
-            return newstr;
-        }
-        
+                            if (_.isArray(targetObj) && targetObj[0]) {
+                                let targetID = targetObj[0].get("id"); //Get the ID of the first object with the name of "a"
+                                let targetType = targetObj[0].get("type");
+ 
+                                if (targetType == "handout") {
+                                    newStr = str.replace(n, "<a href='http://journal.roll20.net/handout/" + targetID + "'>" + b + "</a>")
+                                } else if (targetType == "character") {
+                                    newStr = str.replace(n, "<a href='http://journal.roll20.net/character/" + targetID + "'>" + b + "</a>")
+                                }
+                                //log("NEW STRING FROM AUTOLINKER is:" + newstr)
+                            } else {
+                                menuText = callerName + ": no object found for " + a + "!";
+                                makeAndSendMenu(menuText, "AutoLinker Error", 'gm');
+                                //return str;
+                            }
+                            break;
+                        case "5e":
+                            a = a.replace("5e:","");
+                            if (a == ""){
+                                newStr = str.replace(n, "<i><a href='https://roll20.net/compendium/dnd5e/Spells:" + b + "'>" + b + "</a></i>")
+                            } else {
+                                newStr = str.replace(n, "<i><a href='https://roll20.net/compendium/dnd5e/Spells:" + a + "'>" + b + "</a></i>")
+                            }
+                            break;
+                        case "pf2": 
+                            a = a.replace("pf2:","");
+                            if (a == ""){
+                                newStr = str.replace(n, "<i><a href='https://roll20.net/compendium/pf2/Spells:" + b + "'>" + b + "</a></i>")
+                            } else {
+                                newStr = str.replace(n, "<i><a href='https://roll20.net/compendium/pf2/Spells:" + a + "'>" + b + "</a></i>")
+                            }
+                            break;
+                    }
+                }
+
+                if (newStr !== "") {
+                    return newStr;
+                } else {
+                    return str;
+                }
+
+            } else {
+                return str;
+            }
+        },
+
         chatMenu = () => {
             menuText = "";
             menuText += "These are tools to help in the creation of Roll20 modules! If you need any help, ask Mik! <br />" +
                 "For documentation <a href='https://github.com/Mikkles/roll20producer/tree/master/ProductionAssist'>**Click Here**</a><br /><br />";
-            menuText += (!tokenModInstall) ? "TOKEN MOD IS NOT INSTALLED.<br />":"";
-            menuText += (!theAaronConfigInstall) ? "THE AARON CONFIG IS NOT INSTALLED.<br />":"" ;
-            //menuText += (!dog) ? "DOG IS NOT INSTALLED.<br />":"";
-            menuText += "**TOKEN PAGE CREATOR** <br />"
+            menuText += (!tokenModInstall) ? "TOKEN MOD IS NOT INSTALLED.<br />" : "";
+            menuText += (!theAaronConfigInstall) ? "THE AARON CONFIG IS NOT INSTALLED.<br />" : "";
+            menuText += "**TEXT AUTO-LINKER INSTRUCTIONS** <br />"
+            menuText += makeButton("Run Autolinker", "!prod autoLinker", styles.button);
+            menuText += "<br /><br />**TOKEN PAGE CREATOR** <br />"
             menuText += makeButton("Token Page Creator Menu", "!prod tokenPage", styles.button);
             menuText += "<br /><br />**TOKEN EDITOR TOOLS** <br />"
             menuText += makeButton("Token Editor Tools Menu", "!prod tokenEditor", styles.button);
@@ -439,34 +493,22 @@ const Roll20Pro = (() => {
 
         handleInput = (msg) => {
             if (msg.type == "api" && msg.content.indexOf("!prod") === 0) {
-                var selected = msg.selected;
-                var args = msg.content.split(" ");
-                var command = args[1];
-                var lastPageID = getObj('player', msg.playerid).get('_lastpage');
+                let selected = msg.selected;
+                let args = msg.content.split(" ");
+                let command = args[1];
+                let lastPageID = getObj('player', msg.playerid).get('_lastpage');
 
                 switch (command) {
                     default:
                     case "menu":
                         chatMenu();
                         break;
-                        
+
                     case "autoLinker":
-                        var ho = findHandout('TestHandout');
-                        
-                        if (_.isArray(ho) && ho[0]) {
-                            
-                            var str = ho[0].get("notes", function(bioText) {
-                                log("Bio Text is: " + bioText);
-                                let newString = autoLinker(bioText);
-                                log("new String is :" + newString);
-                                ho[0].set("notes", newString);
-                                
-                                
-                            })
-                            
-                        } else {
-                            log("not found bro");
-                        }
+                        menuText = "**Autolinker Help** <br /> To autolink, use two pointy brackets instead of single square brackets. You can "
+                        + "include a pipe character '|' to link a handout without using the original text, or to link compendium spells. <br /><br />"
+                        + "THIS HELP TEXT IS STILL BEING WRITTEN.";
+                        makeAndSendMenu(menuText, "Token Page Creator", 'gm');
                         break;
 
                         ///////////TOKEN PAGE MAKER//////////////
@@ -712,8 +754,8 @@ const Roll20Pro = (() => {
                                     }
                                 })
                             })
-                            
-                        } else if (args[2] == "linking"){
+
+                        } else if (args[2] == "linking") {
                             let handouts = findObjs({
                                 type: "handout",
                             })
@@ -723,20 +765,13 @@ const Roll20Pro = (() => {
                             let text = "";
                             objs = filterObjs(function(obj) {
                                 if (obj.get('type') == 'handout' || obj.get('type') == 'character') return true;
-                                
+
                             });
-                            
-                            _.each(objs, function(obj){
-                                //let objID = obj.id
-                                //let object = getObj(obj);
+
+                            _.each(objs, function(obj) {
                                 text += "[" + obj.get("name") + "] <br />";
                             });
-                            /*
-                            _.each(links, function(obj){
-                                let objID = obj.id
-                                let object = getObj(obj);
-                                text += "[" + object.get("name") + "] <br />";
-                            })*/
+
                             let title = "!!Linking";
                             findAndMakeHandout(title, text);
                             makeAndSendMenu("Linking handout created. Delete handout if you'd like to rebuild.", "Handout Created", 'gm');
@@ -866,7 +901,7 @@ const Roll20Pro = (() => {
                                     makeAndSendMenu("Argument not found for Map Tools; please contact Mik.", "Roll20 Producer Error", 'gm');
                                     break;
                                 case "resize":
-                                    a
+                                    
                                     log("args = " + args);
                                     if (!args[3] || (args[3] == "") || !args[4] || (args[4] == "")) {
                                         makeAndSendMenu("Height or Width not found!; please contact Mik.", "Roll20 Producer Error", 'gm');
@@ -950,48 +985,62 @@ const Roll20Pro = (() => {
             }
         }
 
-    const registerEventHandlers = function() {
-        on('chat:message', handleInput);
-    };
     
-    const checkInstalls = function(){
-        
+
+    const checkInstalls = function() {
+
         tokenModInstall = ('undefined' !== typeof TokenMod) ? true : false;
         theAaronConfigInstall = (state.TheAaron) ? true : false;
         //dog = (state.dog) ? true : false;
-        
-        
+
     };
-    
+
     function Semaphore(callback, initial, context) {
         var args = (arguments.length === 1 ? [arguments[0]] : Array.apply(null, arguments));
-    
+
         this.lock = parseInt(initial, 10) || 0;
         this.callback = callback;
         this.context = context || callback;
         this.args = args.slice(3);
     };
-    
+
     Semaphore.prototype = {
-        v: function() { this.lock++; },
+        v: function() {
+            this.lock++;
+        },
         p: function() {
             var parameters;
-    
+
             this.lock--;
-    
+
             if (this.lock === 0 && this.callback) {
                 // allow sem.p(arg1, arg2, ...) to override args passed to Semaphore constructor
-                if (arguments.length > 0) { parameters = arguments; }
-                else { parameters = this.args; }
-    
+                if (arguments.length > 0) {
+                    parameters = arguments;
+                } else {
+                    parameters = this.args;
+                }
+
                 this.callback.apply(this.context, parameters);
             }
         }
     };
+    
+
+    
+    const registerEventHandlers = function() {
+        on('chat:message', handleInput);
+        on('change:handout:notes', function(obj, prev){runAutoLinkTester(obj, "notes")});
+        on('change:handout:gmnotes', function(obj, prev){runAutoLinkTester(obj, "gmnotes")});
+        on('change:character:bio', function(obj, prev){runAutoLinkTester(obj, "bio")});
+        on('change:character:gmnotes', function(obj, prev){runAutoLinkTester(obj, "gmnotes")});
+        
+    };
 
     on("ready", () => {
+        eventChangeLockout = false;
         registerEventHandlers();
         checkInstalls();
-        
+
     });
 })();
