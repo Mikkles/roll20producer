@@ -10,7 +10,7 @@ const Roll20Pro = (() => {
     let theAaronConfigInstall;
 
     const scriptName = "Roll20 Producer Wizard",
-        version = "0.5",
+        version = "0.6",
 
         styles = {
             reset: 'padding: 0; margin: 0;',
