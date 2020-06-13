@@ -408,21 +408,21 @@ const Roll20Pro = (() => {
         autoLink = function(str, callerName) {
             let newStr = ""
             if (str == null) {str = ""};
-            let m = str.match(/&lt;&lt;[^|]*?\|[^|]*?&gt;&gt;/g);
+            let m = str.match(/\[[^|]*?\|[^|]*?\]/g);
             if (m) {
                 for (let i = 0; i < m.length; i++) {
-                    let n_arr = m[i].toString().match(/&lt;&lt;([^|]*?)\|([^|]*?)&gt;&gt;/);
+                    let n_arr = m[i].toString().match(/\[([^|]*?)\|([^|]*?)\]/);
                     let n = n_arr[0]; // Contains the entire piped link
                     let a = n_arr[1]; // Contains everything before pipe
                     let b = n_arr[2]; // Contains everything after pipe
                     let spell = a.split(":")
-                    log("a: " + a + " spell: " + spell);
+                    //log("a: " + a + " spell: " + spell);
 
                     switch (spell[0]) {
                         default:
                             let targetObj = findObjs({
                                 name: a
-                            });
+                            }, {caseInsensitive: true});
         
                             if (_.isArray(targetObj) && targetObj[0]) {
                                 let targetID = targetObj[0].get("id"); //Get the ID of the first object with the name of "a"
@@ -476,8 +476,8 @@ const Roll20Pro = (() => {
                 "For documentation <a href='https://github.com/Mikkles/roll20producer/tree/master/ProductionAssist'>**Click Here**</a><br /><br />";
             menuText += (!tokenModInstall) ? "TOKEN MOD IS NOT INSTALLED.<br />" : "";
             menuText += (!theAaronConfigInstall) ? "THE AARON CONFIG IS NOT INSTALLED.<br />" : "";
-            menuText += "**TEXT AUTO-LINKER INSTRUCTIONS** <br />"
-            menuText += makeButton("Run Autolinker", "!prod autoLinker", styles.button);
+            menuText += "**TEXT AUTOLINKER INSTRUCTIONS** <br />"
+            menuText += makeButton("Autolinker Examples", "!prod autoLinker", styles.button);
             menuText += "<br /><br />**TOKEN PAGE CREATOR** <br />"
             menuText += makeButton("Token Page Creator Menu", "!prod tokenPage", styles.button);
             menuText += "<br /><br />**TOKEN EDITOR TOOLS** <br />"
@@ -505,10 +505,20 @@ const Roll20Pro = (() => {
                         break;
 
                     case "autoLinker":
-                        menuText = "**Autolinker Help** <br /> To autolink, use two pointy brackets instead of single square brackets. You can "
-                        + "include a pipe character '|' to link a handout without using the original text, or to link compendium spells. <br /><br />"
-                        + "THIS HELP TEXT IS STILL BEING WRITTEN.";
-                        makeAndSendMenu(menuText, "Token Page Creator", 'gm');
+                        menuText = "The autolinker has been enhanced with the following.<br /><br/>" +
+                            "Normal links are unchanged: <br /><pre><code>[goblin]</code></pre><br />" +
+                            "To link text that doesn't match a handout/character, put the handout name first, use a pipe character '|' and the text to output after." +
+                            "<br /><pre><code>[Goblin|angry goblins]</code></pre><br />" +
+                            "Spells can be linked in two ways. Use a pipe and put '5e:' or 'pf2:' on the right to link to that spell's compendium entry." +
+                            "<br /><pre><code>[5e:|Fireball]</code></pre><br />" +
+                            "The full spell name can be given on the right to link other text." +
+                            "<br /><pre><code>[5e:Glyph of Warding|arcane glyphs]</code></pre>" +
+                            "In this last example, the script can't detect if the actual spell name is valid. If there's no spell of that name, it will still " +
+                            "replace the text with a link to an error page.<br /><br />Note: This script updates slightly slowly. If you use these " +
+                            "enhancements, they sometimes may not appear immediately after saving new text. If you close and reopen the handout, or go back " +
+                            "into the Edit menu, it should fix itself. If an enhanced link fails, there will be a message posted to chat (though this will " +
+                            "not catch normal square bracket broken links)."
+                        makeAndSendMenu(menuText, "Autolinker Help", 'gm');
                         break;
 
                         ///////////TOKEN PAGE MAKER//////////////
