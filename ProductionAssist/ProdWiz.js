@@ -202,9 +202,26 @@ const Roll20Pro = (() => {
 
                         }
                     }
-
                     break;
-                    //case...
+                    
+                case "ashtonmancer":
+                    if (!args[2]) {
+                        ashtonmancerMenu();
+                    } else {
+                        switch(args[2]){
+                            case "first":
+                                ashtonmancerRunFirst();
+                                break;
+                            case "create":
+                                ashtonmancerCreateHandouts(args[3])
+                                break;
+                                
+                        }
+                    }
+                    
+                    
+                    break;
+                        
                 }
             }
         },
@@ -261,10 +278,10 @@ const Roll20Pro = (() => {
                     state.Roll20Pro.sortCats[tokenID] = 99;
                 }
             })
-        }
+        },
 
     //---------------Add to categories
-    addToTokenPageCategories = function (arg, selected) {
+        addToTokenPageCategories = function (arg, selected) {
             log("Adding to Token Page Category")
             menuText = "";
             //For each selected, add to category.
@@ -667,9 +684,9 @@ const Roll20Pro = (() => {
 
             });
 
-        }
+        },
 
-    autoLink = function (str, callerName) {
+        autoLink = function (str, callerName) {
             let newStr = ""
             if (str == null) {
                 str = ""
@@ -1064,6 +1081,88 @@ const Roll20Pro = (() => {
                     <strong>Pressing Shift+Z as the GM</strong>&nbsp;shows all players the larger version of that object<br />
                     <strong>Pressing Ctrl/Cmd+L with a token selected</strong>&nbsp;<strong>as the GM</strong>&nbsp;to view the environment as that token would.<br />
                 </p>`,
+    },
+    
+    ashtonmancerMenu = function () { 
+        menuText = "";
+        menuText += "These scripts will create templates for our typical pages and handouts! This should probably "
+        menuText += "only be used by a lead!<br /><br />**First Time Setup.** Run this once (or until Help Handouts are OFF).<br />"
+        menuText += makeButton("First Time Setup", "!the-aaron --toggle-help-handouts&#13;!prod ashtonmancer first", styles.button);
+        menuText += "<br /><br />"
+        menuText += "**Handout Creation** <br />"
+        menuText += makeButton("Battle Map Scale", "!prod ashtonmancer create battleMap", styles.button);
+        menuText += makeButton("Credits", "!prod ashtonmancer create credits", styles.button);
+        menuText += makeButton("Thank You For Purchasing (Paizo)", "!prod ashtonmancer create thankYouPaizo", styles.button);
+        menuText += makeButton("Thank You For Purchasing (WoTC)", "!prod ashtonmancer create thankYouWotc", styles.button);
+        menuText += makeButton("Rollable Tables & Macros", "!prod ashtonmancer create tablesAndMacros", styles.button);
+        menuText += makeButton("Rollable Tokens", "!prod ashtonmancer create rollableTokens", styles.button);
+        menuText += makeButton("NPC Init (PF2)", "!prod ashtonmancer create npcInitPF2", styles.button);
+        menuText += makeButton("NPC Init (5e)", "!prod ashtonmancer create npcInit5e", styles.button);
+        menuText += makeButton("Game Settings (PF2)", "!prod ashtonmancer create gameSettingsPF2", styles.button);
+        menuText += makeButton("Game Settings (5e)", "!prod ashtonmancer create gameSettings5e", styles.button);
+        menuText += makeButton("Module Shortcuts", "!prod ashtonmancer create moduleShortcuts", styles.button);
+        menuText += makeButton("Safety Deck", "!prod ashtonmancer create safetyDeck", styles.button);
+        menuText += makeButton("Playing Burn Bryte", "!prod ashtonmancer create playingBurnBryte", styles.button);
+        menuText += "<br /><br />" + makeButton("Back", "!prod menu", styles.button);
+
+        makeAndSendMenu(menuText, "Ashtonmancer", 'gm');
+    },
+    
+    ashtonmancerRunFirst = function(){
+        var handout = findObjs({
+            type: 'handout',
+            name: 'Help: TokenMod'
+        });
+        if (handout && handout[0]) {
+            handout[0].remove();
+        }
+    },
+    
+    ashtonmancerCreateHandouts = function(handout){
+        switch (handout) {
+            default:
+                makeAndSendMenu("Argument not found for Handout Creator; please contact Mik.", "Roll20 Producer Error", 'gm');
+                break;
+            case "battleMap":
+                findAndMakeHandout("Battle Map Scale", html.battleMap);
+                break;
+            case "credits":
+                findAndMakeHandout("Credits", html.credits);
+                break;
+            case "thankYouPaizo":
+                findAndMakeHandout("Thank you for purchasing", html.thankYouPaizo);
+                break;
+            case "thankYouWotc":
+                findAndMakeHandout("Thank you for purchasing", html.thankYouWotc);
+                break;
+            case "tablesAndMacros":
+                findAndMakeHandout("Random Rollable Tables & Macros", html.tablesAndMacros);
+                break;
+            case "rollableTokens":
+                findAndMakeHandout("Rollable Tokens", html.rollableTokens);
+                break;
+            case "npcInitPF2":
+                findAndMakeHandout("NPC Initiative", html.npcInitPF2);
+                break;
+            case "npcInit5e":
+                findAndMakeHandout("NPC Initiative", html.npcInit5e);
+                break;
+            case "gameSettings5e":
+                findAndMakeHandout("Game Settings", html.gameSettings5e);
+                break;
+            case "gameSettingsPF2":
+                findAndMakeHandout("Game Settings", html.gameSettingsPF2);
+                break;
+            case "moduleShortcuts":
+                findAndMakeHandout("Module Shortcuts", html.moduleShortcuts);
+                break;
+            case "safetyDeck":
+                findAndMakeHandout("Safety Deck", html.safetyDeck);
+                break;
+            case "playingBurnBryte":
+                findAndMakeHandout("Playing Burn Bryte", html.playingBurnBryte);
+                break;
+        }
     }
 
     //=========SCRIPT FUNCTIONALITY==============
