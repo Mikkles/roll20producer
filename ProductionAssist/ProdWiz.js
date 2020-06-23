@@ -15,13 +15,14 @@ const Roll20Pro = (() => {
     }
 
     const scriptName = "Roll20 Producer Wizard",
-        version = "0.1.9",
+        version = "0.2.0",
 
         //============CHAT RESPONSES SETUP============
 
         styles = {
             reset: 'padding: 0; margin: 0;',
             menu: 'background-color: #fff; border: 1px solid #000; padding: 5px; font-family: &quot;Good Pro Condensed&quot;, &quot;Roboto&quot;, &quot;Verdana&quot;,sans-serif;, ',
+            bigButton: 'font-size: 1.5em; background-color: pink; border: 1px solid black; border-radius: 3px; padding: 4px; margin: 2px; color: #000; text-align: center; ',
             button: 'background-color: pink; border: 1px solid black; border-radius: 3px; padding: 0px, 2px; margin: 2px; color: #000; text-align: center; ',
             textButton: 'background-color: transparent; border: none; padding: 0; color: #000; text-decoration: underline',
             list: 'list-style: none;',
@@ -57,17 +58,17 @@ const Roll20Pro = (() => {
             menuText += (!tokenModInstall) ? "TOKEN MOD IS NOT INSTALLED.<br />" : "";
             menuText += (!theAaronConfigInstall) ? "THE AARON CONFIG IS NOT INSTALLED.<br />" : "";
             menuText += "**Text Autolinker Examples** <br />"
-            menuText += makeButton("Autolinker Examples", "!prod autoLinker", styles.button);
-            menuText += "<br /><br />**Token Page Creator.** Script to categorize and autosort Token Pages.<br />"
-            menuText += makeButton("Token Page Creator Menu", "!prod tokenPage", styles.button);
-            menuText += "<br /><br />**Token Editor Tools.** Quickly edit groups of tokens.<br />"
-            menuText += makeButton("Token Editor Tools Menu", "!prod tokenEditor", styles.button);
+            menuText += makeButton("Autolinker Examples", "!prod autoLinker", styles.bigButton);
+            menuText += "<br /><br />**Token Editor/Page Creator.** Script to categorize and autosort Token Pages.<br />"
+            menuText += makeButton("Token Page Creator Menu", "!prod tokenPage", styles.bigButton);
+           // menuText += "<br /><br />**Token Editor Tools.** Quickly edit groups of tokens.<br />"
+           // menuText += makeButton("Token Editor Tools Menu", "!prod tokenEditor", styles.button);
             menuText += "<br /><br />**Map/Dynamic Lighting Tools.** Tools to assist map making and dynamic lighting.<br />"
-            menuText += makeButton("Map Tools Menu", "!prod map", styles.button);
+            menuText += makeButton("Map Tools Menu", "!prod map", styles.bigButton);
             menuText += "<br /><br />**Art Handout Linker.** Add 'Picture: [Handout: Name]' to character bios. <br />"
-            menuText += makeButton("Handout Linker Menu", "!prod artLinker", styles.button);
+            menuText += makeButton("Handout Linker Menu", "!prod artLinker", styles.bigButton);
             menuText += "<br /><br />**Ashtonmancer.** Administrators' tools. <br />"
-            menuText += makeButton("Ashtonmancer Menu", "!prod ashtonmancer", styles.button);
+            menuText += makeButton("Ashtonmancer Menu", "!prod ashtonmancer", styles.bigButton);
             makeAndSendMenu(menuText, scriptName, 'gm');
         },
 
@@ -130,9 +131,9 @@ const Roll20Pro = (() => {
                         }
                     }
                     break
-                case "tokenEditor":
-                    tokenEditorMenu();
-                    break;
+               // case "tokenEditor":
+               //     tokenEditorMenu();
+               //     break;
                 case "tokenPage":
                     if (!args[2]) {
                         tokenPageMenu();
@@ -199,7 +200,13 @@ const Roll20Pro = (() => {
                                 makeAndSendMenu("No tokens selected", "Roll20 Producer Error", 'gm');
 
                             }
-
+                            break;
+                        case "findMentionAll":
+                            let findChars = findObjs({
+                                type: "character"
+                            })
+                            mentionFinder(findChars);
+                            break;
                         }
                     }
                     break;
@@ -230,13 +237,24 @@ const Roll20Pro = (() => {
 
         tokenPageMenu = function () {
             menuText = "";
-            menuText += makeButton("Change Token Category", "!prod tokenPage addSort ?{Category Number}", styles.button);
-            menuText += makeButton("See Categories", "!prod tokenPage seeCats", styles.button);
+            menuText = "Tokens must have 'Represented' filled out. All tools work for all selected tokens.<br /><br />";
+            menuText += "**Toggle Show Names.**<br />";
+            menuText += makeButton("Toggle Show Names", "!token-mod --flip showname", styles.button);
+            menuText += "<br /><br />**Setup NPC Tokens for System.**<br />"
+            menuText += makeButton("D&D 5e", "!token-mod --set bar1_link|hp bar2_link|npc_ac bar3| bar3_link| &#13;!token-mod --set bar1_link|", styles.button);
+            menuText += makeButton("Pathfinder 2e", "!token-mod --set bar1_link|hit_points bar2_link|ac bar3| bar3_link| &#13;!token-mod --set bar1_link|", styles.button);
+            menuText += makeButton("Starfinder", "!token-mod --set bar1_link|hp bar2_link|eac bar3_link|kac &#13;!token-mod --set bar1_link|", styles.button);
+            menuText += makeButton("Pathfinder 1e", "!token-mod --set bar1_link|hp bar2_link|ac bar3| bar3_link| &#13;!token-mod --set bar1_link|", styles.button);
+            menuText += "<br /><br />**Assign Token as Default Token**"
+            menuText += "<br />" + makeButton("Reassign", "!token-mod --set defaulttoken", styles.button)
+            menuText += "<hr />**Token Page Tools**<br />"
+            menuText += makeButton("Assign Category", "!prod tokenPage addSort ?{Category Number}", styles.button);
+            menuText += makeButton("See All Categories", "!prod tokenPage seeCats", styles.button);
             menuText += "<br /><br />"
             menuText += makeButton("Run Token Page Creator", "!prod tokenPage run", styles.button);
             menuText += makeButton("Reset Categories [IF SURE]", "!prod tokenPage resetCats", styles.button);
             menuText += "<br /><br />" + makeButton("Back", "!prod menu", styles.button);
-            makeAndSendMenu(menuText, "Token Page Creator", 'gm');
+            makeAndSendMenu(menuText, "Token Tools", 'gm');
         },
 
         makeText = function (x, y, defaultText) {
@@ -563,13 +581,18 @@ const Roll20Pro = (() => {
         //Art Linker
 
         artLinkerMenu = function (arg) {
-            menuText = "";
-            menuText += "This will connect art handouts onto characters. When using the selected tokens option " +
-                "they must have their 'represented' set.<br /><br />"
-            menuText += makeButton("Link ALL characters", "!prod artLinker linkAll", styles.button); + "<br /><br />"
+            menuText = "**Art Handout Linker**<br />";
+            menuText += "This will connect art handouts onto characters (eg '**Picture:** Handout: Goblin'). When using the selected tokens option " +
+                "they must have their 'represented' set.<br />"
+            menuText += makeButton("Link ALL characters", "!prod artLinker linkAll", styles.button);
             menuText += makeButton("Link ONLY selected tokens", "!prod artLinker linkSelected", styles.button);
+            menuText += "<br /><br />**Page Finder**<br />For each character, this will look in all handouts for a link to that character, and set " +
+                "the GM info to include '___(s) can be found in:' and list handouts with them. You will need to go through and add in room numbers. <br />"
+            menuText += makeButton("Find ALL characters", "!prod artLinker findMentionAll", styles.button)
+            menuText += makeButton("Find ONLY selected chars", "!prod artLinker findMentionSelected", styles.button);
+            menuText += "<br /><br />" + makeButton("Back", "!prod menu", styles.button);
 
-            makeAndSendMenu(menuText, "Art Handout Linker", 'gm');
+            makeAndSendMenu(menuText, "Link Generators", 'gm');
 
         },
 
@@ -614,6 +637,56 @@ const Roll20Pro = (() => {
                 }
             }
 
+            burndown();
+        },
+        
+        mentionFinder = function(queue) {
+            //let mentions = ""
+            log("Mention Finder Running")
+            
+            const burndown = () => {
+                if (queue.length){
+                    //log("queue.length works")
+                    let mentions = [];
+                    let charObj = queue.shift();
+                    let charName = charObj.get("name");
+                    let handouts = findObjs({
+                        type: "handout"
+                    });
+                    const burndownHandouts = () => {
+                        if (handouts.length){
+                            //log("handouts.length is on " + handouts.length);
+                            let handout = handouts.shift();
+                            handout.get("gmnotes", function(gmnotes){
+                                if (gmnotes.includes(charName)){
+                                    mentions.push(handout);    
+                                }
+                                setTimeout(burndownHandouts,0);
+                            })
+                        } else {
+                            charObj.get("gmnotes", function(charNotes){
+                                if (mentions.length && !charNotes.includes("found")){
+                                    let newText = charName + "<p>(s) can be found in the following locations(s).</p>"
+                                    newText += "<br /><ul>"
+                                    _.each(mentions, function(mention){
+                                        mentionName = mention.get("name")
+                                        newText += "<li> [" + mentionName + "] </li>" 
+                                    })
+                                    
+                                    newText += "</ul><br /><br />" + charNotes;
+                                    charObj.set("gmnotes", newText);
+                                }
+                            })
+                            setTimeout(burndown, 0);
+                        }
+                        
+                    };
+                    burndownHandouts(); 
+                    
+                } else {
+                    //?
+                }
+            }
             burndown();
         },
 
@@ -782,6 +855,8 @@ const Roll20Pro = (() => {
             }
 
         }
+        
+        
 
     //=============ASHTONMANCER=========
     //List of all of the HTML handouts.
