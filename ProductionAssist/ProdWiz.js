@@ -15,14 +15,14 @@ const Roll20Pro = (() => {
     }
 
     const scriptName = "Roll20 Producer Wizard",
-        version = "0.2.0",
+        version = "0.2.2",
 
         //============CHAT RESPONSES SETUP============
 
         styles = {
             reset: 'padding: 0; margin: 0;',
             menu: 'background-color: #fff; border: 1px solid #000; padding: 5px; font-family: &quot;Good Pro Condensed&quot;, &quot;Roboto&quot;, &quot;Verdana&quot;,sans-serif;, ',
-            bigButton: 'font-size: 1.5em; background-color: pink; border: 1px solid black; border-radius: 3px; padding: 4px; margin: 2px; color: #000; text-align: center; ',
+            bigButton: 'font-size: 1.2em; background-color: pink; border: 1px solid black; border-radius: 3px; padding: 4px; margin: 2px; color: #000; text-align: center; ',
             button: 'background-color: pink; border: 1px solid black; border-radius: 3px; padding: 0px, 2px; margin: 2px; color: #000; text-align: center; ',
             textButton: 'background-color: transparent; border: none; padding: 0; color: #000; text-decoration: underline',
             list: 'list-style: none;',
@@ -53,23 +53,22 @@ const Roll20Pro = (() => {
 
         chatMenu = function () {
             menuText = "v" + version + " ready.<br /><br />";
-            menuText += "These are tools to help in the creation of Roll20 modules! If you need any help, ask Mik! <br />" +
-                "For documentation <a href='https://github.com/Mikkles/roll20producer/tree/master/ProductionAssist'>**click Here**</a><br /><br />";
             menuText += (!tokenModInstall) ? "TOKEN MOD IS NOT INSTALLED.<br />" : "";
             menuText += (!theAaronConfigInstall) ? "THE AARON CONFIG IS NOT INSTALLED.<br />" : "";
-            menuText += "**Text Autolinker Examples** <br />"
+            menuText += (!_.isEmpty(state.Roll20Pro.buddyTracker)) ? "**NOTE**: At least one remaining DL Buddy. See " + makeButton("Map Tools", "!prod map", styles.textButton) + ".<br /><br />" : ""
+            menuText += "Examples of autolinking functions.<br />"
             menuText += makeButton("Autolinker Examples", "!prod autoLinker", styles.bigButton);
-            menuText += "<br /><br />**Token Editor/Page Creator.** Script to categorize and autosort Token Pages.<br />"
-            menuText += makeButton("Token Page Creator Menu", "!prod tokenPage", styles.bigButton);
+            menuText += "<br /><br />Organizing Token Pages, editing groups of tokens.<br />"
+            menuText += makeButton("Token Tools Menu", "!prod tokenPage", styles.bigButton);
            // menuText += "<br /><br />**Token Editor Tools.** Quickly edit groups of tokens.<br />"
            // menuText += makeButton("Token Editor Tools Menu", "!prod tokenEditor", styles.button);
-            menuText += "<br /><br />**Map/Dynamic Lighting Tools.** Tools to assist map making and dynamic lighting.<br />"
+            menuText += "<br /><br />Setting up maps or making/testing Dynamic Lighting.<br />"
             menuText += makeButton("Map Tools Menu", "!prod map", styles.bigButton);
-            menuText += "<br /><br />**Art Handout Linker.** Add 'Picture: [Handout: Name]' to character bios. <br />"
+            menuText += "<br /><br />Linking art handouts or adding 'may be found in' text.<br />"
             menuText += makeButton("Handout Linker Menu", "!prod artLinker", styles.bigButton);
-            menuText += "<br /><br />**Ashtonmancer.** Administrators' tools. <br />"
+            menuText += "<br /><br />Admin tools. <br />"
             menuText += makeButton("Ashtonmancer Menu", "!prod ashtonmancer", styles.bigButton);
-            makeAndSendMenu(menuText, scriptName, 'gm');
+            makeAndSendMenu(menuText, "Main Menu", 'gm');
         },
 
         findAndMakeHandout = function (title, text) {
@@ -123,10 +122,10 @@ const Roll20Pro = (() => {
                             mapQuickChange(args[3], args[4], msg);
                             break;
                         case "buddy":
-                            toggleBuddy();
+                            toggleBuddy(msg);
                             break;
                         case "buddyFinder":
-                            buddyFinder();
+                            buddyFinder(msg);
                             break;
                         }
                     }
@@ -222,7 +221,12 @@ const Roll20Pro = (() => {
                             case "create":
                                 ashtonmancerCreateHandouts(args[3])
                                 break;
-                                
+                            case "cleanUpNulls":
+                                cleanUpNulls();
+                                break;
+                            case "clearAllBuddies":
+                                clearAllBuddies();
+                                break;
                         }
                     }
                     
@@ -543,7 +547,7 @@ const Roll20Pro = (() => {
             let page = getObj("page", pageID);
             if (pageID == lastPageID) {
                 if (_.isUndefined(state.Roll20Pro.buddyTracker[pageID])) {
-                    state.Roll20Pro.buddyTracker[pageID] = createObj("graphic", {
+                    newBuddy = createObj("graphic", {
                         name: "Dynamic Lighting Buddy",
                         imgsrc: 'https://s3.amazonaws.com/files.d20.io/images/140823448/E4Kn8ggLQWyRtaJHzLAPAw/thumb.png?1591297505',
                         _pageid: pageID,
@@ -554,8 +558,10 @@ const Roll20Pro = (() => {
                         width: 70,
                         height: 70,
                     })
+                    state.Roll20Pro.buddyTracker[pageID] = newBuddy.id;
                 } else {
-                    state.Roll20Pro.buddyTracker[pageID].remove();
+                    
+                    getObj("graphic", state.Roll20Pro.buddyTracker[pageID]).remove();
                     delete state.Roll20Pro.buddyTracker[pageID]
                 }
             } else {
@@ -650,6 +656,7 @@ const Roll20Pro = (() => {
                     let mentions = [];
                     let charObj = queue.shift();
                     let charName = charObj.get("name");
+                    let charID = charObj.get("id");
                     let handouts = findObjs({
                         type: "handout"
                     });
@@ -658,16 +665,18 @@ const Roll20Pro = (() => {
                             //log("handouts.length is on " + handouts.length);
                             let handout = handouts.shift();
                             handout.get("gmnotes", function(gmnotes){
-                                if (gmnotes.includes(charName)){
+                                if (gmnotes.includes(charName) || gmnotes.includes(charID)){
                                     mentions.push(handout);    
+                                    log("mention found for " + charName)
                                 }
                                 setTimeout(burndownHandouts,0);
                             })
                         } else {
                             charObj.get("gmnotes", function(charNotes){
+                                if (charNotes == null){charNotes = ""}
                                 if (mentions.length && !charNotes.includes("found")){
-                                    let newText = charName + "<p>(s) can be found in the following locations(s).</p>"
-                                    newText += "<br /><ul>"
+                                    let newText = "<p>" + charName + "(s) can be found in the following locations(s).</p>"
+                                    newText += "<ul>"
                                     _.each(mentions, function(mention){
                                         mentionName = mention.get("name")
                                         newText += "<li> [" + mentionName + "] </li>" 
@@ -675,7 +684,7 @@ const Roll20Pro = (() => {
                                     
                                     newText += "</ul><br /><br />" + charNotes;
                                     charObj.set("gmnotes", newText);
-                                }
+                                } else {}
                             })
                             setTimeout(burndown, 0);
                         }
@@ -1238,6 +1247,24 @@ const Roll20Pro = (() => {
                 findAndMakeHandout("Playing Burn Bryte", html.playingBurnBryte);
                 break;
         }
+    }
+    
+    //Cleaning up "null" in character GM areas, for testing.
+    cleanUpNulls = function(){
+        let chars = findObjs({
+            type: "character"
+        })
+        _.each(chars, function(char){
+            char.get("gmnotes", function(note){
+                newNote = note.replace("null", "")
+                char.set("gmnotes", newNote);
+            })
+        })
+    }
+    
+    //Empty Buddy list, for testing.
+    clearAllBuddies = function(){
+        state.Roll20Pro.buddyTracker = {};
     }
 
     //=========SCRIPT FUNCTIONALITY==============
