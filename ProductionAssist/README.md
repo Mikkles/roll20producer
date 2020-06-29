@@ -17,6 +17,18 @@ Once installed, simply type/copypaste `!prod` into chat!
 
 ## Features
 
+### Autolinker
+This function is always on while the script is installed. It enhances the `"[link]"` style links in bio/gmnotes of characters, and notes/gmnotes of handouts.
+* `[something]` will link to a character/handout named Something, as normal functionality.
+* `[something|words]` will display "words" on the handout, and link to the character/handout Something.
+* `[5e:fireball]` will link to the 5e spell compendium for Fireball.
+* `[5e:glyph of warding|glyph]` will display "glyph" and link to the 5e spell compendium for Glyph of Warding.
+
+This allows us to skip our usual !handouts page. For the `[something|words]` style, if the script doesn't find a character/handout with the exact name, it will fail. However, for `[5e:...]` styles, it will always link, as there's no way to make sure the compendium actually has a spell. We must double check all these links to make sure they go to the correct spell.
+
+For spells, we can use `5e:` or `PF2:` for their respective spell compendiums. More compendiums can be added into the script.
+
+---
 ### Token Page Creator
 This script will organize all the tokens on the Token Page, based on whatever categories we'd like. After dragging all of the tokens in the game onto the page, tagging them into categories (like Named NPCs, Mythic Monsters, NPC Spaceships, etc), you can click the button and the tokens will space themselves out, sorted alphabetically in each category, and arrange themself based on the width of the page. The script will automatically increase the height of the page to accomidate tokens, and will automatically add an asterisk next to any rollable tokens. If you make changes to the page (adding/removing/renaming tokens), you can run this script again to resort them. **Note!** This script will not create the titles of the categories, so you will need to go in and add/rearrange a text label for each category on the objects layer! 
 
@@ -65,7 +77,7 @@ You will be prompted to enter the pixel dimensions of the width and height of th
 These are simple quick buttons to be used while setting up pages. Each button will change an element of the page or grid.
 
 #### Create DL Buddy
-This will create or delete a token for testing Dynamic Lighting. The token has a light radius of 100'. 
+This will create or delete a token for testing Dynamic Lighting. The token has a light radius of 100'. The script will remember if any buddies are active, and will output "Buddy still in game" on the main menu if any are still on, so we can check that we've deleted all of them.
 
 ---
 ### Art Handout Linker
