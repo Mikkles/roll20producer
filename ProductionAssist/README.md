@@ -4,9 +4,9 @@ This script is a suite of tools to help with creation of modules in Roll20. A me
 ## Installation to Game
 For each game, the creator of the game (probably Ashton!) needs to install some scripts into the API. You can be in the game in another tab safely.
 
-**1.** The_Aaron's Config (from 1-click)
-**2.** Token-Mod (from 1-click)
-**3.** This script! Copy the raw text of this script into a new script and click Save Script.
+* **1.** The_Aaron's Config (from 1-click)
+* **2.** Token-Mod (from 1-click)
+* **3.** This script! Copy the raw text of this script into a new script and click Save Script.
 
 Once they've finished compiling, go into the game and type/copypaste `!prod` and navigate to the Ashtonmancer. 
 
@@ -27,6 +27,8 @@ This function is always on while the script is installed. It enhances the `"[lin
 This allows us to skip our usual !handouts page. For the `[something|words]` style, if the script doesn't find a character/handout with the exact name, it will fail. However, for `[5e:...]` styles, it will always link, as there's no way to make sure the compendium actually has a spell. We must double check all these links to make sure they go to the correct spell.
 
 For spells, we can use `5e:` or `PF2:` for their respective spell compendiums. More compendiums can be added into the script.
+
+**NOTE.** Since this part of the script triggers after changes to a handout/character have been saved, it's possible the handout/character will reload before the script finishes. If you still see bracketed links, close and reopen the handout/character before trying to fix them.
 
 ---
 ### Token Page Creator
