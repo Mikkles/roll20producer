@@ -82,12 +82,22 @@ These are simple quick buttons to be used while setting up pages. Each button wi
 This will create or delete a token for testing Dynamic Lighting. The token has a light radius of 100'. The script will remember if any buddies are active, and will output "Buddy still in game" on the main menu if any are still on, so we can check that we've deleted all of them.
 
 ---
-### Art Handout Linker
+### Link Generators
+These tools will automatically add links to certain handouts or characters.
+
+#### Art Handout Linker
 This tool will go through all selected tokens and attempt to add a "Picture: Handout: (Name)" link to their bio page. 
 
 When you run the tool, it will search for a handout titled exactly like the character that the token represents. It will check if the character's bio has the text "Picture:" in it. If the bio does not, then it will check if there is a handout titled "Handout: " plus the character's name. If it finds a handout, it will add "Picture: Handout: (name)" to the top of the bio.
 
 Note that this searches for exact title matches, so creatures named something different will not automatically link. For example, Elite Cauthooj will not find Handout: Cauthooj. These will still need to be added manually.
+
+#### Mention Linker
+This tool will go through all handouts and attempt to add "<name>(s) may be found in the following location(s):" to selected characters' gmnotes.
+  
+When you run the tool, it'll search all handouts for the character's name or a link to the character. If this is found, it will check if the character's gmnotes has the text "may be found" in it. If the gmnotes does not, it will add all mentions of that character in a bullet list. 
+
+Since this script doesn't understand context, it may gather irrelevant mentions, or pick up completely incorrect ones (the word "shaggy" will count as a mention for "hag"). In addition, it won't add things like room numbers or areas. This tool is meant largely as a starting point for us to carefully edit. 
 
 ---
 ### Ashtonmancer
