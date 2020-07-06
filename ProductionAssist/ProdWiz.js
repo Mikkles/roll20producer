@@ -3,15 +3,24 @@ const Roll20Pro = (() => {
         category = [],
         tokenModInstall,
         theAaronConfigInstall;
-    if (!_.has(state, "Roll20Pro")) {
-        reinstallRoll20Pro();
-    }
+    
 
     //IF NEED TO REINSTALL, USE !prod reinstall
     const reinstallRoll20Pro = function () {
         state.Roll20Pro = {};
         state.Roll20Pro.sortCats = {};
         state.Roll20Pro.buddyTracker = {};
+    }
+    
+    if (!_.has(state, "Roll20Pro")) {
+        reinstallRoll20Pro();
+    }
+    if (! _.has(state,'TheAaron')){
+    	state.TheAaron = {
+    		config: {
+    			makeHelpHandouts: false
+    		}
+    	};
     }
 
     const scriptName = "Roll20 Producer Wizard",
@@ -1170,9 +1179,11 @@ const Roll20Pro = (() => {
     ashtonmancerMenu = function () { 
         menuText = "";
         menuText += "These scripts will create templates for our typical pages and handouts! This should probably "
-        menuText += "only be used by a lead!<br /><br />**First Time Setup.** Run this once (or until Help Handouts are OFF).<br />"
+       /*
+       menuText += "only be used by a lead!<br /><br />**First Time Setup.** Run this once (or until Help Handouts are OFF).<br />"
         menuText += makeButton("First Time Setup", "!the-aaron --toggle-help-handouts&#13;!prod ashtonmancer first", styles.button);
         menuText += "<br /><br />"
+       */
         menuText += "**Handout Creation** <br />"
         menuText += makeButton("Battle Map Scale", "!prod ashtonmancer create battleMap", styles.button);
         menuText += makeButton("Credits", "!prod ashtonmancer create credits", styles.button);
