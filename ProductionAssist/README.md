@@ -4,9 +4,9 @@ This script is a suite of tools to help with creation of modules in Roll20. A me
 ## Installation to Game
 For each game, the creator of the game (probably Ashton!) needs to install some scripts into the API. You can be in the game in another tab safely.
 
-* **1.** The_Aaron's Config (from 1-click)
+* **1.** This script! Copy the raw text of this script into a new script and click Save Script.
 * **2.** Token-Mod (from 1-click)
-* **3.** This script! Copy the raw text of this script into a new script and click Save Script.
+* **3.** TableExport (from 1-click)
 
 Once they've finished compiling, go into the game and type/copypaste `!prod` and navigate to the Ashtonmancer. 
 
