@@ -24,7 +24,7 @@ const Roll20Pro = (() => {
     }
 
     const scriptName = "Roll20 Producer Wizard",
-        version = "0.2.4",
+        version = "0.2.5",
 
         //============CHAT RESPONSES SETUP============
 
@@ -646,9 +646,11 @@ const Roll20Pro = (() => {
                     burndownHandouts();
                 } else {
                     if (report == "") {
-                        makeAndSendMenu("No characters were linked!", "Art Linker Error", 'gm')
+                        setTimeout(function(){makeAndSendMenu("No characters were linked!", "Art Linker Error", 'gm');}, 500);
+                        return;
                     } else {
-                        makeAndSendMenu(report, "Links Added", 'gm');
+                        setTimeout(function(){makeAndSendMenu(report, "Links Added", 'gm');}, 500);
+                        return;
                     }
                 }
             }
