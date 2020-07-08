@@ -24,7 +24,7 @@ const Roll20Pro = (() => {
     }
 
     const scriptName = "Roll20 Producer Wizard",
-        version = "0.2.2",
+        version = "0.2.4",
 
         //============CHAT RESPONSES SETUP============
 
@@ -629,6 +629,7 @@ const Roll20Pro = (() => {
                             if (handout.get("name") == handoutName) {
                                 charObj.get("bio", function (bioText) {
                                     if (!bioText.includes("Picture:")) {
+                                        if bioText = null {bioText = ""}
                                         newText = "<b>Picture: </b><a href='http://journal.roll20.net/handout/" + handout.id + "'>" + handoutName + "</a><br/><br>" + bioText;
                                         charObj.set("bio", newText);
                                         report += "Added: " + charName + "<br />";
