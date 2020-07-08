@@ -629,7 +629,7 @@ const Roll20Pro = (() => {
                             if (handout.get("name") == handoutName) {
                                 charObj.get("bio", function (bioText) {
                                     if (!bioText.includes("Picture:")) {
-                                        if bioText = null {bioText = ""}
+                                        if (bioText == null) {bioText = ""}
                                         newText = "<b>Picture: </b><a href='http://journal.roll20.net/handout/" + handout.id + "'>" + handoutName + "</a><br/><br>" + bioText;
                                         charObj.set("bio", newText);
                                         report += "Added: " + charName + "<br />";
