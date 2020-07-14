@@ -24,7 +24,7 @@ const Roll20Pro = (() => {
     }
 
     const scriptName = "Roll20 Producer Wizard",
-        version = "0.2.8",
+        version = "0.2.9",
 
         //============CHAT RESPONSES SETUP============
 
@@ -150,6 +150,9 @@ const Roll20Pro = (() => {
                         default:
                             makeAndSendMenu("Argument not found for Token Page Creator; please contact Mik.", "Roll20 Producer Error", 'gm');
                             break;
+                        case "changeAvatar":
+                            changeAvatar(selected);
+                            break;
                         case "seeCats":
                             seeCats();
                             break;
@@ -265,6 +268,8 @@ const Roll20Pro = (() => {
             menuText += makeButton("Pathfinder 1e", "!token-mod --set bar1_link|hp bar2_link|ac bar3| bar3_link| &#13;!token-mod --set bar1_link|", styles.button);
             menuText += "<br /><br />**Assign Token as Default Token**"
             menuText += "<br />" + makeButton("Reassign", "!token-mod --set defaulttoken", styles.button)
+            menuText += "<br /><br />**Make Character's avatar from token**"
+            menuText += "<br />" + makeButton("Reassign", "!prod tokenPage changeAvatar", styles.button)
             menuText += "<hr />**Token Page Tools**<br />"
             menuText += makeButton("Assign Category", "!prod tokenPage addSort ?{Category Number}", styles.button);
             menuText += makeButton("See All Categories", "!prod tokenPage seeCats", styles.button);
@@ -462,6 +467,18 @@ const Roll20Pro = (() => {
             menuText += "<br />" + makeButton("Back", "!prod tokenPage", styles.button);
             makeAndSendMenu(menuText, "Categories", 'gm');
         },
+        
+        changeAvatar = function(selected){
+            if (selected){
+                _.each(selected, function(token){
+                    tok = getObj("graphic", token._id)
+                    img = tok.get("imgsrc");
+                    parent = tok.get("represents");
+                    par = getObj("character", parent)
+                    par.set("avatar", img);
+                })
+            }            
+        }
 
         //===========TOKEN EDITING TOOLS=============
 
