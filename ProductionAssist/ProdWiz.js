@@ -253,6 +253,11 @@ const Roll20Pro = (() => {
             menuText = "Tokens must have 'Represented' filled out. All tools work for all selected tokens.<br /><br />";
             menuText += "**Toggle Show Names.**<br />";
             menuText += makeButton("Toggle Show Names", "!token-mod --flip showname", styles.button);
+            menuText += "<br /><br />**Resize Tokens**<br />"
+            menuText += makeButton("1x1", "!token-mod --set width|70 height|70", styles.button);
+            menuText += makeButton("2x2", "!token-mod --set width|140 height|140", styles.button);
+            menuText += makeButton("3x3", "!token-mod --set width|210 height|210", styles.button);
+            menuText += makeButton("4x4", "!token-mod --set width|280 height|280", styles.button);
             menuText += "<br /><br />**Setup NPC Tokens for System.**<br />"
             menuText += makeButton("D&D 5e", "!token-mod --set bar1_link|hp bar2_link|npc_ac bar3| bar3_link| &#13;!token-mod --set bar1_link|", styles.button);
             menuText += makeButton("Pathfinder 2e", "!token-mod --set bar1_link|hit_points bar2_link|ac bar3| bar3_link| &#13;!token-mod --set bar1_link|", styles.button);
