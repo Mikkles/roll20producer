@@ -24,7 +24,7 @@ const Roll20Pro = (() => {
     }
 
     const scriptName = "Roll20 Producer Wizard",
-        version = "0.2.5",
+        version = "0.2.8",
 
         //============CHAT RESPONSES SETUP============
 
