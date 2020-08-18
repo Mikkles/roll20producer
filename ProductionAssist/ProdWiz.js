@@ -24,7 +24,7 @@ const Roll20Pro = (() => {
     }
 
     const scriptName = "Roll20 Producer Wizard",
-        version = "0.2.9",
+        version = "0.3.0",
 
         //============CHAT RESPONSES SETUP============
 
@@ -236,6 +236,9 @@ const Roll20Pro = (() => {
                             case "cleanUpNulls":
                                 cleanUpNulls();
                                 break;
+                            case "deUDL":
+                                removeUDL();
+                                break;
                             case "clearAllBuddies":
                                 clearAllBuddies();
                                 break;
@@ -248,6 +251,56 @@ const Roll20Pro = (() => {
                 }
             }
         },
+        
+        removeUDL = function (){
+            let pages = findObjs({
+                _type: "page"
+            })
+            _.each(pages, function(page){
+                let isLit = page.get("dynamic_lighting_enabled");
+                //let isAFoW = page.get("explorer_mode");
+                let isDay = page.get("daylight_mode_enabled");
+                
+                if (isLit) {page.set("showlighting", isLit);}
+                page.set("lightglobalillum", isDay);
+                page.set("lightenforcelos", true);
+                
+                
+                page.set("dynamic_lighting_enabled", false);
+                //page.set("daylight_mode_enabled", false);
+            })
+            
+            let tokens = findObjs({
+                _type: "graphic",
+            })
+            
+            _.each(tokens, function(token){
+                let hasDV = token.get("has_night_vision");
+                let DVval = token.get("night_vision_distance");
+                let hasVis = token.get("has_bright_light_vision");
+                let emitsB = token.get("emits_bright_light");
+                let emitsL = token.get("emits_low_light");
+                let Bval = token.get("bright_light_distance");
+                let Lval = token.get("low_light_distance");
+                let newBright = Bval + Lval;
+                
+                if (emitsB || emitsL){
+                    token.set("light_otherplayers", true);
+                    token.set("light_radius", newBright);
+                    token.set("light_dimradius", Lval);
+                } else if (hasDV) {
+                    token.set("light_otherplayers", false);
+                    token.set("light_radius", DVval);
+                    token.set("light_dimradius", 0);
+                }
+                
+                token.set("light_hassight", hasVis);
+                
+            })
+            
+        },
+        
+        
         //===========TOKEN PAGE GENERATOR=============
         //--------------Create asterisks for token page generator\
 
@@ -478,7 +531,7 @@ const Roll20Pro = (() => {
                     par.set("avatar", img);
                 })
             }            
-        }
+        },
 
         //===========TOKEN EDITING TOOLS=============
 
