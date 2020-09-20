@@ -7,6 +7,7 @@ const Roll20Pro = (() => {
         state.Roll20Pro = {};
         state.Roll20Pro.sortCats = {};
         state.Roll20Pro.buddy = null;
+        state.Roll20Pro.productName = "PRODUCT NAME";
     }
     
     if (! _.has(state, "Roll20Pro")) {
@@ -14,7 +15,7 @@ const Roll20Pro = (() => {
     }
     
     const scriptName = "Roll20 Production Wizard",
-        version = "0.4",
+        version = "0.4.3",
         
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -81,7 +82,7 @@ const Roll20Pro = (() => {
             makeButton("Token Helper", "!prod token", styles.bigButton) + 
             makeButton("Map/DL Helper", "!prod map", styles.bigButton) + 
             makeButton("Picture/Mention Finder", "!prod finder", styles.bigButton) + 
-            makeButton("Stock Handouts", "!prod stockHandout", styles.bigButton) + 
+            makeButton("Stock Handouts", "!prod stock", styles.bigButton) + 
             makeButton("Admin Tools", "!prod admin", styles.bigButton)
             ,
             autolinker: () => "<p>Some examples of the autolinker functionality. These can be used on the notes/gmnotes of any handout or character.</p>" +
@@ -136,22 +137,30 @@ const Roll20Pro = (() => {
             makeButton("High Vis Green", "!prod map edit gridcolor #00ff00", styles.button) +
             makeButton("Med Vis Green", "!prod map edit gridcolor #93c47d", styles.button) +
             makeH4("Toggle Dynamic Lighting Buddy") + "<p>Creates a buddy on the current page. If there are already any buddies created, " + 
-            "this will delete it. You may copypaste buddies as long as you remove them before project completion." +
+            "this will delete it. You may copypaste buddies as long as you remove them before project completion.</p>" +
             makeButton("Toggle Buddy", "!prod map buddy", styles.button) +
             makeBackButton()
             ,
-            finder: () => makeH4("Picture Finder") +
+            finder: () => makeH4("NPC Handout Finder") +
             makeButton("Find for All Characters", "!prod finder art", styles.button) + 
             makeButton("Find for Selected Only", "!prod finder artSelected", styles.button) + 
-            makeH4("Character Mention Finder") +
+            makeH4("NPC Mention Finder") +
             makeButton("Find for All Characters", "!prod finder mention", styles.button) + 
             makeButton("Find for Selected Only", "!prod finder mentionSelected", styles.button) +
+            makeH4("NPC Handout Processor") +
+            makeButton("Create Handouts","!prod finder process", styles.button) + 
             makeBackButton()
             ,
-            stockHandouts: () => "Stock Handouts are currently under construction." +
+            stockHandouts: () => `<p>Current Product Name: ${state.Roll20Pro.productName}</p>` +
+            makeButton("Change Product Name", "!prod stock changeName ?{Product Name}", styles.button) +
+            makeH4("Stock Handouts") + 
+            makeButton("Battle Map Scale", "!prod stock create battleMap", styles.button) +
+            //makeButton("!linking", "!prod stock linking", styles.button) + //UNDER CONSTRUCTION
             makeBackButton()
             ,
-            admin: () => "Admin scripts are currently under construction." + 
+            admin: () => "Admin scripts are currently under construction.<br/>" + 
+            makeH4("Handout HTML Logger") + "<p>This will prompt the name of a handout, then log the HTML of it in the API Output Console.</p>" +
+            makeButton("Log HTML", "!prod admin getHTML ?{Handout Name}", styles.button) + 
             makeBackButton()
             
             /*makeH4("Reset Wizard") + 
@@ -172,6 +181,9 @@ const Roll20Pro = (() => {
                 let lastPageID = getObj('player', msg.playerid).get('_lastpage');
                 let who = (getObj('player',msg.playerid)||{get:()=>'API'}).get('_displayname');
                 let caller = '"' + who + '"'
+                let ext = args.slice(3);
+                let extString = ext.join(" ");
+
                 
                 switch (command) {
                     default:
@@ -198,6 +210,7 @@ const Roll20Pro = (() => {
                             case "artSelected": artFinder(selected); break;
                             case "mention": mentionFinder("all"); break;
                             case "mentionSelected": mentionFinder(selected); break;
+                            case "process": processImageToHandout(selected); break;
                         } 
                         break;
                     case "map": 
@@ -209,10 +222,13 @@ const Roll20Pro = (() => {
                             case "buddy": toggleBuddy(msg); break;
                         }
                         break;
-                    case "stockHandout":
+                    case "stock":
                         switch (args[2]) {
                             default: 
                             case "menu": makeAndSendMenu(menuText.stockHandouts(), "Stock Handouts", caller); break;
+                            case "linking": createLinkingHandout(); break;
+                            case "changeName": state.Roll20Pro.productName = extString; break;
+                            case "create": createStockHandout(args[3], caller); break;
                             //TO DO: actual handouts :/
                         }
                         break;
@@ -220,6 +236,8 @@ const Roll20Pro = (() => {
                         switch (args[2]) {
                             default: 
                             case "menu": makeAndSendMenu(menuText.admin(), "Admin Tools", caller); break;
+                            case "getHTML": logHandoutHTML(msg.content); break;
+                            //case "linking": createLinkingHandout(); break;
                             //TO DO: admin reset
                         }
                         break;
@@ -753,7 +771,145 @@ const Roll20Pro = (() => {
         
 ///===========STOCK HANDOUTS===========
         handoutHTML = {
-            //battleMap: () => ``
+            battleMap: () => `<h2>Battle Map Scale</h2><p>Map scale varies across the collection of battle maps within <i>${state.Roll20Pro.productName}</i>. To make movement and token placement ideal, we have adjusted the grid on some of the maps so that tokens are easier to select and manipulate. Listed below are all the maps in this module and what scale they are currently set to.</p><hr><h3 style=\"font-family: &#34;helvetica neue&#34; , &#34;helvetica&#34; , &#34;arial&#34; , sans-serif\">100 Foot Maps</h3><p style=\"font-family: &#34;helvetica neue&#34; , &#34;helvetica&#34; , &#34;arial&#34; , sans-serif\">Each grid square on the art is 100' with no Roll20 subdivisions. Medium/Small tokens are set to 1 to 1 units (technically 100' by 100') here.</p><p>If you wish to set it for scale accuracy, enable the Grid and set the Grid Size in Page Settings to 0.05 units. Token Sizing is as follows: Medium/Small/Tiny (0.05 unit by 0.05 unit), Large (0.1 unit by 0.1 unit), Huge (0.15 unit by 0.15 unit), gargantuan (0.2 unit by 0.2 unit).</p><p><b>100 Foot Maps in <i>${state.Roll20Pro.productName}</i></b></p><ul><li>Abberton</li></ul><hr><h3>20 Foot Maps</h3><p>Each grid square on the art is 20' with four subdivisions in the Roll20 grid (Grid Size set to 0.5 units). Each Roll20 grid square is 5'. Tokens are sized accordingly to Pathfinder Second Edition rules (5', 10', 15', 20'). No adjustments are needed for strategy accuracy.</p><p><b>20 Foot Maps in <i><i>${state.Roll20Pro.productName}</i></i></b></p><ul><li>Big Top</li></ul><hr><p></p><h3 style=\"font-family: &#34;helvetica neue&#34; , &#34;helvetica&#34; , &#34;arial&#34; , sans-serif\">5 Foot Maps</h3><p>Each grid square is 5' on the art as well as 5' on the Roll20 grid. No adjustments are needed.</p><p><strong>5</strong><strong>&nbsp;Foot Maps in <i><i>${state.Roll20Pro.productName}</i></i></strong><br></p><ul><li>Circus Camp (This map can also be used at a 0.5 grid size for a tactical experience.)</li><li>Abberton</li><li>Oldlin's Orchard</li><li>Hawfton Mill</li><li>Mad Mug</li><li>Goldenlaws Church</li><li>Lindell Barn</li><li>Hermitage of the Blessed Lightning</li><li>Erran Tower First Floor</li><li>Erran Tower Second Floor</li><li>Erran Tower Top</li></ul>`,
+            gameSettings: () => `<h2>Game Settings</h2><p>This module has been set up with the following Game Settings. For more information on how to change these settings, please check out the <a href=\"https://roll20.zendesk.com/hc/en-us/articles/360039715753-Game-Management\">Game Management page on the Help Center</a>.<br></p><h3 style=\"font-family: &#34;helvetica neue&#34; , &#34;helvetica&#34; , &#34;arial&#34; , sans-serif\">Map Settings</h3><p><strong>Dynamic Lighting:</strong>&nbsp;Enabled<br><strong>Enforce Line of Sight:</strong>&nbsp;On</p><p><strong>Only Update on Drop:</strong>&nbsp;Off<br><strong>Restrict Movement:</strong>&nbsp;Off<br></p><h3 style=\"font-family: &#34;helvetica neue&#34; , &#34;helvetica&#34; , &#34;arial&#34; , sans-serif\">Token Settings</h3><p><strong>Bar 1:</strong>&nbsp;hit_points<br><strong>Bar 2:</strong>&nbsp;ac<br><strong>Bar 3:</strong>&nbsp;Intentionally left blank for GM use<br><strong>Show Nameplate Toggle:</strong>&nbsp;On<br><br><strong>Light Radius:</strong>&nbsp;Used for darkvision or if an NPC exudes light<br><b><i>Note:</i></b>&nbsp;On large, performance heavy maps, groups of NPC's with darkvision may be adjusted so only one will have this radius turned on. This assists with game performance.&nbsp;<br><strong>All Players See Light:</strong>&nbsp;On if NPC exudes light<br><strong>Has Sight Toggle:</strong>&nbsp;Off, for performance.</p>`,
+            
+        },
+        
+        createStockHandout = function(name, caller) {
+            title = ""
+            
+            switch (name) {
+                case "battleMap": title = "Battle Map Scale"; findAndMakeHandout(title, "", handoutHTML.battleMap()); break;
+                case "gameSettings": title = "Game Settings"; findAndMakeHandout(title, "", handoutHTML.gameSettings()); break;
+            }
+            
+            if (title != ""){
+                makeAndSendMenu(title + " handout created", "Handout", caller);
+                
+                makeAndSendMenu(menuText.stockHandouts(), "Stock Handouts", caller)
+            }
+            else{
+                makeAndSendMenu(title + " handout not created; no html found", "Handout Error", caller);
+                
+                makeAndSendMenu(menuText.stockHandouts(), "Stock Handouts", caller)
+            }
+            
+        },
+        
+        
+        findAndMakeHandout = function (title, text, gmtext) {
+            let check = findHandout(title);
+            if (check) {
+                log("Handout Exists");
+            }
+            if (findHandout(title)) {
+                makeHandout(title, text, gmtext)
+            }
+        },
+
+        findHandout = function (title) {
+            let handout = findObjs({
+                _type: 'handout',
+                name: title
+            })
+            return handout
+        },
+        
+        replaceHandout = function(title, text, gmtext) {
+            let handout = findObjs("handout");
+        }
+
+        makeHandout = function (title, text, gmtext) {
+            let handout = createObj("handout", {
+                name: title,
+            });
+            handout.set({
+                notes: text
+            });
+            handout.set({
+                gmnotes: gmtext
+            });
+        },
+        
+        processImageToHandout = function(selected){
+            let count = 0;
+            if(selected){
+                _.each(selected, function (token) {
+                    let tokenID = token._id;
+                    let tokenObj = getObj("graphic", tokenID);
+                    let img = tokenObj.get("imgsrc");
+                    let handout = createObj("handout",{
+                        name: "Handout: "
+                    });
+                    handout.set("avatar", img);
+                    count++;
+                })
+            }
+            makeAndSendMenu(count + " handouts created.", "Creator", 'gm')
+            
+        }
+
+        logHandoutHTML = function(msg) {
+            log(msg.replace("!prod admin getHTML ",""))
+            let name = msg.replace("!prod admin getHTML ","")
+            let handout = findObjs({                              
+                _type: "handout",
+                name: name
+            });
+            
+            if (handout[0]){
+                handout[0].get("gmnotes", function(note){
+                    log(note);
+                })
+                handout[0].get("notes", function(note){
+                    log(note);
+                })
+            }
+            
+            
+            
+        },
+        
+        createLinkingHandout = function(){
+            let handout = findObjs({                              
+                _type: "handout",
+                name: "!linking"
+            });
+            if(!handout[0]){
+                handout[0] = createObj('handout', {
+                    name: '!linking'
+                });
+            }
+            
+            /*
+            let allHandouts = findObjs({
+                type: "handout"
+            })
+            let allChars = findObjs({
+                type: "character"
+            })
+            
+            let allLinks = allHandouts.concat(allChars);
+            */
+            let text = ""
+            let list = JSON.parse(Campaign().get("_journalfolder"))
+
+            
+            
+            _.each(list, function (link) {
+                let linkObj = getObj("handout", link.id);
+                let name = link.get("name");
+                let url = link.id
+                
+                
+                
+                text += "<a href='http://journal.roll20.net/handout/" + url + "'>" + name + "</a><br>"
+                
+            })
+            handout[0].set({
+                notes: text
+            });
         }
     
    
@@ -772,6 +928,8 @@ const Roll20Pro = (() => {
             }
             
             state.TheAaron.config.makeHelpHandouts = false;
+            
+            if (!state.Roll20Pro.productName) {state.Roll20Pro.productName = "PRODUCT NAME"}
         },
     
         registerEventHandlers = function () {
