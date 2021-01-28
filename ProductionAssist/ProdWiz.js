@@ -15,7 +15,7 @@ const Roll20Pro = (() => {
     }
     
     const scriptName = "Roll20 Production Wizard",
-        version = "0.4.3",
+        version = "0.5",
         
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -107,10 +107,18 @@ const Roll20Pro = (() => {
             makeButton("Pathfinder 2e", "!token-mod --set bar1_link|hit_points bar2_link|armor_class bar3| bar3_link| &#13;!token-mod --set bar1_link|", styles.button) +
             makeButton("Starfinder", "!token-mod --set bar1_link|hp bar2_link|eac bar3_link|kac &#13;!token-mod &#13;!token-mod --set bar1_link|", styles.button) +
             makeButton("Pathfinder 1e", "!token-mod --set bar1_link|hp bar2_link|ac bar3| bar3_link| &#13;!token-mod &#13;!token-mod --set bar1_link|", styles.button) +
-            makeH4("LDL Darkvision") + 
+            makeH4("<del>LDL Darkvision") + 
             makeButton("None", "!token-mod --set light_radius| light_dimradius|0", styles.button) +
             makeButton("60 ft", "!token-mod --set light_radius|60 light_dimradius|0", styles.button) +
-            makeButton("120 ft", "!token-mod --set light_radius|120 light_dimradius|0", styles.button) + 
+            makeButton("120 ft", "!token-mod --set light_radius|120 light_dimradius|0", styles.button) + "</del>" +
+            makeH4("UDL Vision") + 
+            makeButton("Vision Off", "!token-mod --set bright_vision|false", styles.button) +
+            makeButton("Vision On", "!token-mod --set bright_vision|true", styles.button) +
+            makeH4("UDL Darkvision") + 
+            makeButton("None", "!token-mod --set has_night_vision|false night_vision_distance|0", styles.button) +
+            makeButton("60 ft", "!token-mod --set has_night_vision|true night_vision_distance|60", styles.button) +
+            makeButton("120 ft", "!token-mod --set has_night_vision|true night_vision_distance|120", styles.button) + 
+            makeButton("PF2: Get from senses", "!prod token UDLdv", styles.button) + 
             makeH4("Defaults") + 
             makeButton("Assign as Default Token", "!token-mod --set defaulttoken", styles.button) +
             makeButton("Avatar from Token", "!prod token avatar", styles.button) +
@@ -200,6 +208,7 @@ const Roll20Pro = (() => {
                             case "runSorter": if (onPlayerPage(msg)) {runGenerateTokenPage();} 
                                 break;
                             case "resetCats": resetCats(); break;
+                            case "UDLdv": tokenPF2DarkvisionChecker(selected); break;
                         } 
                         break;
                     case "finder":
@@ -341,6 +350,27 @@ const Roll20Pro = (() => {
                 })
             }            
         },
+        
+        tokenPF2DarkvisionChecker =function(selected){
+            if (selected){
+                _.each(selected, function(token){
+                    if (token._type == "graphic"){
+                        tok = getObj("graphic", token._id);
+                        parent = tok.get("represents");
+                        senses = getAttrByName(parent, "senses")
+                        log(tok.get('name') + " senses= " + senses);
+                        if (typeof senses !== 'undefined'){
+                            if (senses.includes("darkvision")) {
+                                tok.set("has_night_vision", true);
+                                tok.set("night_vision_distance", 60);
+                                log("got dv!")
+                            }
+                        }
+                    }
+                })
+            }
+        },
+        
 
 //===========TOKEN PAGE GENERATOR=============
         makeText = function (x, y, defaultText) {
