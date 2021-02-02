@@ -15,7 +15,7 @@ const Roll20Pro = (() => {
     }
     
     const scriptName = "Roll20 Production Wizard",
-        version = "0.5",
+        version = "0.6",
         
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -49,7 +49,7 @@ const Roll20Pro = (() => {
         },
         
         makeH4 = function(text){
-            return '<br /><br /><h4>' + text + '</h4>';  
+            return '<h4>' + text + '</h4>';  
         },
 
         makeAndSendMenu = function (contents, title, whisper, callback) {
@@ -77,6 +77,8 @@ const Roll20Pro = (() => {
             ((!tokenModInstall) ? "<p style='" + styles.warning + "'> TOKEN MOD is not installed!</p>" : "") +
             ((!theAaronConfigInstall) ? "<p style='" + styles.warning + "'> AARON CONFIG is not installed!</p>" : "") +
             ((locateBuddies().length) ? "<p style='" + styles.warning + "'>There is at least one DL buddy left! Go to Map/DL Helper to toggle off.</p>" : "") +
+            
+            "<p>See <b><u><a href='https://roll20.atlassian.net/wiki/spaces/CP/pages/1408761861/Production+Wizard+Script'>How-To</a></u></b> for instructions.</p>" +
 
             makeButton("Autolinker Examples", "!prod autolinker", styles.bigButton)+
             makeButton("Token Helper", "!prod token", styles.bigButton) + 
@@ -96,7 +98,10 @@ const Roll20Pro = (() => {
             makeBackButton()
             ,
             token: () => "<p style='" + styles.note + "'>Tokens must have Represented filled out manually.</p>" +
-            "<h4>**Toggle Show Names**</h4>" + makeButton("Toggle Show Names", "!token-mod --flip showname", styles.button) +
+            makeH4("Show Nameplates") +
+            makeButton("Show Names", "!token-mod --on showname", styles.button) +
+            makeButton("Hide Names", "!token-mod --off showname", styles.button) +
+            makeButton("Toggle Names", "!token-mod --flip showname", styles.button) +
             makeH4("Resize Tokens") + 
             makeButton("1x1", "!token-mod --set width|70 height|70", styles.button) +
             makeButton("2x2", "!token-mod --set width|140 height|140", styles.button) +
@@ -107,10 +112,6 @@ const Roll20Pro = (() => {
             makeButton("Pathfinder 2e", "!token-mod --set bar1_link|hit_points bar2_link|armor_class bar3| bar3_link| &#13;!token-mod --set bar1_link|", styles.button) +
             makeButton("Starfinder", "!token-mod --set bar1_link|hp bar2_link|eac bar3_link|kac &#13;!token-mod &#13;!token-mod --set bar1_link|", styles.button) +
             makeButton("Pathfinder 1e", "!token-mod --set bar1_link|hp bar2_link|ac bar3| bar3_link| &#13;!token-mod &#13;!token-mod --set bar1_link|", styles.button) +
-            makeH4("<del>LDL Darkvision") + 
-            makeButton("None", "!token-mod --set light_radius| light_dimradius|0", styles.button) +
-            makeButton("60 ft", "!token-mod --set light_radius|60 light_dimradius|0", styles.button) +
-            makeButton("120 ft", "!token-mod --set light_radius|120 light_dimradius|0", styles.button) + "</del>" +
             makeH4("UDL Vision") + 
             makeButton("Vision Off", "!token-mod --set bright_vision|false", styles.button) +
             makeButton("Vision On", "!token-mod --set bright_vision|true", styles.button) +
@@ -127,11 +128,16 @@ const Roll20Pro = (() => {
             makeButton("See Categories", "!prod token seeCats", styles.button) + "<br/><br/>" +
             makeButton("Run Page Sorter", "!prod token runSorter", styles.button) +
             makeButton("Reset Categories (if sure!)", "!prod token resetCats", styles.button) +
+            makeH4("<del><i>LDL Darkvision") + 
+            makeButton("None", "!token-mod --set light_radius| light_dimradius|0", styles.button) +
+            makeButton("60 ft", "!token-mod --set light_radius|60 light_dimradius|0", styles.button) +
+            makeButton("120 ft", "!token-mod --set light_radius|120 light_dimradius|0", styles.button) + "</del></i>" +
             makeBackButton()
             ,
             map: () => "<p style='" + styles.note + "'>Player bookmark must be on your active page.</p>" +
             makeH4("Resize Map and Page") + "<p>Select map graphic and enter width/height of image when prompted.</p>" +
-            makeButton("Resize Map and Page", "!prod map resize ?{Pixel width of JPG} ?{Pixel height of JPG}", styles.button) + 
+            makeButton("Resize by pixel dimensions", "!prod map resize ?{Pixel width of image} ?{Pixel height of image}", styles.button) + 
+            makeButton("Resize by 70px units", "!prod map resize ?{Unit width of image}*70 ?{Unit height of image}*70", styles.button) + 
             makeH4("Change Grid Width") +
             makeButton("Width 1", "!prod map edit snapping_increment 1", styles.button) +
             makeButton("Width 0.5", "!prod map edit snapping_increment 0.5", styles.button) +
@@ -156,7 +162,7 @@ const Roll20Pro = (() => {
             makeButton("Find for All Characters", "!prod finder mention", styles.button) + 
             makeButton("Find for Selected Only", "!prod finder mentionSelected", styles.button) +
             makeH4("NPC Handout Processor") +
-            makeButton("Create Handouts","!prod finder process", styles.button) + 
+            makeButton("Create Empty Art Handouts","!prod finder process", styles.button) + 
             makeBackButton()
             ,
             stockHandouts: () => `<p>Current Product Name: ${state.Roll20Pro.productName}</p>` +
@@ -690,7 +696,7 @@ const Roll20Pro = (() => {
                             if (handout.get("name") == handoutName) {
                                 charObj.get("bio", function (bioText) {
                                     if (!bioText.includes("Picture:")) {
-                                        if (bioText == null || undefined) {bioText = ""}
+                                        if (bioText == null || bioText == undefined) {bioText = ""}
                                         newText = "<b>Picture: </b><a href='http://journal.roll20.net/handout/" + handout.id + "'>" + handoutName + "</a><br/><br>" + bioText;
                                         charObj.set("bio", newText);
                                         report += "Added: " + charName + "<br />";
