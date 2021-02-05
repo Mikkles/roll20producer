@@ -15,7 +15,7 @@ const Roll20Pro = (() => {
     }
     
     const scriptName = "Roll20 Production Wizard",
-        version = "0.6",
+        version = "0.7.2",
         
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -75,7 +75,7 @@ const Roll20Pro = (() => {
         menuText = {
             main: () => "<p>v" + version + " ready.</p>" +
             ((!tokenModInstall) ? "<p style='" + styles.warning + "'> TOKEN MOD is not installed!</p>" : "") +
-            ((!theAaronConfigInstall) ? "<p style='" + styles.warning + "'> AARON CONFIG is not installed!</p>" : "") +
+            //((!theAaronConfigInstall) ? "<p style='" + styles.warning + "'> AARON CONFIG is not installed!</p>" : "") +
             ((locateBuddies().length) ? "<p style='" + styles.warning + "'>There is at least one DL buddy left! Go to Map/DL Helper to toggle off.</p>" : "") +
             
             "<p>See <b><u><a href='https://roll20.atlassian.net/wiki/spaces/CP/pages/1408761861/Production+Wizard+Script'>How-To</a></u></b> for instructions.</p>" +
@@ -108,7 +108,7 @@ const Roll20Pro = (() => {
             makeButton("3x3", "!token-mod --set width|210 height|210", styles.button) +
             makeButton("4x4", "!token-mod --set width|280 height|280", styles.button) +
             makeH4("Setup Token by System") + 
-            makeButton("D&D 5e", "!token-mod --set bar1_link|hp bar2_link|npc_ac bar3| bar3_link| &#13;!token-mod &#13;!token-mod --set bar1_link|", styles.button) +
+            makeButton("D&D 5e", "!token-mod --set bar1_link|hp bar2_link|npc_ac bar3| bar3_link| &#13;!token-mod --set bar1_reset| &#13;!token-mod --set bar1_link|", styles.button) +
             makeButton("Pathfinder 2e", "!token-mod --set bar1_link|hit_points bar2_link|armor_class bar3| bar3_link| &#13;!token-mod --set bar1_link|", styles.button) +
             makeButton("Starfinder", "!token-mod --set bar1_link|hp bar2_link|eac bar3_link|kac &#13;!token-mod &#13;!token-mod --set bar1_link|", styles.button) +
             makeButton("Pathfinder 1e", "!token-mod --set bar1_link|hp bar2_link|ac bar3| bar3_link| &#13;!token-mod &#13;!token-mod --set bar1_link|", styles.button) +
@@ -122,7 +122,7 @@ const Roll20Pro = (() => {
             makeButton("PF2: Get from senses", "!prod token UDLdv", styles.button) + 
             makeH4("Defaults") + 
             makeButton("Assign as Default Token", "!token-mod --set defaulttoken", styles.button) +
-            makeButton("Avatar from Token", "!prod token avatar", styles.button) +
+            makeButton("Avatar from Token (if in library)", "!prod token avatar", styles.button) +
             makeH4("<hr>Token Page Tools") +
             makeButton("Assign Category", "!prod token addToCat ?{Category Number}", styles.button) +
             makeButton("See Categories", "!prod token seeCats", styles.button) + "<br/><br/>" +
@@ -137,7 +137,7 @@ const Roll20Pro = (() => {
             map: () => "<p style='" + styles.note + "'>Player bookmark must be on your active page.</p>" +
             makeH4("Resize Map and Page") + "<p>Select map graphic and enter width/height of image when prompted.</p>" +
             makeButton("Resize by pixel dimensions", "!prod map resize ?{Pixel width of image} ?{Pixel height of image}", styles.button) + 
-            makeButton("Resize by 70px units", "!prod map resize ?{Unit width of image}*70 ?{Unit height of image}*70", styles.button) + 
+            makeButton("Resize by 70px units", "!prod map resizeUnit ?{Unit width of image} ?{Unit height of image}", styles.button) + 
             makeH4("Change Grid Width") +
             makeButton("Width 1", "!prod map edit snapping_increment 1", styles.button) +
             makeButton("Width 0.5", "!prod map edit snapping_increment 0.5", styles.button) +
@@ -233,6 +233,7 @@ const Roll20Pro = (() => {
                             default: 
                             case "menu": makeAndSendMenu(menuText.map(), "Map Helper", caller); break;
                             case "resize": if (onPlayerPage(msg)) {resizeMap(args[3], args[4], msg)} break;
+                            case "resizeUnit": if (onPlayerPage(msg)) {resizeMapUnit(args[3], args[4], msg)} break;
                             case "edit": if (onPlayerPage(msg)) {mapQuickChange(args[3], args[4], msg)} break;
                             case "buddy": toggleBuddy(msg); break;
                         }
@@ -614,6 +615,37 @@ const Roll20Pro = (() => {
             }
         },
         
+        resizeMapUnit = function (width, height, msg) {
+
+            selected = msg.selected
+            if (!width || width == "" || !height || height == "") {
+                makeAndSendMenu("Height or Width arguments not found!", "Roll20 Producer Error", 'gm');
+            } else {
+                if (!selected || !selected[0]) {
+                    makeAndSendMenu("No map image selected!", "Roll20 Producer Error", 'gm');
+                } else {
+
+                    let lastPageID = getObj('player', msg.playerid).get('_lastpage');
+                    let pageID = Campaign().get("playerpageid")
+                    let page = getObj("page", pageID);
+                    if (pageID == lastPageID) {
+                        page.set("width", width);
+                        page.set("height", height);
+                        tokenID = selected[0]._id;
+                        tokenObject = getObj("graphic", tokenID)
+                        tokenObject.set({
+                            width: width * 70,
+                            height: height * 70,
+                            left: (width*70)/2,
+                            top: (height*70)/2,
+                        });
+                    } else {
+                        makeAndSendMenu("For safety, The player bookmark must be on your page!", "Roll20 Producer Error", 'gm');
+                    }
+
+                }
+            }
+        },
         mapQuickChange = function (param, value, msg) {
             if (!param || !value) {
                 makeAndSendMenu("Parameters not found", "Roll20 Producer Error", 'gm');
@@ -653,7 +685,9 @@ const Roll20Pro = (() => {
                     imgsrc: 'https://s3.amazonaws.com/files.d20.io/images/140823448/E4Kn8ggLQWyRtaJHzLAPAw/thumb.png?1591297505',
                     _pageid: pageID,
                     layer: "objects",
-                    light_radius: "100",
+                    has_bright_light_vision: true,
+                    emits_bright_light: true,
+                    bright_light_distance: "100",
                     top: 70,
                     left: 70,
                     width: 70,
