@@ -15,7 +15,7 @@ const Roll20Pro = (() => {
     }
     
     const scriptName = "Roll20 Production Wizard",
-        version = "0.7.2",
+        version = "0.7.3",
         
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -351,6 +351,11 @@ const Roll20Pro = (() => {
                 _.each(selected, function(token){
                     tok = getObj("graphic", token._id)
                     img = tok.get("imgsrc");
+                    log(tok.get("represents"));
+                    if (tok.get("represents") == ""){
+                        makeAndSendMenu("There is no Represented field for one or more tokens", "Admin Tools", 'gm');
+                        return;
+                    }
                     parent = tok.get("represents");
                     par = getObj("character", parent)
                     par.set("avatar", img);
