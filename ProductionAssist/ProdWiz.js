@@ -15,7 +15,7 @@ const Roll20Pro = (() => {
     }
     
     const scriptName = "Roll20 Production Wizard",
-        version = "0.7.3",
+        version = "0.7.4",
         
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -115,6 +115,7 @@ const Roll20Pro = (() => {
             makeH4("UDL Vision") + 
             makeButton("Vision Off", "!token-mod --set bright_vision|false", styles.button) +
             makeButton("Vision On", "!token-mod --set bright_vision|true", styles.button) +
+            makeButton("Campaign-wide Vis/NV Off", "!prod token ?{This affects every placed token! Type 'off' to confirm.}", styles.button) +
             makeH4("UDL Darkvision") + 
             makeButton("None", "!token-mod --set has_night_vision|false night_vision_distance|0", styles.button) +
             makeButton("60 ft", "!token-mod --set has_night_vision|true night_vision_distance|60", styles.button) +
@@ -189,6 +190,7 @@ const Roll20Pro = (() => {
         
         handleInput = function (msg) {
             if (msg.type == "api" && msg.content.indexOf("!prod") === 0) {
+                //log(msg);
                 let selected = msg.selected;
                 let args = msg.content.split(" ");
                 let command = args[1];
@@ -215,6 +217,7 @@ const Roll20Pro = (() => {
                                 break;
                             case "resetCats": resetCats(); break;
                             case "UDLdv": tokenPF2DarkvisionChecker(selected); break;
+                            case "off": turnOffAllTokenVision(); break;
                         } 
                         break;
                     case "finder":
@@ -346,6 +349,17 @@ const Roll20Pro = (() => {
         },
         
 ///===============TOKEN TOOLS==================
+
+        report = function(selected){
+            let idList = [];
+            let nameList = [];
+            
+            _.each(selected, function(tok){
+                token = getObj("graphic", tok._id);
+
+            })
+        }
+        
         tokenChangeAvatar = function(selected){
             if (selected){
                 _.each(selected, function(token){
@@ -382,6 +396,19 @@ const Roll20Pro = (() => {
                 })
             }
         },
+        
+        turnOffAllTokenVision = function(){
+            log("running turn off all vision")
+            var tokens = findObjs({                              
+              _type: "graphic"           
+            });
+            _.each(tokens, function(token) {
+                log(token.get("name"));
+                token.set("has_night_vision", false);
+                token.set("has_bright_light_vision", false);
+                
+            });
+        }
         
 
 //===========TOKEN PAGE GENERATOR=============
