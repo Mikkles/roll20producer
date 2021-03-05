@@ -716,7 +716,7 @@ const Roll20Pro = (() => {
                     name: "Dynamic Lighting Buddy",
                     imgsrc: 'https://s3.amazonaws.com/files.d20.io/images/140823448/E4Kn8ggLQWyRtaJHzLAPAw/thumb.png?1591297505',
                     _pageid: pageID,
-                    layer: "objects",
+                    layer: "walls",
                     has_bright_light_vision: true,
                     emits_bright_light: true,
                     bright_light_distance: "100",
