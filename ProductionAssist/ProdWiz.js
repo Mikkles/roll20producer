@@ -259,6 +259,7 @@ const Roll20Pro = (() => {
                             default: 
                             case "menu": makeAndSendMenu(menuText.admin(), "Admin Tools", caller); break;
                             case "getHTML": logHandoutHTML(msg.content); break;
+                            case "autoNav": autoNav(extString); break;
                             //case "linking": createLinkingHandout(); break;
                             //TO DO: admin reset
                         }
@@ -1022,8 +1023,58 @@ const Roll20Pro = (() => {
             handout[0].set({
                 notes: text
             });
-        }
-    
+        },
+        
+//========HANDOUT AND NAVIGATION CREATOR==============
+        
+        autoNav = function (csv) {
+            log("CSV IS " + csv);
+            ///let handouts = new Array();
+            handouts = csv.split(",");
+            let contents = ""
+            log("Handouts is " + handouts[0])
+            for (let i = 0; i < handouts.length; i++){
+                log ("name should be " + handouts[i])
+                
+                let newHandout = createObj('handout', {
+                    name: handouts[i]
+                });
+                
+                newHandout.set('gmnotes',addFooter(handouts[i - 1], handouts, handouts[i + 1]))
+                contents += `<p>[${handouts[i]}]</p>`
+            }
+            
+            let contentsHandout = createObj('handout', {
+                name: "Contents"
+            })
+            contentsHandout.set('gmnotes',contents);
+
+        },
+        
+        addFooter = function (prev, curr, next) {
+            let footer = `<hr><p style="text-align:center">`;
+            if (prev) {
+              //let prev_name = prev.match(/<h1.*?>(.*?)<\/h1>/g) || [""];
+              //prev_name = prev_name[0].replace(/(<h1.*?>|<\/h1>)/g, "").trim();
+              //footer += `<span style="font-family:pictos">[</span> <a href="${prev}">${prev}</a> <b>|</b> `;
+              footer += `<span style="font-family:pictos">8</span> [${prev}] <b>|</b> `;
+            }
+        
+            footer += `<span style="font-family:pictos">l</span> [Contents]`;
+        
+            if (next) {
+              //let next_name = next.match(/<h1.*?>(.*?)<\/h1>/g) || [""];
+              //next_name = next_name[0].replace(/(<h1.*?>|<\/h1>)/g, "").trim();
+              footer += ` <b>|</b> [${next}] <span style="font-family:pictos">7</span>`;
+            }
+        
+            footer += `</p>`;
+        
+            return footer;
+        },
+            
+            
+        
    
 //=========SCRIPT FUNCTIONALITY==============
 
@@ -1070,6 +1121,38 @@ const Roll20Pro = (() => {
 
     });
 })();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Github:   https://github.com/shdwjk/Roll20API/blob/master/TokenMod/TokenMod.js
 // By:       The Aaron, Arcane Scriptomancer
