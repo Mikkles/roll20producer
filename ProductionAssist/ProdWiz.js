@@ -15,7 +15,7 @@ const Roll20Pro = (() => {
     }
     
     const scriptName = "Roll20 Production Wizard",
-        version = "0.8.0",
+        version = "0.8.2",
         
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -260,6 +260,7 @@ const Roll20Pro = (() => {
                             case "menu": makeAndSendMenu(menuText.admin(), "Admin Tools", caller); break;
                             case "getHTML": logHandoutHTML(msg.content); break;
                             case "autoNav": autoNav(extString); break;
+                            case "deleteAllHandouts": deleteHandouts(); break;
                             //case "linking": createLinkingHandout(); break;
                             //TO DO: admin reset
                         }
@@ -293,8 +294,11 @@ const Roll20Pro = (() => {
                     case "pf2":
                         return "<i><a href='https://roll20.net/compendium/pf2/" + spell[1] + "'>" + spell[1] + "</a></i>"
                         break;
-                    case "gmr": 
+                    case "gr": 
                         return '<a href="`/gmroll ' + spell[1] + '">' + spell[1] + "</a>";
+                        break;
+                    case "r": 
+                        return '<a href="`/roll ' + spell[1] + '">' + spell[1] + "</a>";
                         break;
                     case "sot-quote":
                         return `<div style="` + styles.sot.quote + `">` + spell[1] + `</div>`
@@ -1034,21 +1038,23 @@ const Roll20Pro = (() => {
             let contents = ""
             log("Handouts is " + handouts[0])
             for (let i = 0; i < handouts.length; i++){
-                log ("name should be " + handouts[i])
+                //log ("name should be " + handouts[i])
                 
                 let newHandout = createObj('handout', {
                     name: handouts[i]
                 });
                 
-                newHandout.set('gmnotes',addFooter(handouts[i - 1], handouts, handouts[i + 1]))
-                contents += `<p>[${handouts[i]}]</p>`
+                let content = ""
+                content += addFooter(handouts[i - 1], handouts, handouts[i + 1])
+                newHandout.set('gmnotes',content)
+                
             }
             
-            let contentsHandout = createObj('handout', {
+            /*let contentsHandout = createObj('handout', {
                 name: "Contents"
             })
             contentsHandout.set('gmnotes',contents);
-
+            */
         },
         
         addFooter = function (prev, curr, next) {
@@ -1060,19 +1066,29 @@ const Roll20Pro = (() => {
               footer += `<span style="font-family:pictos">8</span> [${prev}] <b>|</b> `;
             }
         
-            footer += `<span style="font-family:pictos">l</span> [Contents]`;
+            //footer += `<span style="font-family:pictos">l</span> [Contents]`;
         
             if (next) {
               //let next_name = next.match(/<h1.*?>(.*?)<\/h1>/g) || [""];
               //next_name = next_name[0].replace(/(<h1.*?>|<\/h1>)/g, "").trim();
-              footer += ` <b>|</b> [${next}] <span style="font-family:pictos">7</span>`;
+              footer += `[${next}] <span style="font-family:pictos">7</span>`;
             }
         
             footer += `</p>`;
         
             return footer;
         },
+        
+        deleteHandouts = function () {
+            let handouts = findObjs({                              
+                _type: "handout",
+            });
             
+            _.each(handouts, function (handout) {
+                handout.remove()
+                
+            })
+        }
             
         
    
