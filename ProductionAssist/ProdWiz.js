@@ -261,6 +261,7 @@ const Roll20Pro = (() => {
                             case "getHTML": logHandoutHTML(msg.content); break;
                             case "autoNav": autoNav(extString); break;
                             case "deleteAllHandouts": deleteHandouts(); break;
+                            case "insertFulltext": insertFulltext(msg.content);
                             //case "linking": createLinkingHandout(); break;
                             //TO DO: admin reset
                         }
@@ -1078,6 +1079,37 @@ const Roll20Pro = (() => {
         
             return footer;
         },
+        
+        insertFulltext = function(msg){
+            //log(msg)
+            let regex = new RegExp("`.*?`","g");
+            let matches = [...msg.matchAll(regex)];
+            //log(matches + ", 0= " + matches[0] + ", 1= " + matches[1])
+            let name = matches[0][0].replace(/`/g,"");
+            let text = matches[1][0].replace(/`/g,"");
+            text = text.replace(/~/g,"</p><p>");
+            log(name)
+            
+            
+            var handout = findObjs({                              
+                _name: name,
+                _type: "handout",
+            });
+            log(handout.length);
+            
+            if (handout.length != 1) {
+                log("No handout with that name, or too many handouts with the same name")
+            } else if (handout[0]) {
+                thisHandout = getObj("handout", handout[0].id)
+                thisHandout.get("gmnotes", function(notes) {
+                    if (notes==null){notes = ""}
+                    newNotes = "<p>" + text + "</p>" + notes;
+                    setTimeout(function(){thisHandout.set("gmnotes", newNotes);}, 0);
+                });
+                
+            } 
+           
+        }
         
         deleteHandouts = function () {
             let handouts = findObjs({                              
