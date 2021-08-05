@@ -1,16 +1,6 @@
 # Prod Wizard
 This script is a suite of tools to help with creation of modules in Roll20. A menu with all of the tools can be accessed by typing or copypasting **`!prod`** into the game's chat. Safety measures have been added to ensure these tools can't mess up the game too much!
 
-## Installation to Game
-For each game, the creator of the game (probably Ashton!) needs to install some scripts into the API. You can be in the game in another tab safely.
-
-* **1.** This script! Copy the raw text of this script into a new script and click Save Script.
-* **2.** Token-Mod (from 1-click)
-* **3.** TableExport (from 1-click)
-
-Once they've finished compiling, go into the game and type/copypaste `!prod` and navigate to the Ashtonmancer. 
-
-Click the "First Time Setup" button; this will configure Token-mod to our specifications. The chat should output "The creation of Help Handouts is now OFF." If it says "ON" instead, click it once more. 
 
 ## How to Use
 Once installed, simply type/copypaste `!prod` into chat!
