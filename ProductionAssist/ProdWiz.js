@@ -126,7 +126,7 @@ const Roll20Pro = (() => {
             makeButton("PF2: Get from senses", "!prod token UDLdv", styles.button) + 
             makeH4("Token Actions") + 
             makeButton("For 5e", "!ta", styles.button) + 
-            makeButton("For PF2", "!ta PF2", styles.button) + 
+            makeButton("For PF2", "!ta pf2", styles.button) + 
             makeButton("Delete All", "!deleteta", styles.button) + 
             makeH4("Defaults") + 
             makeButton("Assign as Default Token", "!token-mod --set defaulttoken", styles.button) +
