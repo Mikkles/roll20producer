@@ -5841,8 +5841,9 @@ var tokenAction = tokenAction || (function () {
         handleInput = function (msg) {
             var char;
             var keywords = ['attacks', 'bonusactions', 'spells', 'abilities', 'saves', 'checks', 'traits', 'reactions', 'init', 'pf2', 'offensive'];
-            if (!(msg.type === 'api' && msg.selected && (msg.content.search(/^!ta\b/) || msg.content.search(/^!deleteta\b/) || msg.content.search(/^!deleteallta\b/) || msg.content.search(/^!sortta\b/)))) return;
-let whom = `"${msg.who.replace(' (GM)','')}"`;
+            if (!(msg.type === 'api' && msg.selected && (msg.content.toString().toLowerCase().search(/^!ta\b/) || msg.content.toString().toLowerCase().search(/^!deleteta\b/) || msg.content.toString().toLowerCase().search(/^!deleteallta\b/) || msg.content.toString().toLowerCase().search(/^!sortta\b/)))) return;
+            msg.content = msg.content.toString().toLowerCase();
+	    let whom = `"${msg.who.replace(' (GM)','')}"`;
             var args = msg.content.split(" ");
             const usename = args.includes('name') ? true : false;
             sheet = ((args.includes('pf2')) ? 'pf2' : '5e');
