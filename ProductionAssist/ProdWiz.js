@@ -15,7 +15,7 @@ const Roll20Pro = (() => {
     }
     
     const scriptName = "Roll20 Production Wizard",
-        version = "0.8.4",
+        version = "0.8.6",
         
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -1205,7 +1205,6 @@ const Roll20Pro = (() => {
 
 
 
-
 // Github:   https://github.com/shdwjk/Roll20API/blob/master/TokenMod/TokenMod.js
 // By:       The Aaron, Arcane Scriptomancer
 // Contact:  https://app.roll20.net/users/104025/the-aaron
@@ -1216,14 +1215,15 @@ API_Meta.TokenMod={offset:Number.MAX_SAFE_INTEGER,lineCount:-1};
 const TokenMod = (() => { // eslint-disable-line no-unused-vars
 
     const scriptName = "TokenMod";
-    const version = '0.8.69';
+    const version = '0.8.74';
     API_Meta.TokenMod.version = version;
-    const lastUpdate = 1622745645;
+    const lastUpdate = 1646271161;
     const schemaVersion = 0.4;
 
     const fields = {
             // booleans
             showname: {type: 'boolean'},
+            show_tooltip: {type: 'boolean'},
             showplayers_name: {type: 'boolean'},
             showplayers_bar1: {type: 'boolean'},
             showplayers_bar2: {type: 'boolean'},
@@ -1243,6 +1243,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
             fliph: {type: 'boolean'},
             aura1_square: {type: 'boolean'},
             aura2_square: {type: 'boolean'},
+            lockMovement: {type: 'boolean'},
 
             // UDL settings
             has_bright_light_vision: {type: 'boolean'},
@@ -1318,9 +1319,12 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
             aura2_color: {type: 'color'},
             tint_color: {type: 'color'},
             night_vision_tint: {type: 'color'},
+            lightColor: {type: 'color'},
 
             // Text : special
             name: {type: 'text'},
+            tooltip: {type: 'text'},
+
             statusmarkers: {type: 'status'},
             layer: {type: 'layer'},
             represents: {type: 'character_id'},
@@ -1349,7 +1353,11 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
             bright_distance: "bright_light_distance",    
             low_distance: "low_light_distance",
             low_light_opacity: "dim_light_opacity",
-            currentside: "currentSide"   // fix for case issue
+            currentside: "currentSide",   // fix for case issue
+            lightcolor: "lightColor", // fix for case issue
+            light_color: "lightColor", // fix for case issue
+            lockmovement: "lockMovement", // fix for case issue
+            lock_movement: "lockMovement" // fix for case issue
         };
 
     const reportTypes = [
@@ -1398,27 +1406,97 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
 
     const option_fields = {
       night_vision_effect: {
-        __default__: 'None',
-        off: 'None',
-        ['none']: 'None',
-        ['dimming']: 'Dimming',
-        ['nocturnal']: 'Nocturnal'
+        __default__: ()=>()=>'None',
+        off: ()=>()=>'None',
+        ['none']: ()=>()=>'None',
+        ['dimming']: (amount='5ft')=>(token,mods)=>{
+          const regexp = /^([=+\-/*])?(-?\d+\.?|\d*\.\d+)(u|g|s|ft|m|km|mi|in|cm|un|hex|sq|%)?$/i;
+          let match = `${amount}`.match(regexp);
+          let factor;
+          let pnv;
+          if(mods.hasOwnProperty('night_vision_distance')){
+            pnv = mods.night_vision_distance;
+          } else {
+            pnv = token.get('night_vision_distance');
+          }
+
+          let dp;
+          if(mods.hasOwnProperty('night_vision_effect') && /^Dimming_/.test(mods.night_vision_effect)){
+            dp = (parseFloat(mods.night_vision_effect.replace(/^Dimming_/,''))||0)*pnv;
+          } else if(/^Dimming_/.test(token.get('night_vision_effect'))){
+            dp = (parseFloat(token.get('night_vision_effect').replace(/^Dimming_/,''))||0)*pnv;
+          }
+
+          if(match){
+            let dist;
+            switch(match[3]){
+
+              // handle percentage
+              case '%': {
+                  let p = parseFloat(match[2])||0;
+                  if(p>1){
+                    p*=.01;
+                  }
+                  p = Math.min(1,p);
+                
+                  dist = p*pnv;
+                }
+                break;
+
+              // handle units
+              default: {
+                  let page=getObj('page',token.get('pageid'));
+                  if(page){
+                    dist = numberOp.ConvertUnitsRoll20(match[2],match[3],page);
+                  }
+                  else {
+                    dist=5;
+                  }
+                }
+                break;
+            }
+            switch(match[1]){
+              default:
+              case '=':
+                factor=(dist/pnv);
+                break;
+
+              case '+':
+                factor=((dist+dp)/pnv);
+                break;
+              case '-':
+                factor=((dp-dist)/pnv);
+                break;
+              case '*':
+                factor=((dist*dp)/pnv);
+                break;
+              case '/':
+                factor=((dp/dist)/pnv);
+                break;
+            }
+          } else {
+            factor=(5/pnv);
+          }
+
+          return `Dimming_${Math.min(1,Math.max(0,factor))}`;
+        },
+        ['nocturnal']: ()=>()=>'Nocturnal'
       },
       bar_location: {
-        __default__: null,
-        off: null,
-        none: null,
-        ['above']: null,
-        ['overlap_top']: 'overlap_top',
-        ['overlap_bottom']: 'overlap_bottom',
-        ['below']: 'below'
+        __default__: ()=>null,
+        off: ()=>null,
+        none: ()=>null,
+        ['above']: ()=>null,
+        ['overlap_top']: ()=>'overlap_top',
+        ['overlap_bottom']: ()=>'overlap_bottom',
+        ['below']: ()=>'below'
       },
       compact_bar: {
-        __default__: null,
-        off: null,
-        none: null,
-        ['compact']: 'compact',
-        ['on']: 'compact'
+        __default__: ()=>null,
+        off: ()=>null,
+        none: ()=>null,
+        ['compact']: ()=>'compact',
+        ['on']: ()=>'compact'
       }
     };
 
@@ -1567,14 +1645,43 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
 
                 let adjuster = (a)=>a;
 
-                if(this.enforce){
-                  switch(this.field){
+                switch(this.field){
                     case 'bar1_value':
                     case 'bar2_value':
                     case 'bar3_value':
-                      adjuster = (a,t)=>Math.max(0,Math.min(a,t.get(this.field.replace(/_value/,'_max'))));
-                      break;
-                  }
+                        if(this.enforce){
+                            adjuster = (a,t)=>Math.max(0,Math.min(a,t.get(this.field.replace(/_value/,'_max'))));
+                        }
+                        break;
+
+                    case 'night_vision_distance':
+                        adjuster = (a,token,mods) => { 
+                            let pnv;
+                            if(mods.hasOwnProperty('night_vision_distance')){
+                              pnv = mods.night_vision_distance;
+                            } else {
+                              pnv = token.get('night_vision_distance');
+                            }
+
+                            let dp;
+                            if(mods.hasOwnProperty('night_vision_effect') && /^Dimming_/.test(mods.night_vision_effect)){
+                              dp = parseFloat(mods.night_vision_effect.replace(/^Dimming_/,''))||undefined;
+                            } else if(/^Dimming_/.test(token.get('night_vision_effect'))){
+                              dp = parseFloat(token.get('night_vision_effect').replace(/^Dimming_/,''))||undefined;
+                            }
+
+                            if(undefined !== dp) {
+                              let dd = 0;
+                              if(dp>0){
+                                  dd = parseFloat(pnv)*dp;
+                                  dp=Math.min(1,parseFloat(dd.toFixed(2))/a);
+                              }
+
+                              mods.night_vision_effect=`Dimming_${dp}`;
+                            }
+                            return a; 
+                        };
+                        break;
                 }
 
                 switch(this.operation){
@@ -1592,15 +1699,16 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                                 return {
                                     low_light_distance: ((parseFloat(getValue('bright_light_distance',mods,token))||0)+num)
                                 };
+
                             default:
-                                return {[this.field]:adjuster(num,token)};
+                                return {[this.field]:adjuster(num,token,mods)};
                         }
                     }
-                    case '!': return {[this.field]:adjuster((current===0 ? num : ''),token)};
-                    case '+': return {[this.field]:adjuster((current+num),token)};
-                    case '-': return {[this.field]:adjuster((current-num),token)};
-                    case '/': return {[this.field]:adjuster((current/(num||1)),0)};
-                    case '*': return {[this.field]:adjuster((current*num),0)};
+                    case '!': return {[this.field]:adjuster((current===0 ? num : ''),token,mods)};
+                    case '+': return {[this.field]:adjuster((current+num),token,mods)};
+                    case '-': return {[this.field]:adjuster((current-num),token,mods)};
+                    case '/': return {[this.field]:adjuster((current/(num||1)),0,mods)};
+                    case '*': return {[this.field]:adjuster((current*num),0,mods)};
                 }
             }
 
@@ -2614,7 +2722,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
             })
             .filter((p)=>playerIsGM(p.id))
             .map((p)=>p.get('lastpage'))
-        ])
+          ])
         ];
 
         const getPageForPlayer = (playerid) => {
@@ -2804,6 +2912,25 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
         };
     }());
 
+    const HE = (() => {
+        const esRE = (s) => s.replace(/(\\|\/|\[|\]|\(|\)|\{|\}|\?|\+|\*|\||\.|\^|\$)/g,'\\$1');
+        const e = (s) => `&${s};`;
+        const entities = {
+            '<' : e('lt'),
+            '>' : e('gt'),
+            "'" : e('#39'),
+            '@' : e('#64'),
+            '{' : e('#123'),
+            '|' : e('#124'),
+            '}' : e('#125'),
+            '[' : e('#91'),
+            ']' : e('#93'),
+            '"' : e('quot')
+        };
+        const re = new RegExp(`(${Object.keys(entities).map(esRE).join('|')})`,'g');
+        return (s) => s.replace(re, (c) => (entities[c] || c) );
+    })();
+
     const ch = function (c) {
         let entities = {
             '<' : 'lt',
@@ -2853,7 +2980,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
         section: (s,...o) => `${_h.subhead(s)}${_h.inset(...o)}`,
         paragraph: (...o) => `<p>${o.join(' ')}</p>`,
         experimental: () => `<div style="display:inline-block;padding: .1em 1em; border: 1px solid #993333; border-radius:.5em;background-color:#cccccc;color:#ff0000;">Experimental</div>`,
-        items: (o) => `<li>${o.join('</li><li>')}</li>`,
+        items: (o) => o.map(t=>`<li>${t}</li>`).join(''),
         ol: (...o) => `<ol>${_h.items(o)}</ol>`,
         ul: (...o) => `<ul>${_h.items(o)}</ul>`,
         grid: (...o) => `<div style="padding: 12px 0;">${o.join('')}<div style="clear:both;"></div></div>`, 
@@ -3005,6 +3132,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                     _h.inset(
                         _h.grid(
                             _h.cell('showname'),
+                            _h.cell('show_tooltip'),
                             _h.cell('showplayers_name'),
                             _h.cell('showplayers_bar1'),
                             _h.cell('showplayers_bar2'),
@@ -3024,7 +3152,6 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                             _h.cell('fliph'),
                             _h.cell('aura1_square'),
                             _h.cell('aura2_square'),
-                            _h.cell(''),
 
                             _h.cell("has_bright_light_vision"),
                             _h.cell("has_limit_field_of_vision"),
@@ -3037,7 +3164,8 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                             _h.cell("emits_bright_light"),
                             _h.cell("emits_bright"),
                             _h.cell("emits_low_light"),
-                            _h.cell("emits_low")
+                            _h.cell("emits_low"),
+                            _h.cell('lockMovement')
                         )
                     ),
                     _h.paragraph( `Any of the booleans can be set with the ${_h.italic('--set')} command by passing a true or false as the value`),
@@ -3082,7 +3210,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
         setNightVisionEffect: (/* context*/) => _h.join(
                     _h.subhead('Night Vision Effect'),
                     _h.inset(
-                        _h.paragraph(`Night Vision Effect specifes how the region of night vision around a token looks.  There are two effects that can be turned on: ${_h.code('dimming')} and ${_h.code('nocturnal')}. You can disable Night Vision Effects using ${_h.code('off')}, ${_h.code('none')}, or leave the field blank.  Any other value is ignored.`),
+                        _h.paragraph(`Night Vision Effect specifies how the region of night vision around a token looks.  There are two effects that can be turned on: ${_h.code('dimming')} and ${_h.code('nocturnal')}. You can disable Night Vision Effects using ${_h.code('off')}, ${_h.code('none')}, or leave the field blank.  Any other value is ignored.`),
                         _h.minorhead('Available Night Vision Effect Properties:'),
                         _h.inset(
                             _h.grid(
@@ -3093,9 +3221,26 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                         _h.inset(
                             _h.pre( '!token-mod --set night_vision_effect|nocturnal' )
                         ),
-                        _h.paragraph(`Enable the dimming Night Vision Effect on a token:`),
+                        _h.paragraph(`Enable the dimming Night Vision Effect on a token, with dimming starting at 5ft from the token:`),
                         _h.inset(
                             _h.pre( '!token-mod --set night_vision_effect|dimming' )
+                        ),
+                        _h.paragraph(`Dimming can take an additional argument to set the distance from the token to begin dimming.  The default is 5ft if not specified. Distances are provided by appending a another ${_h.code('|')} character and adding a number followed by either a unit or a ${_h.code('%')}:`),
+                        _h.inset(
+                            _h.pre( '!token-mod --set night_vision_effect|dimming|5ft' ),
+                            _h.pre( '!token-mod --set night_vision_effect|dimming|1u' )
+                        ),
+                        _h.paragraph(`Using the ${_h.code('%')} allows you to specify the distance as a percentage of the Night Vision Distance.  Numbers less than 1 are treated as a decimal percentage.  Both of the following are the same:`),
+                        _h.inset(
+                            _h.pre( '!token-mod --set night_vision_effect|dimming|20%' ),
+                            _h.pre( '!token-mod --set night_vision_effect|dimming|0.2%' )
+                        ),
+                        _h.paragraph(`You can also use operators to make relative changes.  Operators are ${_h.code('+')}, ${_h.code('-')}, ${_h.code('*')}, and ${_h.code('/')}`),
+                        _h.inset(
+                            _h.pre( '!token-mod --set night_vision_effect|dimming|+10%' ),
+                            _h.pre( '!token-mod --set night_vision_effect|dimming|-5ft' ),
+                            _h.pre( '!token-mod --set night_vision_effect|dimming|/2' ),
+                            _h.pre( '!token-mod --set night_vision_effect|dimming|*10' )
                         ),
                         _h.paragraph(`Disable any Night Vision Effects on a token:`),
                         _h.inset(
@@ -3337,7 +3482,9 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                             _h.cell('tint_color'),
                             _h.cell('aura1_color'),
                             _h.cell('aura2_color'),
-                            _h.cell('night_vision_tint')
+                            _h.cell('night_vision_tint'),
+                            _h.cell('lightColor'),
+                            _h.cell('lightcolor')
                         )
                     ),
                     _h.paragraph('Turning off the tint and setting aura1 to a reddish color.  All of the following are the same:'),
@@ -3399,6 +3546,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                     _h.inset(
                         _h.grid(
                             _h.cell('name'),
+                            _h.cell('tooltip'),
                             _h.cell('bar1_value'),
                             _h.cell('bar2_value'),
                             _h.cell('bar3_value'),
@@ -4156,7 +4304,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                         arg='__default__';
                       }
                       if(ks.includes(arg)){
-                        retr[cmd].push(o[arg]);
+                        retr[cmd].push(o[arg](args.shift()));
                       }
                     }
                     break;
@@ -4593,16 +4741,19 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                   case 'aura2_color':
                   case 'tint_color':
                   case 'night_vision_tint':
+                  case 'lightColor':
                     mods[k]=f[0].applyTo(token.get(k)).toHTML();
                     break;
 
+                case 'night_vision_effect':
+                  mods[k]=f[0](token,mods);
+                  break;
 
 /*
                 case 'light_sensitivity_multiplier':
                     // {type: 'number'},
                     break;
 
-                case 'night_vision_effect':
                     // 'None', 'Dimming', 'Nocturnal'
                     break;
                 case 'bar_location':
@@ -4673,24 +4824,6 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
             }
         };
 
-        const HE = (() => {
-            const esRE = (s) => s.replace(/(\\|\/|\[|\]|\(|\)|\{|\}|\?|\+|\*|\||\.|\^|\$)/g,'\\$1');
-            const e = (s) => `&${s};`;
-            const entities = {
-                '<' : e('lt'),
-                '>' : e('gt'),
-                "'" : e('#39'),
-                '@' : e('#64'),
-                '{' : e('#123'),
-                '|' : e('#124'),
-                '}' : e('#125'),
-                '[' : e('#91'),
-                ']' : e('#93'),
-                '"' : e('quot')
-            };
-            const re = new RegExp(`(${Object.keys(entities).map(esRE).join('|')})`,'g');
-            return (s) => s.replace(re, (c) => (entities[c] || c) );
-        })();
 
         const getChange = (()=> {
           const charName = (cid) => (getObj('character',cid)||{get:()=>'[Missing]'}).get('name');
@@ -4824,10 +4957,50 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
         }
     };
 
+
+    
+
+    const OutputDebugInfo = (msg,ids,modlist,badCmds) => {
+      let selMap = (msg.selected||[]).map(o=>o._id);
+      let who=(getObj('player',msg.playerid)||{get:()=>'API'}).get('_displayname');
+      let fMsg = HE(msg.content.replace(/<br\/>/g,'')).replace(/ /g,'&nbsp;').replace(/\$/g,'&#36;');
+      let fIds = ids.map((o)=>{
+        if(undefined !== o.token){
+          return `${_h.bold('Token:')} ${o.token.get('name')} [${_h.code(o.token.id)}]${selMap.includes(o.token.id)?` ${_h.bold('Selected')}`:''}`;
+        } else if(undefined !== o.character){
+          return `${_h.bold('Character:')} ${o.character.get('name')} [${_h.code(o.character.id)}]`;
+        } 
+        return `${_h.bold('Unknown:')} [${_h.code(o.id)}]`;
+      });
+
+      sendChat('TokenMod: Debug',`/w "${who}" &{template:default}{{Command=${_h.pre(fMsg)}}}{{Targets=${_h.ul(...fIds)}}}`);
+      
+      //$d({msg:msg.content,fMsg,modlist,badCmds});
+    };
+
+
+  const processInlinerolls = (msg) => {
+    if(msg.hasOwnProperty('inlinerolls')){
+      return msg.inlinerolls
+        .reduce((m,v,k) => {
+          let ti=v.results.rolls.reduce((m2,v2) => {
+            if(v2.hasOwnProperty('table')){
+              m2.push(v2.results.reduce((m3,v3) => [...m3,(v3.tableItem||{}).name],[]).join(", "));
+            }
+            return m2;
+          },[]).join(', ');
+          return [...m,{k:`$[[${k}]]`, v:(ti.length && ti) || v.results.total || 0}];
+        },[])
+        .reduce((m,o) => m.replace(o.k,o.v), msg.content);
+    } else {
+      return msg.content;
+    }
+  };
+
 // */
      const handleInput = function(msg_orig) {
         try {
-            if (msg_orig.type !== "api") {
+            if (msg_orig.type !== "api" || !/^!token-mod(\b\s|$)/.test(msg_orig.content)) {
                 return;
             }
 
@@ -4849,169 +5022,158 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                 };
             let reports=[];
 
-
-            if(_.has(msg,'inlinerolls')){
-                msg.content = _.chain(msg.inlinerolls)
-                    .reduce(function(m,v,k){
-                        let ti=_.reduce(v.results.rolls,function(m2,v2){
-                            if(_.has(v2,'table')){
-                                m2.push(_.reduce(v2.results,function(m3,v3){
-                                    m3.push(v3.tableItem.name);
-                                    return m3;
-                                },[]).join(', '));
-                            }
-                            return m2;
-                        },[]).join(', ');
-                        m['$[['+k+']]']= (ti.length && ti) || v.results.total || 0;
-                        return m;
-                    },{})
-                    .reduce(function(m,v,k){
-                        return m.replace(k,v);
-                    },msg.content)
-                    .value();
-            }
+			msg.content = processInlinerolls(msg)
 
             args = msg.content
                 .replace(/<br\/>\n/g, ' ')
                 .replace(/(\{\{(.*?)\}\})/g," $2 ")
                 .split(/\s+--/);
 
+            let IsDebugRequest = false;
+            let Debug_UnrecognizedCommands = [];
 
-            switch(args.shift()) {
-                case '!token-mod': {
 
-                    while(args.length) {
-                        cmds=args.shift().match(/([^\s]+[|#]'[^']+'|[^\s]+[|#]"[^"]+"|[^\s]+)/g);
-                        switch(cmds.shift()) {
-                            case 'help':
+			while(args.length) {
+				cmds=args.shift().match(/([^\s]+[|#]'[^']+'|[^\s]+[|#]"[^"]+"|[^\s]+)/g);
+				let cmd = cmds.shift();
+				switch(cmd) {
+					case 'help':
 
 // !tokenmod --help [all]
-    // just the top part and ToC
+// just the top part and ToC
 
 // !tokenmod --help
-    // just the top part and ToC
+// just the top part and ToC
 
 // !tokenmod --help[-only] [set|on|off|flip|config]
-    // top part, plus the command parts
-    // -only leaves off top part
+// top part, plus the command parts
+// -only leaves off top part
 
 // !tokenmod --help[-only] <property> [<properties...]
-    // top part, command part, property part
-    // -only leaves off top and command 
+// top part, command part, property part
+// -only leaves off top and command 
 
 // !tokenmod --help <full command>
-    // explains the parts command
+// explains the parts command
 
 
-                                showHelp(playerid);
-                                return;
+						showHelp(playerid);
+						return;
 
-                            case 'api-as':
-                                if('API' === playerid){
-                                    let player = getObj('player',cmds[0]);
-                                    if(player){
-                                        playerid = player.id;
-                                        who = player.get('_displayname');
-                                    }
-                                }
-                                break;
+					case 'api-as':
+						if('API' === playerid){
+							let player = getObj('player',cmds[0]);
+							if(player){
+								playerid = player.id;
+								who = player.get('_displayname');
+							}
+						}
+						break;
 
-                            case 'config':
-                                if(playerIsGM(playerid)) {
-                                    handleConfig(cmds,playerid);
-                                }
-                                return;
+					case 'debug': {
+						IsDebugRequest = true;
+					  }
+					  break;
+
+					case 'config':
+						if(playerIsGM(playerid)) {
+							handleConfig(cmds,playerid);
+						}
+						return;
 
 
-                            case 'flip':
-                                modlist.flip=_.union(_.filter(cmds.map(unalias),filters.isBoolean),modlist.flip);
-                                break;
+					case 'flip':
+						modlist.flip=_.union(_.filter(cmds.map(unalias),filters.isBoolean),modlist.flip);
+						break;
 
-                            case 'on':
-                                modlist.on=_.union(_.filter(cmds.map(unalias),filters.isBoolean),modlist.on);
-                                break;
+					case 'on':
+						modlist.on=_.union(_.filter(cmds.map(unalias),filters.isBoolean),modlist.on);
+						break;
 
-                            case 'off':
-                                modlist.off=_.union(_.filter(cmds.map(unalias),filters.isBoolean),modlist.off);
-                                break;
+					case 'off':
+						modlist.off=_.union(_.filter(cmds.map(unalias),filters.isBoolean),modlist.off);
+						break;
 
-                            case 'set':
-                                modlist.set=parseSetArguments(cmds,modlist.set);
-                                break;
+					case 'set':
+						modlist.set=parseSetArguments(cmds,modlist.set);
+						break;
 
-                            case 'order':
-                                modlist.order=parseOrderArguments(cmds,modlist.order);
-                                break;
+					case 'order':
+						modlist.order=parseOrderArguments(cmds,modlist.order);
+						break;
 
-                            case 'report':
-                                reports= parseReportArguments(cmds,reports);
-                                break;
+					case 'report':
+						reports= parseReportArguments(cmds,reports);
+						break;
 
-                            case 'move':
-                                modlist.move = parseMoveArguments(cmds,modlist.move);
-                                break;
+					case 'move':
+						modlist.move = parseMoveArguments(cmds,modlist.move);
+						break;
 
-                            case 'ignore-selected':
-                                ignoreSelected=true;
-                                break;
+					case 'ignore-selected':
+						ignoreSelected=true;
+						break;
 
-                            case 'active-pages':
-                                pageRestriction=getActivePages();
-                                break;
+					case 'active-pages':
+						pageRestriction=getActivePages();
+						break;
 
-                            case 'current-page':
-                                pageRestriction=[getPageForPlayer(playerid)];
-                                break;
+					case 'current-page':
+						pageRestriction=[getPageForPlayer(playerid)];
+						break;
 
-                            case 'ids':
-                                ids=_.union(cmds,ids);
-                                break;
-                        }
-                    }
-                    modlist.off=_.difference(modlist.off,modlist.on);
-                    modlist.flip=_.difference(modlist.flip,modlist.on,modlist.off);
-                    if( !playerIsGM(playerid) && !state.TokenMod.playersCanUse_ids ) {
-                        ids=[];
-                    }
+					case 'ids':
+						ids=_.union(cmds,ids);
+						break;
 
-                    if(!ignoreSelected) {
-                        ids=_.union(ids,_.pluck(msg.selected,'_id'));
-                    }
+					default:
+					  Debug_UnrecognizedCommands.push({cmd,args:cmds});
+					  break;
+				}
+			}
+			modlist.off=_.difference(modlist.off,modlist.on);
+			modlist.flip=_.difference(modlist.flip,modlist.on,modlist.off);
+			if( !playerIsGM(playerid) && !state.TokenMod.playersCanUse_ids ) {
+				ids=[];
+			}
 
-                    let pageFilter = pageRestriction.length
-                        ? (o) => pageRestriction.includes(o.get('pageid'))
-                        : () => true;
+			if(!ignoreSelected) {
+				ids=_.union(ids,_.pluck(msg.selected,'_id'));
+			}
 
-                    if(ids.length){
-                        _.chain(ids)
-                        .uniq()
-                        .map(function(t){
-                            return {
-                                id: t,
-                                token: getObj('graphic',t),
-                                character: getObj('character',t)
-                            };
-                        })
-                        .reduce(function(m,o){
-                            if(o.token){
-                                m.push(o.token);
-                            } else if(o.character){
-                                m=_.union(m,findObjs({type:'graphic',represents:o.character.id}));
-                            }
-                            return m;
-                        },[])
-                        .uniq()
-                        .reject(_.isUndefined)
-                        .filter(pageFilter)
-                        .each(function(t) {
-                            let ctx = applyModListToToken(modlist,t);
-                            doReports(ctx,reports,who);
-                        });
-                    }
-                }
-                break;
+			let pageFilter = pageRestriction.length
+				? (o) => pageRestriction.includes(o.get('pageid'))
+				: () => true;
 
-            }
+			ids = [...new Set([...ids])]
+				.map(function(t){
+					return {
+						id: t,
+						token: getObj('graphic',t),
+						character: getObj('character',t)
+					};
+				});
+
+			if(IsDebugRequest){
+			  OutputDebugInfo(msg_orig,ids,modlist,Debug_UnrecognizedCommands);
+			}
+
+			if(ids.length){
+				[...new Set(ids.reduce(function(m,o){
+					if(o.token){
+						m.push(o.token);
+					} else if(o.character){
+						m=_.union(m,findObjs({type:'graphic',represents:o.character.id}));
+					}
+					return m;
+				},[]))]
+				  .filter(o=>undefined !== o)
+				  .filter(pageFilter)
+				  .forEach((t) => {
+					  let ctx = applyModListToToken(modlist,t);
+					  doReports(ctx,reports,who);
+				  });
+			}
         } catch (e) {
             let who=(getObj('player',msg_orig.playerid)||{get:()=>'API'}).get('_displayname');
             sendChat('TokenMod',`/w "${who}" `+
@@ -5045,302 +5207,6 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
 
 {try{throw new Error('');}catch(e){API_Meta.TokenMod.lineCount=(parseInt(e.stack.split(/\n/)[1].replace(/^.*:(\d+):.*$/,'$1'),10)-API_Meta.TokenMod.offset);}}
 
-// Github:   https://github.com/shdwjk/Roll20API/blob/master/TableExport/TableExport.js
-// By:       The Aaron, Arcane Scriptomancer
-// Contact:  https://app.roll20.net/users/104025/the-aaron
-
-var TableExport = TableExport || (function() {
-	'use strict';
-
-	var version  = '0.2.4',
-        lastUpdate = 1576529132,
-        tableCache = {},
-        escapes = {
-            '['   : '<%%91%%>',
-            ']'   : '<%%93%%>',
-            '--' : '<%%-%%>',
-            ' --' : '[TABLEEXPORT:ESCAPE]'
-        },
-    
-    esRE = function (s) {
-        var escapeForRegexp = /(\\|\/|\[|\]|\(|\)|\{|\}|\?|\+|\*|\||\.|\^|\$)/g;
-        return s.replace(escapeForRegexp,"\\$1");
-    },
-
-	ch = function (c) {
-		var entities = {
-			'<' : 'lt',
-			'>' : 'gt',
-			"'" : '#39',
-			'@' : '#64',
-            '*' : 'ast',
-            '`' : '#96',
-			'{' : '#123',
-			'|' : '#124',
-			'}' : '#125',
-			'[' : '#91',
-			']' : '#93',
-			'"' : 'quot',
-			'-' : 'mdash',
-			' ' : 'nbsp'
-		};
-
-		if(_.has(entities,c) ){
-			return ('&'+entities[c]+';');
-		}
-		return '';
-	},
-
-	checkInstall = function() {
-        log('-=> TableExport v'+version+' <=-  ['+(new Date(lastUpdate*1000))+']');
-	},
-
-	showHelp = function() {
-		sendChat('',
-            '/w gm '
-+'<div style="border: 1px solid black; background-color: white; padding: 3px 3px;">'
-	+'<div style="font-weight: bold; border-bottom: 1px solid black;font-size: 130%;">'
-		+'TableExport v'+version
-	+'</div>'
-	+'<div style="padding-left:10px;margin-bottom:3px;">'
-		+'<p>This script dumps commands to the chat for reconstructing a rollable table on another campaign.  While this can be done on your own campaigns via the transmogrifier, this script allows you to pass those commands to a friend and thus share your own creative works with others.<p>'
-		+'<p><b>Caveat:</b> Avatar images that are not in your own library will be ignored by the API on import, but will not prevent creation of the table and table items.</p>'
-	+'</div>'
-	+'<b>Commands</b>'
-	+'<div style="padding-left:10px;">'
-		+'<b><span style="font-family: serif;">!export-table --'+ch('<')+'Table Name'+ch('>')+' [ --'+ch('<')+'Table Name'+ch('>')+' ...]</span></b>'
-		+'<div style="padding-left: 10px;padding-right:20px">'
-			+'<p>For all table names, case is ignored and you may use partial names so long as they are unique.  For example, '+ch('"')+'King Maximillian'+ch('"')+' could be called '+ch('"')+'max'+ch('"')+' as long as '+ch('"')+'max'+ch('"')+' does not appear in any other table names.  Exception:  An exact match will trump a partial match.  In the previous example, if a table named '+ch('"')+'Max'+ch('"')+' existed, it would be the only table matched for <b>--max</b>.</p>'
-			+'<ul>'
-				+'<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">'
-					+'<b><span style="font-family: serif;">--'+ch('<')+'Table Name'+ch('>')+'</span></b> '+ch('-')+' This is the name of a table to export.  You can specify as many tables as you like in a single command.'
-				+'</li> '
-			+'</ul>'
-		+'</div>'
-	+'</div>'
-    +'<div style="padding-left:10px;">'
-		+'<b><span style="font-family: serif;">!import-table --'+ch('<')+'Table Name'+ch('>')+' --'+ch('<')+'[ show | hide ]'+ch('>')+'</span></b>'
-		+'<div style="padding-left: 10px;padding-right:20px">'
-			+'<p>This is the command output by <b>!export-table</b> to create the new table.  You likely will not need issue these commands directly.</p>'
-			+'<ul>'
-				+'<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">'
-					+'<b><span style="font-family: serif;">--'+ch('<')+'Table Name'+ch('>')+'</span></b> '+ch('-')+' This is the name of the table to be create.'
-				+'</li> '
-    			+'<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">'
-					+'<b><span style="font-family: serif;">--'+ch('<')+'[ show | hide ]'+ch('>')+'</span></b> '+ch('-')+' This whether to show the table to players or hide it.'
-				+'</li> '
-			+'</ul>'
-		+'</div>'
-	+'</div>'
-    +'<div style="padding-left:10px;">'
-    	+'<b><span style="font-family: serif;">!import-table-item --'+ch('<')+'Table Name'+ch('>')+' --'+ch('<')+'Table Item Name'+ch('>')+' --'+ch('<')+'Weight'+ch('>')+' --'+ch('<')+'Avatar URL'+ch('>')+'</span></b>'
-		+'<div style="padding-left: 10px;padding-right:20px">'
-			+'<p>This is the command output by <b>!export-table</b> to create the new table.  You likely will not need issue these commands directly.</p>'
-			+'<ul>'
-				+'<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">'
-					+'<b><span style="font-family: serif;">--'+ch('<')+'Table Name'+ch('>')+'</span></b> '+ch('-')+' This is the name of the table to add items to.  <b>Note:</b> unlike for <b>!export-table</b>, this must be an exact name match to the created table.'
-				+'</li> '
-    			+'<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">'
-					+'<b><span style="font-family: serif;">--'+ch('<')+'Table Item Name'+ch('>')+'</span></b> '+ch('-')+' This is the name of the table item to create.  <b>Note:</b> Because the string '+ch('"')+' --'+ch('"')+' may occur in a table item name, you may see '+ch('"')+'[TABLEEXPORT:ESCAPE]'+ch('"')+' show up as a replacement in these commands.  This value is corrected internally to the correct '+ch('"')+' --'+ch('"')+' sequence on import.'
-				+'</li> '
-    			+'<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">'
-					+'<b><span style="font-family: serif;">--'+ch('<')+'Weight'+ch('>')+'</span></b> '+ch('-')+' This is the weight for this table item and should be an integer value.'
-				+'</li> '
-    			+'<li style="border-top: 1px solid #ccc;border-bottom: 1px solid #ccc;">'
-					+'<b><span style="font-family: serif;">--'+ch('<')+'Avatar URL'+ch('>')+'</span></b> '+ch('-')+' This is the URL for the avatar image of the table item.'
-				+'</li> '
-			+'</ul>'
-		+'</div>'
-	+'</div>'
-+'</div>'
-		);
-	},
-    nameEscape = (function(){
-        var re=new RegExp('('+_.map(_.keys(escapes),esRE).join('|')+')','g');
-        return function(s){
-            return s.replace(re, function(c){ return escapes[c] || c; });
-        };
-    }()),
-    nameUnescape = (function(){
-        var sepacse = _.invert(escapes),
-        re=new RegExp('('+_.map(_.keys(sepacse),esRE).join('|')+')','g');
-        return function(s){
-            return s.replace(re, function(c){ return sepacse[c] || c; });
-        };
-    }()),
-
-	handleInput = function(msg) {
-		var args, matches, tables, tableIDs=[], errors=[], items, itemMatches, accum='';
-
-		if (msg.type !== "api" || !playerIsGM(msg.playerid)) {
-			return;
-		}
-
-		args = msg.content.split(/\s+/);
-		switch(args[0]) {
-			case '!import-table':
-				args = msg.content.split(/\s+--/);
-				if(args.length === 1) {
-					showHelp();
-					break;
-				}
-				if(_.has(tableCache,args[1])) {
-					sendChat('','/w gm '
-						+'<div style="border: 1px solid black; background-color: white; padding: 3px 3px;">'
-							+'<span style="font-weight:bold;color:#990000;">Warning:</span> '
-							+'Table ['+args[1]+'] already exists, skipping create.'
-						+'</div>'
-					);
-				} else {
-					tableIDs=findObjs({type: 'rollabletable', name: args[1]});
-					if(tableIDs.length) {
-						sendChat('','/w gm '
-        					+'<div style="border: 1px solid black; background-color: white; padding: 3px 3px;">'
-    							+'<span style="font-weight:bold;color:#990000;">Warning:</span> '
-    							+'Table ['+args[1]+'] already exists, skipping create.'
-    						+'</div>'
-						);
-					} else {
-						tableIDs=createObj('rollabletable',{ 
-							name: args[1], 
-							showplayers: ('show'===args[2])
-						});
-						tableCache[args[1]]=tableIDs.id;
-					}
-				}
-				break;
-
-			case '!import-table-item':
-				args = msg.content.split(/\s+--/);
-				if(args.length === 1) {
-					showHelp();
-					break;
-				}
-				args[2] = nameUnescape(args[2]);
-				if(!_.has(tableCache,args[1])) {
-					tableIDs=findObjs({type: 'rollabletable', name: args[1]});
-					if(!tableIDs.length) {
-						sendChat('','/w gm '
-        					+'<div style="border: 1px solid black; background-color: white; padding: 3px 3px;">'
-    							+'<span style="font-weight:bold;color:#990000;">Error:</span> '
-    							+'Table ['+args[1]+'] doesn not exist.  Cannot create table item.'
-    						+'</div>'
-    					);
-                        break;
-                    } else {
-                        tableCache[args[1]]=tableIDs[0].id;
-                    }
-                }
-                createObj('tableitem',{
-                    name: args[2],
-                    rollabletableid: tableCache[args[1]],
-                    weight: parseInt(args[3],10)||1,
-                    avatar: args[4]||''
-                });
-                break;
-                
-			case '!export-table':
-                args = msg.content.split(/\s+--/);
-                if(args.length === 1) {
-                    showHelp();
-                    break;
-                }
-				tables=findObjs({type: 'rollabletable'});
-				matches=_.chain(args)
-					.rest()
-					.map(function(n){
-						var l=_.filter(tables,function(t){
-							return t.get('name').toLowerCase() === n.toLowerCase();
-						});
-						return ( 1 === l.length ? l : _.filter(tables,function(t){
-							return -1 !== t.get('name').toLowerCase().indexOf(n.toLowerCase());
-						}));
-					})
-					.value();
-
-				_.each(matches,function(o,idx){
-					if(1 !== o.length) {
-						if(o.length) {
-							errors.push('Rollable Table [<b>'+args[idx+1]+'</b>] is ambiguous and matches '+o.length+' names: <b><i> '+_.map(o,function(e){
-								return e.get('name');
-								}).join(', ')+'</i></b>');
-						} else {
-							errors.push('Rollable Table [<b>'+args[idx+1]+'</b>] does not match any names.');
-						}
-					}
-				},errors);
-
-				if(errors.length) {
-					sendChat('','/w gm '
-						+'<div style="border: 1px solid black; background-color: white; padding: 3px 3px;">'
-							+'<div><span style="font-weight:bold;color:#990000;">Error:</span> '
-							+errors.join('</div><div><span style="font-weight:bold;color:#990000;">Error:</span> ')
-							+'</div>'
-						+'</div>'
-					);
-					break;
-				}
-
-				if( ! errors.length) {
-					matches=_.chain(matches)
-						.flatten(true)
-						.map(function(t){
-							tableIDs.push(t.id);
-                            return t;
-						})
-						.value();
-
-					items=findObjs({type: 'tableitem'});
-					itemMatches=_.chain(items)
-						.filter(function(i){
-							return _.contains(tableIDs,i.get('rollabletableid'));
-						})
-                        .reduce(function(memo,e){
-                            if(!_.has(memo,e.get('rollabletableid'))) {
-                                memo[e.get('rollabletableid')]=[e];
-                            } else {
-                                memo[e.get('rollabletableid')].push(e);
-                            }
-                            return memo;
-                        },{})
-						.value();
-                    _.each(matches, function(t){
-                        accum+='!import-table --'+nameEscape(t.get('name'))+' --'+(t.get('showplayers') ? 'show' : 'hide')+'<br>';
-                        _.each(itemMatches[t.id], function(i){
-                            accum+='!import-table-item --'+nameEscape(t.get('name'))+' --'+nameEscape(i.get('name'))+' --'+i.get('weight')+' --'+i.get('avatar')+'<br>';
-                        });
-                    });
-                    sendChat('', '/w gm '+accum);
-
-				}
-				break;
-				
-				
-		}
-
-	},
-    handleRemoveTable = function(obj){
-        tableCache = _.without(tableCache,obj.id);
-    },
-
-	registerEventHandlers = function() {
-		on('chat:message', handleInput);
-        on('destroy:rollabletable', handleRemoveTable);
-	};
-
-	return {
-		CheckInstall: checkInstall,
-		RegisterEventHandlers: registerEventHandlers
-	};
-}());
-
-
-on("ready",function(){
-	'use strict';
-
-	TableExport.CheckInstall();
-	TableExport.RegisterEventHandlers();
-});
 
 
 
