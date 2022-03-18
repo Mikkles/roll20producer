@@ -19,7 +19,7 @@ const Roll20Pro = (() => {
         
         styles = {
             reset: 'padding: 0; margin: 0;',
-            menu: 'background-color: #fff; border: 1px solid #000; padding: 5px; font-family: &quot;Good Pro Condensed&quot;, &quot;Roboto&quot;, &quot;Verdana&quot;,sans-serif;, ',
+            menu: 'border: 1px solid #000; padding: 5px; font-family: &quot;Good Pro Condensed&quot;, &quot;Roboto&quot;, &quot;Verdana&quot;,sans-serif;, ',
             bigButton: 'font-size: 1.2em; background-color: pink; border: 1px solid black; border-radius: 3px; padding: 4px; margin: 2px; color: #000; text-align: center; ',
             button: 'background-color: pink; border: 1px solid black; border-radius: 3px; padding: 0px, 2px; margin: 2px; color: #000; text-align: center; ',
             textButton: 'background-color: transparent; border: none; padding: 0; color: #000; text-decoration: underline',
@@ -101,6 +101,9 @@ const Roll20Pro = (() => {
             makeBackButton()
             ,
             token: () => "<p style='" + styles.note + "'>Tokens must have Represented filled out manually.</p>" +
+	    makeH4("Token Lock Selected") + 
+		makeButton("Lock", "!token-mod --on lockMovement", styles.button) +
+		makeButton("Unlock", "!token-mod --off lockMovement", styles.button) +
             makeH4("Show Nameplates") +
             makeButton("Show Names", "!token-mod --on showname", styles.button) +
             makeButton("Hide Names", "!token-mod --off showname", styles.button) +
