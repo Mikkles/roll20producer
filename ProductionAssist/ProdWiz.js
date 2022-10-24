@@ -536,8 +536,11 @@ const Roll20Pro = (() => {
                 }
                 text = "";
                 _.each(selected, function (token) {
+
                     tokenID = token._id;
                     tokenObj = getObj("graphic",tokenID);
+                    log(tokenObj);
+                    if (tokenObj == undefined) {return;}
                     state.Roll20Pro.sortCats[tokenID] = arg;
                     name = tokenObj.get("name");
                     text += "<br />" + name;
@@ -6115,8 +6118,3 @@ on('ready', function () {
     tokenAction.CheckInstall();
     tokenAction.RegisterEventHandlers();
 });
-
-
-
-
-
