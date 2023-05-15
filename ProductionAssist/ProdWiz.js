@@ -2741,7 +2741,7 @@ const Roll20Pro = (() => {
     }
     
     const scriptName = "Roll20 Production Wizard",
-        version = "0.9.2",
+        version = "0.9.3",
         
         styles = {
             reset: 'padding: 0; margin: 0;',
