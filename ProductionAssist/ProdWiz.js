@@ -3725,7 +3725,7 @@ const Roll20Pro = (() => {
                                 if (undefined !== copies){copies = 1}
 
             switch (name) {
-                case "battleMap": title = "Battle Map Scale"; findAndMakeHandout(title, "", handoutHTML.battleMap()); break;
+                case "battleMap": title = "Map Handout"; findAndMakeHandout(title, "", handoutHTML.battleMap()); break;
                 case "artHandout":
                     title = "Player Art Handout: ";
                     log ("copies = " + copies);
