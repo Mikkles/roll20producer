@@ -3722,7 +3722,7 @@ const Roll20Pro = (() => {
         
         createStockHandout = function(name, caller, copies) {
             title = "";
-                                if (undefined !== copies){copies = 1}
+                                if (undefined === copies){copies = 1}
 
             switch (name) {
                 case "battleMap": title = "Map Handout"; findAndMakeHandout(title, "", handoutHTML.battleMap()); break;
