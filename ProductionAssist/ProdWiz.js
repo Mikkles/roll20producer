@@ -3202,7 +3202,7 @@ const Roll20Pro = (() => {
             });
             _.each(tokens, function(token) {
                 log(token.get("name"));
-                token.set("has_night_vision", false);
+                //token.set("has_night_vision", false);
                 token.set("has_bright_light_vision", false);
                 
             });
