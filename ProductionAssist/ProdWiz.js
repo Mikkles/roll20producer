@@ -2741,7 +2741,7 @@ const Roll20Pro = (() => {
     }
     
     const scriptName = "Roll20 Production Wizard",
-        version = "0.9.5",
+        version = "0.9.6",
         
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -2885,7 +2885,12 @@ const Roll20Pro = (() => {
             map: () => "<p style='" + styles.note + "'>Player bookmark must be<BR>on your active page.</p>" +
             makeH4("Resize Map and Page") + "<p>Select map graphic and enter width/height of image when prompted.</p>" +
             makeButton("Resize by pixel dimensions", "!prod map resize ?{Pixel width of image} ?{Pixel height of image}", styles.button) + 
-            makeButton("Resize by units", "!prod map resizeUnit ?{Unit width of image} ?{Unit height of image}", styles.button) + 
+            makeButton("Resize by units", "!prod map resizeUnit ?{Unit width of image} ?{Unit height of image}", styles.button) + "<br/>" +
+            makeButton("Fit Image to page", "!prod map fittopage", styles.button) + 
+            makeButton("Fit Page to image", "!prod map fittoimage", styles.button) + 
+            makeH4("Token Lock Selected") + 
+		    makeButton("Lock", "!token-mod --on lockMovement", styles.button) +
+		    makeButton("Unlock", "!token-mod --off lockMovement", styles.button) +
             makeH4("Change Grid Width") +
             makeButton("Width 1", "!prod map edit snapping_increment 1", styles.button) +
             makeButton("Width 0.5", "!prod map edit snapping_increment 0.5", styles.button) +
@@ -3008,6 +3013,8 @@ const Roll20Pro = (() => {
                             case "menu": makeAndSendMenu(menuText.map(), "Map Helper", caller); break;
                             case "resize": if (onPlayerPage(msg)) {resizeMap(args[3], args[4], msg)} break;
                             case "resizeUnit": if (onPlayerPage(msg)) {resizeMapUnit(args[3], args[4], msg)} break;
+                            case "fittopage": if (onPlayerPage(msg)) {fitToPage(msg)} break;
+                            case "fittoimage": if (onPlayerPage(msg)) {fitToImage(msg)} break;
                             case "edit": if (onPlayerPage(msg)) {mapQuickChange(args[3], args[4], msg)} break;
                             case "buddy": toggleBuddy(msg); break;
                         }
@@ -3494,6 +3501,79 @@ const Roll20Pro = (() => {
                 }
             }
         },
+        
+        fitToPage = function (msg) {
+
+            let selected = msg.selected;
+
+                if (undefined === selected || undefined === selected[0]) {
+                    makeAndSendMenu("No map image selected!", "Roll20 Producer Error", 'gm');
+                } else {
+
+                    let lastPageID = getObj('player', msg.playerid).get('_lastpage');
+                    let pageID = Campaign().get("playerpageid")
+                    let page = getObj("page", pageID);
+                    if (pageID == lastPageID) {
+
+                        tokenID = selected[0]._id;
+                        tokenObject = getObj("graphic", tokenID)
+                        const width = tokenObject.get("width");
+                        const height = tokenObject.get("height");
+                        
+                        page.set("width", width / 70);
+                        page.set("height", height / 70);
+                        tokenObject.set({
+                            left: width / 2,
+                            top: height / 2,
+                        });
+
+                    } else {
+                        makeAndSendMenu("For safety, The player bookmark must be on your page!", "Roll20 Producer Error", 'gm');
+                    }
+
+                }
+            
+        },
+        
+        fitToImage = function(msg) {
+
+            selected = msg.selected
+            log("selected = " + selected);
+            if (undefined === selected || !selected) {
+                makeAndSendMenu("No reference graphic selected!", "Roll20 Producer Error", 'gm');
+            } else {
+
+                width = getObj("graphic", selected[0]._id).get("width");
+                height = getObj("graphic", selected[0]._id).get("height");
+
+                if (!width || width == "" || !height || height == "") {
+                    makeAndSendMenu("Height or Width arguments not found!", "Roll20 Producer Error", 'gm');
+                } else {
+                    if (!selected || !selected[0]) {
+                        makeAndSendMenu("No map image selected!", "Roll20 Producer Error", 'gm');
+                    } else {
+
+                        let lastPageID = getObj('player', msg.playerid).get('_lastpage');
+                        let pageID = Campaign().get("playerpageid")
+                        let page = getObj("page", pageID);
+                        if (pageID == lastPageID) {
+                            page.set("width", width / 70);
+                            page.set("height", height / 70);
+                            tokenID = selected[0]._id;
+                            tokenObject = getObj("graphic", tokenID)
+                            tokenObject.set({
+                                width: width,
+                                height: height,
+                                left: width / 2,
+                                top: height / 2,
+                            });
+                        }
+
+                    }
+                }
+            }
+        },
+        
         
 
         mapQuickChange = function (param, value, msg) {
