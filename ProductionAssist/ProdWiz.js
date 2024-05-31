@@ -3517,14 +3517,16 @@ const Roll20Pro = (() => {
 
                         tokenID = selected[0]._id;
                         tokenObject = getObj("graphic", tokenID)
-                        const width = tokenObject.get("width");
-                        const height = tokenObject.get("height");
+                        let width = page.get("width")*70;
+                        let height = page.get("height")*70;
                         
-                        page.set("width", width / 70);
-                        page.set("height", height / 70);
-                        tokenObject.set({
-                            left: width / 2,
-                            top: height / 2,
+                        //page.set("width", width / 70);
+                        //page.set("height", height / 70);
+                            tokenObject.set({
+                                width: width,
+                                height: height,
+                                left: width / 2,
+                                top: height / 2,
                         });
 
                     } else {
@@ -9321,7 +9323,7 @@ API_Meta.dltool = {
 }
 /* globals checkLightLevel */
 on('ready', () => {
-    const version = '1.0.8';
+    const version = '1.0.9';
     log('-=> Dynamic Lighting Tool v' + version + ' is loaded. Base command is !dltool');
 
 
