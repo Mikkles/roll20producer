@@ -1,3 +1,6 @@
+//Roll20 Production Wizard Version  0.9.7
+
+
 /**
  * This script provides a library for performing affine matrix operations
  * inspired by the [glMatrix library](http://glmatrix.net/) developed by
@@ -2724,6 +2727,11 @@ var VecMath = (function() {
   });
 })();
 
+//##############################################################################
+//################################## PROD WIZ BEGINS ###########################
+//###############################################################################
+
+
 const Roll20Pro = (() => {
     let category = [],
         tokenModInstall,
@@ -2741,7 +2749,7 @@ const Roll20Pro = (() => {
     }
     
     const scriptName = "Roll20 Production Wizard",
-        version = "0.9.6",
+        version = "0.9.7",
         
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -2763,7 +2771,6 @@ const Roll20Pro = (() => {
                 quote: 'border-style: solid none; border-width:1px; border-color:brown; color:brown' 
             }
         },
-        
         
         makeTitle = function (title) {
             return '<h2 style="' + styles.title + '">' + title + '</h2>';
@@ -2800,6 +2807,9 @@ const Roll20Pro = (() => {
                 return false;
             }
         },
+        
+
+
         
         menuText = {
             main: () => "<p>v" + version + " ready.</p>" +
@@ -2906,6 +2916,10 @@ const Roll20Pro = (() => {
             makeH4("Toggle Dynamic Lighting Buddy") + //"<p>Creates a buddy on the current page. If there are already any buddies created, " + 
             //"this will delete it. You may copypaste buddies as long as you remove them before project completion.</p>" +
             makeButton("Toggle Buddy", "!prod map buddy", styles.button) +
+            makeButton("Buddy Menu", "!prod buddy", styles.button) +
+
+            //########################################################################################
+            //THESE ACTIONS WERE APPARENTLY MADE FOR PATH SPLITTER. THEY ARE LEFT IN SHOULD WE DECIDE TO SWITCH BACK TO IT.
             //makeH4("Path Editor") + 
             //makeButton("Edit Selected Path", "!path_Edit", styles.button) +
             //makeButton("Toggle Grid Snap", "!path_Snap", styles.button) +
@@ -2922,6 +2936,8 @@ const Roll20Pro = (() => {
             makeButton("Shrink Pts", "!path_ResizePt decrease", styles.button) +
             makeButton("Grow Pts", "!path_ResizePt increase", styles.button) +
             */
+            //########################################################################################
+
             makeH4("Path Splitter-Use Black for Splitter") +
             makeButton("Split Path", "!pathSplit", styles.button) +
             makeH4("Dynamic Lighting Tool") +
@@ -2929,6 +2945,22 @@ const Roll20Pro = (() => {
             makeButton("Page Tools", "!dltool --report|extra", styles.button) +
             makeBackButton()
             ,
+
+            buddy: () => 
+            makeButton("Toggle Buddy", "!prod map buddy", styles.button) + 
+            makeH4("Nightvision") +
+            makeButton("On", "!prod buddy nightvision_on", styles.button) + 
+            makeButton("Off", "!prod buddy nightvision_off", styles.button) + 
+            makeH4("Light") +
+            makeButton("On", "!prod buddy brightlight_on", styles.button) + 
+            makeButton("Off", "!prod buddy brightlight_off", styles.button) +
+            makeH4("Layer") +
+            makeButton("Dynamic Lighting", "!prod buddy dl_layer", styles.button) + 
+            makeButton("Token", "!prod buddy token_layer", styles.button) + 
+            makeBackButton()
+            ,
+
+            
             finder: () => makeH4("NPC Handout Finder") +
             makeButton("Find for All Characters", "!prod finder art", styles.button) + 
             makeButton("Find for Selected Only", "!prod finder artSelected", styles.button) + 
@@ -3015,6 +3047,19 @@ const Roll20Pro = (() => {
                             case "resetCats": resetCats(); break;
                             case "UDLdv": tokenPF2DarkvisionChecker(selected); break;
                             case "off": turnOffAllTokenVision(); break;
+                        } 
+                        break;
+                    case "buddy": 
+                        switch (args[2]) {
+                            default: 
+                            case "menu": makeAndSendMenu(menuText.buddy(), "DL Buddy", caller); break;
+                            case "nightvision_on": buddyActions("nightvision_on"); break;
+                            case "nightvision_off": buddyActions("nightvision_off"); break;
+                            case "brightlight_on": buddyActions("brightlight_on"); break;
+                            case "brightlight_off": buddyActions("brightlight_off"); break;
+                            case "token_layer": buddyActions("token_layer"); break;
+                            case "dl_layer": buddyActions("dl_layer"); break;
+                            case "toggle": buddyActions("toggle"); break;
                         } 
                         break;
                     case "finder":
@@ -3623,6 +3668,49 @@ const Roll20Pro = (() => {
             return buddies;
             
         }
+
+        buddyActions = function (msg) {
+            buddies = locateBuddies();
+            if (buddies.length > 0 ){
+                _.each(buddies, function(buddy){
+                    
+            switch (msg) {
+                case "nightvision_on":
+                    buddy.set("has_night_vision",true);
+                    buddy.set("night_vision_distance",60);
+                    buddy.set("imgsrc","https://s3.amazonaws.com/files.d20.io/images/402350944/GVueKntkrrg3t2AEbKbupQ/thumb.png?172193992955");
+                break;
+                case "nightvision_off":
+                    buddy.set("has_night_vision",false);
+                    buddy.set("imgsrc","https://s3.amazonaws.com/files.d20.io/images/402350946/2efm18DOG7dZ4kXUoZxJlw/thumb.png?172193992955");
+                break;
+                case "brightlight_on":
+                    buddy.set("emits_bright_light",true);
+                    buddy.set("bright_light_distance",100);
+                    buddy.set("imgsrc","https://s3.amazonaws.com/files.d20.io/images/402350945/M5oGrWornuvvyq3ynnM09Q/thumb.png?172193993055");
+                break;
+                case "brightlight_off":
+                    buddy.set("emits_bright_light",false);
+                    buddy.set("has_night_vision",false);
+                    buddy.set("imgsrc","https://s3.amazonaws.com/files.d20.io/images/402350946/2efm18DOG7dZ4kXUoZxJlw/thumb.png?172193992955");
+                break;
+                case "token_layer":
+                    buddy.set("layer","objects");
+                break;
+                case "dl_layer":
+                    buddy.set("layer","walls");
+                break;
+                case "toggle":
+                sendChat ("ProdWiz","/w gm All buddies deleted");
+                toggleBuddy();
+                return;
+                break;  
+                }
+                })
+            } else {
+                sendChat ("ProdWiz","/w gm No buddies exist in the game. Create a buddy before using this command")
+        }
+        }
         
         toggleBuddy = function (msg) {
             buddies = locateBuddies();
@@ -3632,10 +3720,12 @@ const Roll20Pro = (() => {
                     log("Buddy Deleted");
                 })
             } else {
+                makeAndSendMenu(menuText.buddy(), "DL Buddy", "");
                 let pageID = getObj('player', msg.playerid).get('_lastpage');
                 newBuddy = createObj("graphic", {
                     name: "Dynamic Lighting Buddy",
-                    imgsrc: 'https://s3.amazonaws.com/files.d20.io/images/140823448/E4Kn8ggLQWyRtaJHzLAPAw/thumb.png?1591297505',
+                    //imgsrc: 'https://s3.amazonaws.com/files.d20.io/images/140823448/E4Kn8ggLQWyRtaJHzLAPAw/thumb.png?1591297505',
+                    imgsrc: 'https://s3.amazonaws.com/files.d20.io/images/402350945/M5oGrWornuvvyq3ynnM09Q/thumb.png?172193993055',
                     _pageid: pageID,
                     layer: "walls",
                     has_bright_light_vision: true,
@@ -3645,7 +3735,9 @@ const Roll20Pro = (() => {
                     left: 70,
                     width: 70,
                     height: 70,
-                })
+                });
+                //sendChat ("ProdWiz", "!prod buddy");
+
             }
         },
 
