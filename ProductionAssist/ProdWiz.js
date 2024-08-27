@@ -1,2735 +1,6 @@
-//Roll20 Production Wizard Version  0.9.7
-
-
-/**
- * This script provides a library for performing affine matrix operations
- * inspired by the [glMatrix library](http://glmatrix.net/) developed by
- * Toji and SinisterChipmunk.
- *
- * Unlike glMatrix, this library does not have operations for vectors.
- * However, my VectorMath script provides a library providing many kinds of
- * common vector operations.
- *
- * This project has no behavior on its own, but its functions are used by
- * other scripts to do some cool things, particular for math involving 2D and
- * 3D geometry.
- */
-var MatrixMath = (function() {
-  /**
-   * An NxN square matrix, represented as a 2D array of numbers in column-major
-   * order. For example, mat[3][2] would get the value in column 3 and row 2.
-   * order.
-   * @typedef {number[][]} Matrix
-   */
-
-  /**
-   * An N-degree vector.
-   * @typedef {number[]} Vector
-   */
-
-  /**
-   * Gets the adjugate of a matrix, the tranpose of its cofactor matrix.
-   * @param  {Matrix} mat
-   * @return {Matrix}
-   */
-  function adjoint(mat) {
-    var cofactorMat = MatrixMath.cofactorMatrix(mat);
-    return MatrixMath.transpose(cofactorMat);
-  }
-
-   /**
-    * Produces a clone of an NxN square matrix.
-    * @param  {Matrix} mat
-    * @return {Matrix}
-    */
-  function clone(mat) {
-    return _.map(mat, function(column) {
-      return _.map(column, function(value) {
-        return value;
-      });
-    });
-  }
-
-  /**
-   * Gets the cofactor of a matrix at a specified column and row.
-   * @param  {Matrix} mat
-   * @param  {uint} col
-   * @param  {uint} row
-   * @return {number}
-   */
-  function cofactor(mat, col, row) {
-    return Math.pow(-1, col+row)*MatrixMath.minor(mat, col, row);
-  }
-
-  /**
-   * Gets the cofactor matrix of a matrix.
-   * @param  {Matrix} mat
-   * @return {Matrix}
-   */
-  function cofactorMatrix(mat) {
-    var result = [];
-    var size = MatrixMath.size(mat);
-    for(var col=0; col<size; col++) {
-      result[col] = [];
-      for(var row=0; row<size; row++) {
-        result[col][row] = MatrixMath.cofactor(mat, col, row);
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Gets the determinant of an NxN matrix.
-   * @param  {Matrix} mat
-   * @return {number}
-   */
-  function determinant(mat) {
-    var size = MatrixMath.size(mat);
-
-    if(size === 2)
-      return mat[0][0]*mat[1][1] - mat[1][0]*mat[0][1];
-    else {
-      var sum = 0;
-      for(var col=0; col<size; col++) {
-        sum += mat[col][0] * MatrixMath.cofactor(mat, col, 0);
-      }
-      return sum;
-    }
-  }
-
-  /**
-   * Tests if two matrices are equal.
-   * @param  {Matrix} a
-   * @param  {Matrix} b
-   * @param {number} [tolerance=0]
-   *        If specified, this specifies the amount of tolerance to use for
-   *        each value of the matrices when testing for equality.
-   * @return {boolean}
-   */
-  function equal(a, b, tolerance) {
-    tolerance = tolerance || 0;
-    var sizeA = MatrixMath.size(a);
-    var sizeB = MatrixMath.size(b);
-
-    if(sizeA !== sizeB)
-      return false;
-
-    for(var col=0; col<sizeA; col++) {
-      for(var row=0; row<sizeA; row++) {
-        if(Math.abs(a[col][row] - b[col][row]) > tolerance)
-          return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Produces an identity matrix of some size.
-   * @param  {uint} size
-   * @return {Matrix}
-   */
-  function identity(size) {
-    var mat = [];
-    for(var col=0; col<size; col++) {
-      mat[col] = [];
-      for(var row=0; row<size; row++) {
-        if(row === col)
-          mat[col][row] = 1;
-        else
-          mat[col][row] = 0;
-      }
-    }
-    return mat;
-  }
-
-  /**
-   * Gets the inverse of a matrix.
-   * @param  {Matrix} mat
-   * @return {Matrix}
-   */
-  function inverse(mat) {
-    var determinant = MatrixMath.determinant(mat);
-    if(determinant === 0)
-      return undefined;
-
-    var adjoint = MatrixMath.adjoint(mat);
-    var result = [];
-    var size = MatrixMath.size(mat);
-    for(var col=0; col<size; col++) {
-      result[col] = [];
-      for(var row=0; row<size; row++) {
-        result[col][row] = adjoint[col][row]/determinant;
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Gets the determinant of a matrix omitting some column and row.
-   * @param  {Matrix} mat
-   * @param  {uint} col
-   * @param  {uint} row
-   * @return {number}
-   */
-  function minor(mat, col, row) {
-    var reducedMat = MatrixMath.omit(mat, col, row);
-    return determinant(reducedMat);
-  }
-
-
-  /**
-   * Returns the matrix multiplication of a*b.
-   * This function works for non-square matrices (and also for transforming
-   * vectors by a matrix).
-   * For matrix multiplication to work, the # of columns in A must be equal
-   * to the # of rows in B.
-   * The resulting matrix will have the same number of rows as A and the
-   * same number of columns as B.
-   * If b was given as a vector, then the result will also be a vector.
-   * @param  {Matrix} a
-   * @param  {Matrix|Vector} b
-   * @return {Matrix|Vector}
-   */
-  function multiply(a, b) {
-    // If a vector is given for b, convert it to a nx1 matrix, where n
-    // is the length of b.
-    var bIsVector = _.isNumber(b[0]);
-    if(bIsVector)
-      b = [b];
-
-    var colsA = a.length;
-    var rowsA = a[0].length;
-    var colsB = b.length;
-    var rowsB = b[0].length;
-    if(colsA !== rowsB)
-      throw new Error('MatrixMath.multiply ERROR: # columns in A must be ' +
-        'the same as the # rows in B. Got A: ' + rowsA + 'x' + colsA +
-        ', B: ' + rowsB + 'x' + colsB + '.');
-
-    var result = [];
-    for(var col=0; col<colsB; col++) {
-      result[col] = [];
-      for(var row=0; row<rowsA; row++) {
-        result[col][row] = 0;
-        for(var i=0; i<colsA; i++) {
-          result[col][row] += a[i][row] * b[col][i];
-        }
-      }
-    }
-
-    if(bIsVector)
-      result = result[0];
-    return result;
-  }
-
-  /**
-   * Returns a matrix with a column and row omitted.
-   * @param  {Matrix} mat
-   * @param  {uint} col
-   * @param  {uint} row
-   * @return {Matrix}
-   */
-  function omit(mat, col, row) {
-    var result = [];
-
-    var size = MatrixMath.size(mat);
-    for(var i=0; i<size; i++) {
-      if(i === col)
-        continue;
-
-      var column = [];
-      result.push(column);
-      for(var j=0; j<size; j++) {
-        if(j !== row)
-          column.push(mat[i][j]);
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Produces a 2D rotation affine transformation. The direction of the
-   * rotation depends upon the coordinate system.
-   * @param  {number} angle
-   *         The angle, in radians.
-   * @return {Matrix}
-   */
-  function rotate(angle) {
-    var cos = Math.cos(angle);
-    var sin = Math.sin(angle);
-    return [[cos, sin, 0], [-sin, cos, 0], [0,0,1]];
-  }
-
-  /**
-   * Produces a 2D scale affine transformation matrix.
-   * The matrix is used to transform homogenous coordinates, so it is
-   * actually size 3 instead of size 2, despite being used for 2D geometry.
-   * @param  {(number|Vector)} amount
-   *         If specified as a number, then it is a uniform scale. Otherwise,
-   *         it defines a scale by parts.
-   * @return {Matrix}
-   */
-  function scale(amount) {
-    if(_.isNumber(amount))
-      amount = [amount, amount];
-    return [[amount[0], 0, 0], [0, amount[1], 0], [0, 0, 1]];
-  }
-
-  /**
-   * Gets the size N of a NxN square matrix.
-   * @param  {Matrix} mat
-   * @return {uint}
-   */
-  function size(mat) {
-    return mat[0].length;
-  }
-
-  /**
-   * Produces a 2D translation affine transformation matrix.
-   * The matrix is used to transform homogenous coordinates, so it is
-   * actually size 3 instead of size 2, despite being used for 2D geometry.
-   * @param  {Vector} vec
-   * @return {Matrix}
-   */
-  function translate(vec) {
-    return [[1,0,0], [0,1,0],[vec[0], vec[1], 1]];
-  }
-
-  /**
-   * Returns the transpose of a matrix.
-   * @param  {Matrix} mat
-   * @return {Matrix}
-   */
-  function transpose(mat) {
-    var result = [];
-
-    var size = MatrixMath.size(mat);
-    for(var col=0; col<size; col++) {
-      result[col] = [];
-      for(var row=0; row<size; row++) {
-        result[col][row] = mat[row][col];
-      }
-    }
-    return result;
-  }
-
-
-  return {
-    adjoint: adjoint,
-    clone: clone,
-    cofactor: cofactor,
-    cofactorMatrix: cofactorMatrix,
-    determinant: determinant,
-    equal: equal,
-    identity: identity,
-    inverse: inverse,
-    minor: minor,
-    multiply: multiply,
-    omit: omit,
-    rotate: rotate,
-    scale: scale,
-    size: size,
-    translate: translate,
-    transpose: transpose
-  };
-})();
-
-
-
-// Perform unit tests. Inform us in the log if any test fails. Otherwise,
-// succeed silently.
-(function() {
-  /**
-   * Asserts that some boolean expression is true. Otherwise, it throws
-   * an error.
-   * @param {boolean} test    Some expression to test.
-   * @param {string} failMsg  A message displayed if the test fails.
-   */
-  function assert(test, failMsg) {
-    if(!test)
-      throw new Error(failMsg);
-  }
-
-  function assertEqual(actual, expected, tolerance) {
-    assert(MatrixMath.equal(actual, expected, tolerance),
-      'Expected: ' + JSON.stringify(expected) +
-      '\nActual: ' + JSON.stringify(actual));
-  }
-
-  /**
-   * Performs a unit test.
-   * If it fails, then the test's name and the error is displayed.
-   * It is silent if the test passes.
-   * @param  {string} testName
-   * @param  {function} testFn
-   */
-  function unitTest(testName, testFn) {
-    try {
-      testFn();
-    }
-    catch(err) {
-      log('TEST ' + testName);
-      log('ERROR: ');
-      var messageLines = err.message.split('\n');
-      _.each(messageLines, function(line) {
-        log(line);
-      });
-    }
-  }
-
-
-  unitTest('MatrixMath.equal()', function() {
-    var a = [[1,2,3], [4,5,6], [7,8,9]];
-    var b = [[1,2,3], [4,5,6], [7,8,9]];
-    var c = [[0,0,0], [1,1,1], [2,2,2]];
-    assert(MatrixMath.equal(a,b));
-    assert(!MatrixMath.equal(a,c));
-  });
-
-  unitTest('MatrixMath.adjoint()', function() {
-    // Example taken from http://www.mathwords.com/a/adjoint.htm
-    var a = [[1,0,1], [2,4,0], [3,5,6]];
-
-    var actual = MatrixMath.adjoint(a);
-    var expected = [[24, 5, -4], [-12,3,2], [-2,-5,4]];
-
-    assertEqual(actual, expected);
-  });
-
-  unitTest('MatrixMath.clone()', function() {
-    var a = [[1,2,3], [4,5,6], [7,8,9]];
-    var clone = MatrixMath.clone(a);
-    assertEqual(a, clone);
-    assert(a !== clone, 'should not be equal by reference.');
-  });
-
-  unitTest('MatrixMath.cofactor()', function() {
-    // Example taken from http://www.mathwords.com/c/cofactor_matrix.htm.
-    var a = [[1,0,1], [2,4,0], [3,5,6]];
-
-    var actual = MatrixMath.cofactor(a,0,0);
-    var expected = 24;
-    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
-
-    var actual = MatrixMath.cofactor(a,1,0);
-    var expected = 5;
-    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
-
-    var actual = MatrixMath.cofactor(a,2,0);
-    var expected = -4;
-    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
-
-    var actual = MatrixMath.cofactor(a,0,1);
-    var expected = -12;
-    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
-
-    var actual = MatrixMath.cofactor(a,1,1);
-    var expected = 3;
-    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
-
-    var actual = MatrixMath.cofactor(a,2,1);
-    var expected = 2;
-    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
-
-    var actual = MatrixMath.cofactor(a,0,2);
-    var expected = -2;
-    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
-
-    var actual = MatrixMath.cofactor(a,1,2);
-    var expected = -5;
-    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
-
-    var actual = MatrixMath.cofactor(a,2,2);
-    var expected = 4;
-    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
-  });
-
-  unitTest('MatrixMath.cofactorMatrix()', function() {
-    // Example taken from http://www.mathwords.com/c/cofactor_matrix.htm.
-    var a = [[1,0,1], [2,4,0], [3,5,6]];
-    var actual = MatrixMath.cofactorMatrix(a);
-    var expected = [[24, -12, -2], [5, 3, -5], [-4, 2, 4]];
-    assertEqual(actual, expected);
-  });
-
-  unitTest('MatrixMath.determinant()', function() {
-    var a = [[1,2], [3,4]];
-    var actual = MatrixMath.determinant(a);
-    var expected = -2;
-    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
-
-    var a = [[1,5,0,2], [3,1,1,-1], [-2,0,0,0], [1,-1,-2,3]];
-    var actual = MatrixMath.determinant(a);
-    var expected = -6;
-    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
-  });
-
-  unitTest('MatrixMath.identity()', function() {
-    var actual = MatrixMath.identity(3);
-    var expected = [[1,0,0], [0,1,0], [0,0,1]];
-    assertEqual(actual, expected);
-
-    var actual = MatrixMath.identity(2);
-    var expected = [[1,0], [0,1]];
-    assertEqual(actual, expected);
-  });
-
-  unitTest('MatrixMath.inverse()', function() {
-    // Example taken from http://www.mathwords.com/i/inverse_of_a_matrix.htm
-    var a = [[1,0,1], [2,4,0], [3,5,6]];
-    var actual = MatrixMath.inverse(a);
-    var expected = [[12/11, 5/22, -2/11],
-                    [-6/11, 3/22, 1/11],
-                    [-1/11, -5/22, 2/11]];
-    assertEqual(actual, expected);
-
-    var inverse = MatrixMath.multiply(a, actual);
-    var expected = MatrixMath.identity(3);
-    assertEqual(inverse, expected, 0.001);
-  });
-
-  unitTest('MatrixMath.minor()', function() {
-    var a = [[1,2,3], [4,5,6], [7,8,9]];
-    var actual = MatrixMath.minor(a, 1, 1);
-    var expected = -12;
-    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
-  });
-
-  unitTest('MatrixMath.multiply()', function() {
-    var a = [[1,2,3], [4,5,6], [7,8,9]];
-    var b = [[9,8,7], [6,5,4], [3,2,1]];
-    var actual = MatrixMath.multiply(a,b);
-    var expected = [[90, 114, 138], [54,69,84], [18,24,30]];
-    assertEqual(actual, expected);
-  });
-
-  unitTest('Matrix.multiply() to transform a vector', function() {
-    // A 2D point in homogenous coordinates.
-    var pt = [1,2,1];
-
-    var scale = MatrixMath.scale([10,20]);
-    var rotate = MatrixMath.rotate(Math.PI/2);
-    var translate = MatrixMath.translate([2,-8]);
-
-    var m = MatrixMath.multiply(scale, rotate);
-    m = MatrixMath.multiply(m, translate);
-
-    // Transform the point.
-    var actual = MatrixMath.multiply(m, pt);
-    var expected = [60, 60, 1];
-    assertEqual(actual, expected, 0.01);
-  });
-
-  unitTest('MatrixMath.omit()', function() {
-    var a = [[1,2,3], [4,5,6], [7,8,9]];
-    var actual = MatrixMath.omit(a, 1, 2);
-    var expected = [[1,2], [7,8]];
-    assertEqual(actual, expected);
-  });
-
-  unitTest('MatrixMath.size()', function() {
-    var a = [[1,2,3], [4,5,6], [7,8,9]];
-    assert(MatrixMath.size(a) === 3);
-
-    var b = [[1,2],[3,4]];
-    assert(MatrixMath.size(b) === 2);
-  });
-
-  unitTest('MatrixMath.transpose()', function() {
-    var a = [[1,2,3], [4,5,6], [7,8,9]];
-    var expected = [[1,4,7], [2,5,8], [3,6,9]];
-    var transpose = MatrixMath.transpose(a);
-    assertEqual(transpose, expected);
-  });
-
-
-
-})();
-
-
-/**
- * PathMath script
- *
- * This is a library that provides mathematical operations involving Paths.
- * It intended to be used by other scripts and has no stand-alone
- * functionality of its own. All the library's operations are exposed by the
- * PathMath object created by this script.
- */
-var PathMath = (() => {
-    'use strict';
-
-    /** The size of a single square on a page, in pixels. */
-    const UNIT_SIZE_PX = 70;
-
-    /**
-     * A vector used to define a homogeneous point or a direction.
-     * @typedef {number[]} Vector
-     */
-
-    /**
-     * A line segment defined by two homogeneous 2D points.
-     * @typedef {Vector[]} Segment
-     */
-
-    /**
-     * Information about a path's 2D transform.
-     * @typedef {Object} PathTransformInfo
-     * @property {number} angle
-     *           The path's rotation angle in radians.
-     * @property {number} cx
-     *           The x coordinate of the center of the path's bounding box.
-     * @property {number} cy
-     *           The y coordinate of the center of the path's bounding box.
-     * @property {number} height
-     *           The unscaled height of the path's bounding box.
-     * @property {number} scaleX
-     *           The path's X-scale.
-     * @property {number} scaleY
-     *           The path's Y-scale.
-     * @property {number} width
-     *           The unscaled width of the path's bounding box.
-     */
-
-    /**
-     * Rendering information for shapes.
-     * @typedef {Object} RenderInfo
-     * @property {string} [controlledby]
-     * @property {string} [fill]
-     * @property {string} [stroke]
-     * @property {string} [strokeWidth]
-     */
-
-    /**
-     * Some shape defined by a path.
-     * @abstract
-     */
-    class PathShape {
-      constructor(vertices) {
-        this.vertices = vertices || [];
-      }
-
-      /**
-       * Gets the distance from this shape to some point.
-       * @abstract
-       * @param {vec3} pt
-       * @return {number}
-       */
-      distanceToPoint(pt) {
-        throw new Error('Must be defined by subclass.');
-      }
-
-      /**
-       * Gets the bounding box of this shape.
-       * @return {BoundingBox}
-       */
-      getBoundingBox() {
-        if(!this._bbox) {
-          let left, right, top, bottom;
-          _.each(this.vertices, (v, i) => {
-            if(i === 0) {
-              left = v[0];
-              right = v[0];
-              top = v[1];
-              bottom = v[1];
-            }
-            else {
-              left = Math.min(left, v[0]);
-              right = Math.max(right, v[0]);
-              top = Math.min(top, v[1]);
-              bottom = Math.max(bottom, v[1]);
-            }
-          });
-          let width = right - left;
-          let height = bottom - top;
-          this._bbox = new BoundingBox(left, top, width, height);
-        }
-        return this._bbox;
-      }
-
-      /**
-       * Checks if this shape intersects another shape.
-       * @abstract
-       * @param {PathShape} other
-       * @return {boolean}
-       */
-      intersects(other) {
-        throw new Error('Must be defined by subclass.');
-      }
-
-      /**
-       * Renders this path.
-       * @param {string} pageId
-       * @param {string} layer
-       * @param {RenderInfo} renderInfo
-       * @return {Roll20.Path}
-       */
-      render(pageId, layer, renderInfo) {
-        let segments = this.toSegments();
-        let pathData = segmentsToPath(segments);
-        _.extend(pathData, renderInfo, {
-          _pageid: pageId,
-          layer
-        });
-        return createObj('path', pathData);
-      }
-
-      /**
-       * Returns the segments that make up this shape.
-       * @abstract
-       * @return {Segment[]}
-       */
-      toSegments() {
-        throw new Error('Must be defined by subclass.');
-      }
-
-      /**
-       * Produces a copy of this shape, transformed by an affine
-       * transformation matrix.
-       * @param {MatrixMath.Matrix} matrix
-       * @return {PathShape}
-       */
-      transform(matrix) {
-        let vertices = _.map(this.vertices, v => {
-          return MatrixMath.multiply(matrix, v);
-        });
-        let Clazz = this.constructor;
-        return new Clazz(vertices);
-      }
-    }
-
-    /**
-     * An open shape defined by a path or list of vertices.
-     */
-    class Path extends PathShape {
-
-      /**
-       * @param {(Roll20Path|vec3[])} path
-       */
-      constructor(path) {
-        super();
-        if(_.isArray(path))
-          this.vertices = path;
-        else {
-          this._segments = toSegments(path);
-          _.each(this._segments, (seg, i) => {
-            if(i === 0)
-              this.vertices.push(seg[0]);
-            this.vertices.push(seg[1]);
-          });
-        }
-
-        this.numVerts = this.vertices.length;
-      }
-
-      /**
-       * Gets the distance from this path to some point.
-       * @param {vec3} pt
-       * @return {number}
-       */
-      distanceToPoint(pt) {
-        let dist = _.chain(this.toSegments())
-        .map(seg => {
-          let [ p, q ] = seg;
-          return VecMath.ptSegDist(pt, p, q);
-        })
-        .min()
-        .value();
-        return dist;
-      }
-
-      /**
-       * Checks if this path intersects with another path.
-       * @param {Polygon} other
-       * @return {boolean}
-       */
-      intersects(other) {
-        let thisBox = this.getBoundingBox();
-        let otherBox = other.getBoundingBox();
-
-        // If the bounding boxes don't intersect, then the paths won't
-        // intersect.
-        if(!thisBox.intersects(otherBox))
-          return false;
-
-        // Naive approach: Since our shortcuts didn't return, check each
-        // path's segments for intersections with each of the other
-        // path's segments. This takes O(n^2) time.
-        return !!_.find(this.toSegments(), seg1 => {
-          return !!_.find(other.toSegments(), seg2 => {
-            return !!segmentIntersection(seg1, seg2);
-          });
-        });
-      }
-
-      /**
-       * Produces a list of segments defining this path.
-       * @return {Segment[]}
-       */
-      toSegments() {
-        if(!this._segments) {
-          if (this.numVerts <= 1)
-            return [];
-
-          this._segments = _.map(_.range(this.numVerts - 1), i => {
-            let v = this.vertices[i];
-            let vNext = this.vertices[i + 1];
-            return [v, vNext];
-          });
-        }
-        return this._segments;
-      }
-    }
-
-    /**
-     * A closed shape defined by a path or a list of vertices.
-     */
-    class Polygon extends PathShape {
-
-      /**
-       * @param {(Roll20Path|vec3[])} path
-       */
-      constructor(path) {
-        super();
-        if(_.isArray(path))
-          this.vertices = path;
-        else {
-          this._segments = toSegments(path);
-          this.vertices = _.map(this._segments, seg => {
-            return seg[0];
-          });
-        }
-
-        this.numVerts = this.vertices.length;
-        if(this.numVerts < 3)
-          throw new Error('A polygon must have at least 3 vertices.');
-      }
-
-      /**
-       * Determines whether a point lies inside the polygon using the
-       * winding algorithm.
-       * See: http://geomalgorithms.com/a03-_inclusion.html
-       * @param {vec3} p
-       * @return {boolean}
-       */
-      containsPt(p) {
-        // A helper function that tests if a point is "left" of a line segment.
-        let _isLeft = (p0, p1, p2) => {
-          return (p1[0] - p0[0])*(p2[1] - p0[1]) - (p2[0]-p0[0])*(p1[1]-p0[1]);
-        };
-
-        let total = 0;
-        _.each(this.vertices, (v1, i) => {
-          let v2 = this.vertices[(i+1) % this.numVerts];
-
-          // Check for valid up intersect.
-          if(v1[1] <= p[1] && v2[1] > p[1]) {
-            if(_isLeft(v1, v2, p) > 0)
-              total++;
-          }
-
-          // Check for valid down intersect.
-          else if(v1[1] > p[1] && v2[1] <= p[1]) {
-            if(_isLeft(v1, v2, p) < 0)
-              total--;
-          }
-        });
-        return !!total; // We are inside if our total windings are non-zero.
-      }
-
-      /**
-       * Gets the distance from this polygon to some point.
-       * @param {vec3} pt
-       * @return {number}
-       */
-      distanceToPoint(pt) {
-        if(this.containsPt(pt))
-          return 0;
-        else
-          return _.chain(this.toSegments())
-          .map(seg => {
-            let [ p, q ] = seg;
-            return VecMath.ptSegDist(pt, p, q);
-          })
-          .min()
-          .value();
-      }
-
-      /**
-       * Gets the area of this polygon.
-       * @return {number}
-       */
-      getArea() {
-        let triangles = this.tessellate();
-        return _.reduce(triangles, (area, tri) => {
-          return area + tri.getArea();
-        }, 0);
-      }
-
-      /**
-       * Determines whether each vertex along the polygon is convex (1)
-       * or concave (-1). A vertex lying on a straight line is assined 0.
-       * @return {int[]}
-       */
-      getConvexness() {
-        return Polygon.getConvexness(this.vertices);
-      }
-
-      /**
-       * Gets the convexness information about each vertex.
-       * @param {vec3[]}
-       * @return {int[]}
-       */
-      static getConvexness(vertices) {
-        let totalAngle = 0;
-        let numVerts = vertices.length;
-        let vertexCurves = _.map(vertices, (v, i) => {
-          let vPrev = vertices[(i-1 + numVerts) % numVerts];
-          let vNext = vertices[(i+1 + numVerts) % numVerts];
-
-          let u = VecMath.sub(v, vPrev);
-          let w = VecMath.sub(vNext, v);
-          let uHat = VecMath.normalize(u);
-          let wHat = VecMath.normalize(w);
-
-          let cross = VecMath.cross(uHat, wHat);
-          let sign = cross[2];
-          if(sign)
-            sign = sign/Math.abs(sign);
-
-          let dot = VecMath.dot(uHat, wHat);
-          let angle = Math.acos(dot)*sign;
-          totalAngle += angle;
-
-          return sign;
-        });
-
-        if(totalAngle < 0)
-          return _.map(vertexCurves, curve => {
-            return -curve;
-          });
-        else
-          return vertexCurves;
-      }
-
-      /**
-       * Checks if this polygon intersects with another polygon.
-       * @param {(Polygon|Path)} other
-       * @return {boolean}
-       */
-      intersects(other) {
-        let thisBox = this.getBoundingBox();
-        let otherBox = other.getBoundingBox();
-
-        // If the bounding boxes don't intersect, then the polygons won't
-        // intersect.
-        if(!thisBox.intersects(otherBox))
-          return false;
-
-        // If either polygon contains the first point of the other, then
-        // they intersect.
-        if(this.containsPt(other.vertices[0]) ||
-          (other instanceof Polygon && other.containsPt(this.vertices[0])))
-          return true;
-
-        // Naive approach: Since our shortcuts didn't return, check each
-        // polygon's segments for intersections with each of the other
-        // polygon's segments. This takes O(n^2) time.
-        return !!_.find(this.toSegments(), seg1 => {
-          return !!_.find(other.toSegments(), seg2 => {
-            return !!segmentIntersection(seg1, seg2);
-          });
-        });
-      }
-
-      /**
-       * Checks if this polygon intersects a Path.
-       * @param {Path} path
-       * @return {boolean}
-       */
-      intersectsPath(path) {
-        let segments1 = this.toSegments();
-        let segments2 = PathMath.toSegments(path);
-
-        // The path intersects if any point is inside this polygon.
-        if(this.containsPt(segments2[0][0]))
-          return true;
-
-        // Check if any of the segments intersect.
-        return !!_.find(segments1, seg1 => {
-          return _.find(segments2, seg2 => {
-            return PathMath.segmentIntersection(seg1, seg2);
-          });
-        });
-      }
-
-      /**
-       * Tessellates a closed path representing a simple polygon
-       * into a bunch of triangles.
-       * @return {Triangle[]}
-       */
-      tessellate() {
-        let triangles = [];
-        let vertices = _.clone(this.vertices);
-
-        // Tessellate using ear-clipping algorithm.
-        while(vertices.length > 0) {
-          if(vertices.length === 3) {
-            triangles.push(new Triangle(vertices[0], vertices[1], vertices[2]));
-            vertices = [];
-          }
-          else {
-            // Determine whether each vertex is convex, concave, or linear.
-            let convexness = Polygon.getConvexness(vertices);
-            let numVerts = vertices.length;
-
-            // Find the next ear to clip from the polygon.
-            let earIndex = _.find(_.range(numVerts), i => {
-              let v = vertices[i];
-              let vPrev = vertices[(numVerts + i -1) % numVerts];
-              let vNext = vertices[(numVerts + i + 1) % numVerts];
-
-              let vConvexness = convexness[i];
-              if(vConvexness === 0) // The vertex lies on a straight line. Clip it.
-                return true;
-              else if(vConvexness < 0) // The vertex is concave.
-                return false;
-              else { // The vertex is convex and might be an ear.
-                let triangle = new Triangle(vPrev, v, vNext);
-
-                // The vertex is not an ear if there is at least one other
-                // vertex inside its triangle.
-                return !_.find(vertices, (v2, j) => {
-                  if(v2 === v || v2 === vPrev || v2 === vNext)
-                    return false;
-                  else {
-                    return triangle.containsPt(v2);
-                  }
-                });
-              }
-            });
-
-            let v = vertices[earIndex];
-            let vPrev = vertices[(numVerts + earIndex -1) % numVerts];
-            let vNext = vertices[(numVerts + earIndex + 1) % numVerts];
-            triangles.push(new Triangle(vPrev, v, vNext));
-            vertices.splice(earIndex, 1);
-          }
-        }
-        return triangles;
-      }
-
-      /**
-       * Produces a list of segments defining this polygon.
-       * @return {Segment[]}
-       */
-      toSegments() {
-        if(!this._segments) {
-          this._segments = _.map(this.vertices, (v, i) => {
-            let vNext = this.vertices[(i + 1) % this.numVerts];
-            return [v, vNext];
-          });
-        }
-        return this._segments;
-      }
-    }
-
-    /**
-     * A 3-sided polygon that is great for tessellation!
-     */
-    class Triangle extends Polygon {
-      /**
-       * @param {vec3} p1
-       * @param {vec3} p2
-       * @param {vec3} p3
-       */
-      constructor(p1, p2, p3) {
-        if(_.isArray(p1))
-          [p1, p2, p3] = p1;
-        super([p1, p2, p3]);
-
-        this.p1 = p1;
-        this.p2 = p2;
-        this.p3 = p3;
-      }
-
-      /**
-       * @inheritdoc
-       */
-      getArea() {
-        let base = VecMath.sub(this.p2, this.p1);
-        let width = VecMath.length(base);
-        let height = VecMath.ptLineDist(this.p3, this.p1, this.p2);
-
-        return width*height/2;
-      }
-    }
-
-    /**
-     * A circle defined by its center point and radius.
-     */
-    class Circle extends PathShape {
-
-      /**
-       * @param {vec3} pt
-       * @param {number} r
-       */
-      constructor(pt, r) {
-        super();
-        this.center = pt;
-        this.radius = r;
-        this.diameter = 2*r;
-      }
-
-      /**
-       * Checks if a point is contained within this circle.
-       * @param {vec3} pt
-       * @return {boolean}
-       */
-      containsPt(pt) {
-        let dist = VecMath.dist(this.center, pt);
-        return dist <= this.radius;
-      }
-
-      /**
-       * Gets the distance from this circle to some point.
-       * @param {vec3} pt
-       * @return {number}
-       */
-      distanceToPoint(pt) {
-        if(this.containsPt(pt))
-          return 0;
-        else {
-          return VecMath.dist(this.center, pt) - this.radius;
-        }
-      }
-
-      /**
-       * Gets this circle's area.
-       * @return {number}
-       */
-      getArea() {
-        return Math.PI*this.radius*this.radius;
-      }
-
-      /**
-       * Gets the circle's bounding box.
-       * @return {BoundingBox}
-       */
-      getBoundingBox() {
-        let left = this.center[0] - this.radius;
-        let top = this.center[1] - this.radius;
-        let dia = this.radius*2;
-        return new BoundingBox(left, top, dia, dia);
-      }
-
-      /**
-       * Gets this circle's circumference.
-       * @return {number}
-       */
-      getCircumference() {
-        return Math.PI*this.diameter;
-      }
-
-      /**
-       * Checks if this circle intersects another circle.
-       * @param {Circle} other
-       * @return {boolean}
-       */
-      intersects(other) {
-        let dist = VecMath.dist(this.center, other.center);
-        return dist <= this.radius + other.radius;
-      }
-
-      /**
-       * Checks if this circle intersects a polygon.
-       * @param {Polygon} poly
-       * @return {boolean}
-       */
-      intersectsPolygon(poly) {
-
-        // Quit early if the bounding boxes don't overlap.
-        let thisBox = this.getBoundingBox();
-        let polyBox = poly.getBoundingBox();
-        if(!thisBox.intersects(polyBox))
-          return false;
-
-        if(poly.containsPt(this.center))
-          return true;
-        return !!_.find(poly.toSegments(), seg => {
-          return this.segmentIntersection(seg);
-        });
-      }
-
-      /**
-       * Renders this circle.
-       * @param {string} pageId
-       * @param {string} layer
-       * @param {RenderInfo} renderInfo
-       */
-      render(pageId, layer, renderInfo) {
-        let data = createCircleData(this.radius)
-        _.extend(data, renderInfo, {
-          _pageid: pageId,
-          layer,
-          left: this.center[0],
-          top: this.center[1]
-        });
-        createObj('path', data);
-      }
-
-      /**
-       * Gets the intersection coefficient between this circle and a Segment,
-       * if such an intersection exists. Otherwise, undefined is returned.
-       * @param {Segment} segment
-       * @return {Intersection}
-       */
-      segmentIntersection(segment) {
-        if(this.containsPt(segment[0])) {
-          let pt = segment[0];
-          let s = 0;
-          let t = VecMath.dist(this.center, segment[0])/this.radius;
-          return [pt, s, t];
-        }
-        else {
-          let u = VecMath.sub(segment[1], segment[0]);
-          let uHat = VecMath.normalize(u);
-          let uLen = VecMath.length(u);
-          let v = VecMath.sub(this.center, segment[0]);
-
-          let height = VecMath.ptLineDist(this.center, segment[0], segment[1]);
-          let base = Math.sqrt(this.radius*this.radius - height*height);
-
-          if(isNaN(base))
-            return undefined;
-
-          let scalar = VecMath.scalarProjection(u, v)-base;
-          let s = scalar/uLen;
-
-          if(s >= 0 && s <= 1) {
-            let t = 1;
-            let pt = VecMath.add(segment[0], VecMath.scale(uHat, scalar));
-            return [pt, s, t];
-          }
-          else
-            return undefined;
-        }
-      }
-    }
-
-    /**
-     * The bounding box for a path/polygon.
-     */
-    class BoundingBox {
-      /**
-       * @param {Number} left
-       * @param {Number} top
-       * @param {Number} width
-       * @param {Number} height
-       */
-      constructor(left, top, width, height) {
-        this.left = left;
-        this.top = top;
-        this.width = width;
-        this.height = height;
-        this.right = left + width;
-        this.bottom = top + height;
-      }
-
-      /**
-       * Adds two bounding boxes.
-       * @param  {BoundingBox} a
-       * @param  {BoundingBox} b
-       * @return {BoundingBox}
-       */
-      static add(a, b) {
-        var left = Math.min(a.left, b.left);
-        var top = Math.min(a.top, b.top);
-        var right = Math.max(a.left + a.width, b.left + b.width);
-        var bottom = Math.max(a.top + a.height, b.top + b.height);
-
-        return new BoundingBox(left, top, right - left, bottom - top);
-      }
-
-      /**
-       * Gets the area of this bounding box.
-       * @return {number}
-       */
-      getArea() {
-        return this.width * this.height;
-      }
-
-      /**
-       * Checks if this bounding box intersects another bounding box.
-       * @param {BoundingBox} other
-       * @return {boolean}
-       */
-      intersects(other) {
-        return !( this.left > other.right ||
-                  this.right < other.left ||
-                  this.top > other.bottom ||
-                  this.bottom < other.top);
-      }
-
-      /**
-       * Renders the bounding box.
-       * @param {string} pageId
-       * @param {string} layer
-       * @param {RenderInfo} renderInfo
-       */
-      render(pageId, layer, renderInfo) {
-        let verts = [
-          [this.left, this.top, 1],
-          [this.right, this.top, 1],
-          [this.right, this.bottom, 1],
-          [this.left, this.bottom, 1]
-        ];
-        let poly = new Polygon(verts);
-        poly.render(pageId, layer, renderInfo);
-      }
-    }
-
-    /**
-     * Returns the partial path data for creating a circular path.
-     * @param  {number} radius
-     * @param {int} [sides]
-     *        If specified, then a polygonal path with the specified number of
-     *        sides approximating the circle will be created instead of a true
-     *        circle.
-     * @return {PathData}
-     */
-    function createCircleData(radius, sides) {
-      var _path = [];
-      if(sides) {
-        var cx = radius;
-        var cy = radius;
-        var angleInc = Math.PI*2/sides;
-        path.push(['M', cx + radius, cy]);
-        _.each(_.range(1, sides+1), function(i) {
-          var angle = angleInc*i;
-          var x = cx + radius*Math.cos(angle);
-          var y = cy + radius*Math.sin(angle);
-          path.push(['L', x, y]);
-        });
-      }
-      else {
-        var r = radius;
-        _path = [
-          ['M', 0,      r],
-          ['C', 0,      r*0.5,  r*0.5,  0,      r,      0],
-          ['C', r*1.5,  0,      r*2,    r*0.5,  r*2.0,  r],
-          ['C', r*2.0,  r*1.5,  r*1.5,  r*2.0,  r,      r*2.0],
-          ['C', r*0.5,  r*2,    0,      r*1.5,  0,      r]
-        ];
-      }
-      return {
-        height: radius*2,
-        _path: JSON.stringify(_path),
-        width: radius*2
-      };
-    }
-
-    /**
-     * Computes the distance from a point to some path.
-     * @param {vec3} pt
-     * @param {(Roll20Path|PathShape)} path
-     */
-    function distanceToPoint(pt, path) {
-      if(!(path instanceof PathShape))
-        path = new Path(path);
-      return path.distanceToPoint(pt);
-    }
-
-    /**
-     * Gets a point along some Bezier curve of arbitrary degree.
-     * @param {vec3[]} points
-     *        The points of the Bezier curve. The points between the first and
-     *        last point are the control points.
-     * @param {number} scalar
-     *        The parametric value for the point we want along the curve.
-     *        This value is expected to be in the range [0, 1].
-     * @return {vec3}
-     */
-    function getBezierPoint(points, scalar) {
-      if(points.length < 2)
-        throw new Error('Bezier curve cannot have less than 2 points.');
-      else if(points.length === 2) {
-        let u = VecMath.sub(points[1], points[0]);
-        u = VecMath.scale(u, scalar);
-        return VecMath.add(points[0], u);
-      }
-      else {
-        let newPts = _.chain(points)
-        .map((cur, i) => {
-          if(i === 0)
-            return undefined;
-
-          let prev = points[i-1];
-          return getBezierPoint([prev, cur], scalar);
-        })
-        .compact()
-        .value();
-
-        return getBezierPoint(newPts, scalar);
-      }
-    }
-
-
-    /**
-     * Calculates the bounding box for a list of paths.
-     * @param {Roll20Path | Roll20Path[]} paths
-     * @return {BoundingBox}
-     */
-    function getBoundingBox(paths) {
-      if(!_.isArray(paths))
-        paths = [paths];
-
-      var result;
-      _.each(paths, function(p) {
-        var pBox = _getSingleBoundingBox(p);
-        if(result)
-          result = BoundingBox.add(result, pBox);
-        else
-          result = pBox;
-      });
-      return result;
-    }
-
-    /**
-     * Returns the center of the bounding box countaining a path or list
-     * of paths. The center is returned as a 2D homongeneous point
-     * (It has a third component which is always 1 which is helpful for
-     * affine transformations).
-     * @param {(Roll20Path|Roll20Path[])} paths
-     * @return {Vector}
-     */
-    function getCenter(paths) {
-        if(!_.isArray(pathjs))
-            paths = [paths];
-
-        var bbox = getBoundingBox(paths);
-        var cx = bbox.left + bbox.width/2;
-        var cy = bbox.top + bbox.height/2;
-
-        return [cx, cy, 1];
-    }
-
-    /**
-     * @private
-     * Calculates the bounding box for a single path.
-     * @param  {Roll20Path} path
-     * @return {BoundingBox}
-     */
-    function _getSingleBoundingBox(path) {
-        var pathData = normalizePath(path);
-
-        var width = pathData.width;
-        var height = pathData.height;
-        var left = pathData.left - width/2;
-        var top = pathData.top - height/2;
-
-        return new BoundingBox(left, top, width, height);
-    }
-
-    /**
-     * Gets the 2D transform information about a path.
-     * @param  {Roll20Path} path
-     * @return {PathTransformInfo}
-     */
-    function getTransformInfo(path) {
-        var scaleX = path.get('scaleX');
-        var scaleY = path.get('scaleY');
-        var angle = path.get('rotation')/180*Math.PI;
-
-        // The transformed center of the path.
-        var cx = path.get('left');
-        var cy = path.get('top');
-
-        // The untransformed width and height.
-        var width = path.get('width');
-        var height = path.get('height');
-
-        return {
-            angle: angle,
-            cx: cx,
-            cy: cy,
-            height: height,
-            scaleX: scaleX,
-            scaleY: scaleY,
-            width: width
-        };
-    }
-
-    /**
-     * Checks if a path is closed, and is therefore a polygon.
-     * @param {(Roll20Path|Segment[])}
-     * @return {boolean}
-     */
-    function isClosed(path) {
-      // Convert to segments.
-      if(!_.isArray(path))
-        path = toSegments(path);
-      return (_.isEqual(path[0][0], path[path.length-1][1]));
-    }
-
-
-    /**
-     * Produces a merged path string from a list of path objects.
-     * @param {Roll20Path[]} paths
-     * @return {String}
-     */
-    function mergePathStr(paths) {
-        var merged = [];
-        var bbox = getBoundingBox(paths);
-
-        _.each(paths, function(p) {
-            var pbox = getBoundingBox(p);
-
-            // Convert the path to a normalized polygonal path.
-            p = normalizePath(p);
-            var parsed = JSON.parse(p._path);
-            _.each(parsed, function(pathTuple, index) {
-                var dx = pbox.left - bbox.left;
-                var dy = pbox.top - bbox.top;
-
-                // Move and Line tuples
-                var x = pathTuple[1] + dx;
-                var y = pathTuple[2] + dy;
-                merged.push([pathTuple[0], x, y]);
-            });
-        });
-
-        return JSON.stringify(merged);
-    }
-
-    /**
-     * Reproduces the data for a polygonal path such that the scales are 1 and
-     * its rotate is 0.
-     * This can also normalize freehand paths, but they will be converted to
-     * polygonal paths. The quatric Bezier curves used in freehand paths are
-     * so short though, that it doesn't make much difference though.
-     * @param {Roll20Path}
-     * @return {PathData}
-     */
-    function normalizePath(path) {
-        var segments = toSegments(path);
-        return segmentsToPath(segments);
-    }
-
-    /**
-     * Produces a UDL window from a Path.
-     * This UDL window path will be created on the walls layer
-     * and its _path consists entirely of 'M' components.
-     * This may have unexpected behavior for paths that have breaks in them
-     * ('M' components between other components).
-     * Special thanks to Scott C. and Aaron for discovering this hidden UDL
-     * functionality.
-     * @param {Roll20Path} path
-     * @return {Roll20Path} The Path object for the new UDL window.
-     */
-    function pathToUDLWindow(path) {
-      let pathData = normalizePath(path);
-
-      let curPage = path.get('_pageid');
-      _.extend(pathData, {
-        stroke: '#ff0000',
-        _pageid: curPage,
-        layer: 'walls'
-      });
-      pathData._path = pathData._path.replace(/L|C|Q/g, 'M');
-
-      return createObj('path', pathData);
-    }
-
-    /**
-     * Computes the intersection between the projected lines of
-     * two homogenous 2D line segments.
-     *
-     * Explanation of the fancy mathemagics:
-     * Let A be the first point in seg1 and B be the second point in seg1.
-     * Let C be the first point in seg2 and D be the second point in seg2.
-     * Let U be the vector from A to B.
-     * Let V be the vector from C to D.
-     * Let UHat be the unit vector of U.
-     * Let VHat be the unit vector of V.
-     *
-     * Observe that if the dot product of UHat and VHat is 1 or -1, then
-     * seg1 and seg2 are parallel, so they will either never intersect or they
-     * will overlap. We will ignore the case where seg1 and seg2 are parallel.
-     *
-     * We can represent any point P along the line projected by seg1 as
-     * P = A + SU, where S is some scalar value such that S = 0 yeilds A,
-     * S = 1 yields B, and P is on seg1 if and only if 0 <= S <= 1.
-     *
-     * We can also represent any point Q along the line projected by seg2 as
-     * Q = C + TV, where T is some scalar value such that T = 0 yeilds C,
-     * T = 1 yields D, and Q is on seg2 if and only if 0 <= T <= 1.
-     *
-     * Assume that seg1 and seg2 are not parallel and that their
-     * projected lines intersect at some point P.
-     * Therefore, we have A + SU = C + TV.
-     *
-     * We can rearrange this such that we have C - A = SU - TV.
-     * Let vector W = C - A, thus W = SU - TV.
-     * Also, let coeffs = [S, T, 1].
-     *
-     * We can now represent this system of equations as the matrix
-     * multiplication problem W = M * coeffs, where in column-major
-     * form, M = [U, -V, [0,0,1]].
-     *
-     * By matrix-multiplying both sides by M^-1, we get
-     * M^-1 * W = M^-1 * M * coeffs = coeffs, from which we can extract the
-     * values for S and T.
-     *
-     * We can now get the point of intersection on the projected lines of seg1
-     * and seg2 by substituting S in P = A + SU or T in Q = C + TV.
-     *
-     * @param {Segment} seg1
-     * @param {Segment} seg2
-     * @return {Intersection}
-     *      The point of intersection in homogenous 2D coordiantes and its
-     *      scalar coefficients along seg1 and seg2,
-     *      or undefined if the segments are parallel.
-     */
-    function raycast(seg1, seg2) {
-      var u = VecMath.sub(seg1[1], seg1[0]);
-      var v = VecMath.sub(seg2[1], seg2[0]);
-      var w = VecMath.sub(seg2[0], seg1[0]);
-
-      // Can't use 0-length vectors.
-      if(VecMath.length(u) === 0 || VecMath.length(v) === 0)
-          return undefined;
-
-      // If the two segments are parallel, then either they never intersect
-      // or they overlap. Either way, return undefined in this case.
-      var uHat = VecMath.normalize(u);
-      var vHat = VecMath.normalize(v);
-      var uvDot = VecMath.dot(uHat,vHat);
-      if(Math.abs(uvDot) > 0.9999)
-          return undefined;
-
-      // Build the inverse matrix for getting the intersection point's
-      // parametric coefficients along the projected segments.
-      var m = [[u[0], u[1], 0], [-v[0], -v[1], 0], [0, 0, 1]];
-      var mInv = MatrixMath.inverse(m);
-
-      // Get the parametric coefficients for getting the point of intersection
-      // on the projected semgents.
-      var coeffs = MatrixMath.multiply(mInv, w);
-      var s = coeffs[0];
-      var t = coeffs[1];
-
-      var uPrime = VecMath.scale(u, s);
-      return [VecMath.add(seg1[0], uPrime), s, t];
-    }
-
-    /**
-     * Computes the intersection between two homogenous 2D line segments,
-     * if it exists. To figure out the intersection, a raycast is performed
-     * between the two segments.
-     * Seg1 and seg2 also intersect at that point if and only if 0 <= S, T <= 1.
-     * @param {Segment} seg1
-     * @param {Segment} seg2
-     * @return {Intersection}
-     *      The point of intersection in homogenous 2D coordiantes and its
-     *      parametric coefficients along seg1 and seg2,
-     *      or undefined if the segments don't intersect.
-     */
-    function segmentIntersection(seg1, seg2) {
-      let intersection = raycast(seg1, seg2);
-      if(!intersection)
-        return undefined;
-
-      // Return the intersection only if it lies on both the segments.
-      let s = intersection[1];
-      let t = intersection[2];
-      if(s >= 0 && s <= 1 && t >= 0 && t <= 1)
-        return intersection;
-      else
-        return undefined;
-    }
-
-
-    /**
-     * Produces the data for creating a path from a list of segments forming a
-     * continuous path.
-     * @param {Segment[]}
-     * @return {PathData}
-     */
-    function segmentsToPath(segments) {
-        var left = segments[0][0][0];
-        var right = segments[0][0][0];
-        var top = segments[0][0][1];
-        var bottom = segments[0][0][1];
-
-        // Get the bounds of the segment.
-        var pts = [];
-        var isFirst = true;
-        _.each(segments, function(segment) {
-            var p1 = segment[0];
-            if(isFirst) {
-                isFirst = false;
-                pts.push(p1);
-            }
-
-            var p2 = segment[1];
-
-            left = Math.min(left, p1[0], p2[0]);
-            right = Math.max(right, p1[0], p2[0]);
-            top = Math.min(top, p1[1], p2[1]);
-            bottom = Math.max(bottom, p1[1], p2[1]);
-
-            pts.push(p2);
-        });
-
-        // Get the path's left and top coordinates.
-        var width = right-left;
-        var height = bottom-top;
-        var cx = left + width/2;
-        var cy = top + height/2;
-
-        // Convert the points to a _path.
-        var _path = [];
-        var firstPt = true;
-        _.each(pts, function(pt) {
-            var type = 'L';
-            if(firstPt) {
-                type = 'M';
-                firstPt = false;
-            }
-            _path.push([type, pt[0]-left, pt[1]-top]);
-        });
-
-        return {
-            _path: JSON.stringify(_path),
-            left: cx,
-            top: cy,
-            width: width,
-            height: height
-        };
-    }
-
-    /**
-     * Converts a path into a list of line segments.
-     * This supports freehand paths, but not elliptical paths.
-     * @param {(Roll20Path|Roll20Path[])} path
-     * @return {Segment[]}
-     */
-    function toSegments(path) {
-        if(_.isArray(path))
-            return _toSegmentsMany(path);
-
-        var _path;
-        try {
-          let page = getObj('page', path.get('_pageid'));
-          let pageWidth = page.get('width') * UNIT_SIZE_PX;
-          let pageHeight = page.get('height') * UNIT_SIZE_PX;
-
-          let rawPath = path.get('_path')
-            .replace(/mapWidth/g, pageWidth)
-            .replace(/mapHeight/g, pageHeight);
-          _path = JSON.parse(rawPath);
-        }
-        catch (err) {
-          log(`Error parsing Roll20 path JSON: ${path.get('_path')}`);
-          sendChat('Path Math', '/w gm An error was encountered while trying to parse the JSON for a path. See the API Console Log for details.');
-          return [];
-        }
-
-        var transformInfo = getTransformInfo(path);
-
-        var segments = [];
-        var prevPt;
-        let prevType;
-
-        _.each(_path, tuple => {
-            let type = tuple[0];
-
-            // Convert the previous point and tuple into segments.
-            let newSegs = [];
-
-            // Cubic Bezier
-            if(type === 'C') {
-              newSegs = _toSegmentsC(prevPt, tuple, transformInfo);
-              if(newSegs.length > 0)
-                prevPt = newSegs[newSegs.length - 1][1];
-            }
-
-            // Line or two successive Moves. A curious quirk of the latter
-            // case is that UDL treats them as segments for windows.
-            // Thanks to Scott C and Aaron for letting me know about this,
-            // whether it's an intended feature or not.
-            if(type === 'L' || (type === 'M' && prevType === 'M')) {
-              newSegs = _toSegmentsL(prevPt, tuple, transformInfo);
-              if(newSegs.length > 0)
-                prevPt = newSegs[0][1];
-            }
-
-            // Move, not preceded by another move (not a UDL window)
-            if(type === 'M' && prevType !== 'M') {
-              prevPt = tupleToPoint(tuple, transformInfo);
-            }
-
-            // Freehand (tiny Quadratic Bezier)
-            if(type === 'Q') {
-              newSegs = _toSegmentsQ(prevPt, tuple, transformInfo);
-              if(newSegs.length > 0)
-                prevPt = newSegs[0][1];
-            }
-
-            _.each(newSegs, s => {
-              segments.push(s);
-            });
-            prevType = type;
-        });
-
-        return _.compact(segments);
-    }
-
-    /**
-     * Converts a 'C' type path point to a list of segments approximating the
-     * curve.
-     * @private
-     * @param {vec3} prevPt
-     * @param {PathTuple} tuple
-     * @param {PathTransformInfo} transformInfo
-     * @return {Segment[]}
-     */
-    function _toSegmentsC(prevPt, tuple, transformInfo) {
-      let cPt1 = tupleToPoint(['L', tuple[1], tuple[2]], transformInfo);
-      let cPt2 = tupleToPoint(['L', tuple[3], tuple[4]], transformInfo);
-      let pt = tupleToPoint(['L', tuple[5], tuple[6]], transformInfo);
-      let points = [prevPt, cPt1, cPt2, pt];
-
-      // Choose the number of segments based on the rough approximate arc length.
-      // Each segment should be <= 10 pixels.
-      let approxArcLength = VecMath.dist(prevPt, cPt1) + VecMath.dist(cPt1, cPt2) + VecMath.dist(cPt2, pt);
-      let numSegs = Math.max(Math.ceil(approxArcLength/10), 1);
-
-      let bezierPts = [prevPt];
-      _.each(_.range(1, numSegs), i => {
-        let scalar = i/numSegs;
-        let bPt = getBezierPoint(points, scalar);
-        bezierPts.push(bPt);
-      });
-      bezierPts.push(pt);
-
-      return _.chain(bezierPts)
-      .map((cur, i) => {
-        if(i === 0)
-          return undefined;
-
-        let prev = bezierPts[i-1];
-        return [prev, cur];
-      })
-      .compact()
-      .value();
-    }
-
-    /**
-     * Converts an 'L' type path point to a segment.
-     * @private
-     * @param {vec3} prevPt
-     * @param {PathTuple} tuple
-     * @param {PathTransformInfo} transformInfo
-     * @return {Segment[]}
-     */
-    function _toSegmentsL(prevPt, tuple, transformInfo) {
-      // Transform the point to 2D homogeneous map coordinates.
-      let pt = tupleToPoint(tuple, transformInfo);
-      let segments = [];
-      if(!(prevPt[0] == pt[0] && prevPt[1] == pt[1]))
-        segments.push([prevPt, pt]);
-      return segments;
-    }
-
-    /**
-     * Converts a 'Q' type path point to a segment approximating
-     * the freehand curve.
-     * @private
-     * @param {vec3} prevPt
-     * @param {PathTuple} tuple
-     * @param {PathTransformInfo} transformInfo
-     * @return {Segment[]}
-     */
-    function _toSegmentsQ(prevPt, tuple, transformInfo) {
-      // Freehand Bezier paths are very small, so let's just
-      // ignore the control point for it entirely.
-      tuple[1] = tuple[3];
-      tuple[2] = tuple[4];
-
-      // Transform the point to 2D homogeneous map coordinates.
-      let pt = tupleToPoint(tuple, transformInfo);
-
-      let segments = [];
-      if(!(prevPt[0] == pt[0] && prevPt[1] == pt[1]))
-        segments.push([prevPt, pt]);
-      return segments;
-    }
-
-    /**
-     * Converts several paths into a single list of segments.
-     * @private
-     * @param  {Roll20Path[]} paths
-     * @return {Segment[]}
-     */
-    function _toSegmentsMany(paths) {
-      return _.chain(paths)
-        .reduce(function(allSegments, path) {
-            return allSegments.concat(toSegments(path));
-        }, [])
-        .value();
-    }
-
-    /**
-     * Transforms a tuple for a point in a path into a point in
-     * homogeneous 2D map coordinates.
-     * @param  {PathTuple} tuple
-     * @param  {PathTransformInfo} transformInfo
-     * @return {Vector}
-     */
-    function tupleToPoint(tuple, transformInfo) {
-      var width = transformInfo.width;
-      var height = transformInfo.height;
-      var scaleX = transformInfo.scaleX;
-      var scaleY = transformInfo.scaleY;
-      var angle = transformInfo.angle;
-      var cx = transformInfo.cx;
-      var cy = transformInfo.cy;
-
-      // The point in path coordinates, relative to the path center.
-      var x = tuple[1] - width/2;
-      var y = tuple[2] - height/2;
-      var pt = [x,y,1];
-
-      // The transform of the point from path coordinates to map
-      // coordinates.
-      var scale = MatrixMath.scale([scaleX, scaleY]);
-      var rotate = MatrixMath.rotate(angle);
-      var transform = MatrixMath.translate([cx, cy]);
-      transform = MatrixMath.multiply(transform, rotate);
-      transform = MatrixMath.multiply(transform, scale);
-
-      return MatrixMath.multiply(transform, pt);
-    }
-
-    on('chat:message', function(msg) {
-      if(msg.type === 'api' && msg.content.indexOf('!pathInfo') === 0) {
-        log('!pathInfo');
-
-        try {
-          var path = findObjs({
-            _type: 'path',
-            _id: msg.selected[0]._id
-          })[0];
-          log(path);
-          log(path.get('_path'));
-
-          var segments = toSegments(path);
-          log('Segments: ');
-          log(segments);
-
-          var pathData = segmentsToPath(segments);
-          log('New path data: ');
-          log(pathData);
-
-          var curPage = path.get('_pageid');
-          _.extend(pathData, {
-            stroke: '#ff0000',
-            _pageid: curPage,
-            layer: path.get('layer')
-          });
-
-          var newPath = createObj('path', pathData);
-          log(newPath);
-        }
-        catch(err) {
-          log('!pathInfo ERROR: ');
-          log(err.message);
-        }
-      }
-      if (msg.type === 'api' && msg.content.startsWith('!pathToUDLWindow')) {
-        try {
-          var path = findObjs({
-            _type: 'path',
-            _id: msg.selected[0]._id
-          })[0];
-          pathToUDLWindow(path);
-        }
-        catch(err) {
-          log('!pathInfo ERROR: ');
-          log(err.message);
-        }
-      }
-    });
-
-    return {
-        BoundingBox,
-        Circle,
-        Path,
-        Polygon,
-        Triangle,
-
-        createCircleData,
-        distanceToPoint,
-        getBezierPoint,
-        getBoundingBox,
-        getCenter,
-        getTransformInfo,
-        mergePathStr,
-        normalizePath,
-        pathToUDLWindow,
-        raycast,
-        segmentIntersection,
-        segmentsToPath,
-        toSegments,
-        tupleToPoint
-    };
-})();
-
-/**
- * This is a small library for (mostly 2D) vector mathematics.
- * Internally, the vectors used by this library are simple arrays of numbers.
- * The functions provided by this library do not alter the input vectors, 
- * treating each vector as an immutable object.
- */
-var VecMath = (function() {
-    
-    /**
-     * Adds two vectors.
-     * @param {vec} a
-     * @param {vec} b
-     * @return {vec}
-     */
-    var add = function(a, b) {
-        var result = [];
-        for(var i=0; i<a.length; i++) {
-            result[i] = a[i] + b[i];
-        }
-        return result;
-    };
-    
-    
-    /**
-     * Creates a cloned copy of a vector.
-     * @param {vec} v
-     * @return {vec}
-     */
-    var clone = function(v) {
-        var result = [];
-        for(var i=0; i < v.length; i++) {
-            result.push(v[i]);
-        }
-        return result;
-    };
-    
-    
-    /** 
-     * Returns an array representing the cross product of two 3D vectors. 
-     * @param {vec3} a
-     * @param {vec3} b
-     * @return {vec3}
-     */
-    var cross = function(a, b) {
-        var x = a[1]*b[2] - a[2]*b[1];
-        var y = a[2]*b[0] - a[0]*b[2];
-        var z = a[0]*b[1] - a[1]*b[0];
-        return [x, y, z];
-    };
-    
-    
-    /** 
-     * Returns the degree of a vector - the number of dimensions it has.
-     * @param {vec} vector
-     * @return {int}
-     */
-    var degree = function(vector) {
-        return vector.length;
-    };
-    
-    
-    /**
-     * Computes the distance between two points.
-     * @param {vec} pt1
-     * @param {vec} pt2
-     * @return {number}
-     */
-    var dist = function(pt1, pt2) {
-        var v = vec(pt1, pt2);
-        return length(v);
-    };
-    
-    
-    /** 
-     * Returns the dot product of two vectors. 
-     * @param {vec} a
-     * @param {vec} b
-     * @return {number}
-     */
-    var dot = function(a, b) {
-        var result = 0;
-        for(var i = 0; i < a.length; i++) {
-            result += a[i]*b[i];
-        }
-        return result;
-    };
-    
-    
-    /**
-     * Tests if two vectors are equal.
-     * @param {vec} a
-     * @param {vec} b
-     * @param {float} [tolerance] A tolerance threshold for comparing vector 
-     *                            components.  
-     * @return {boolean} true iff the each of the vectors' corresponding 
-     *                  components are equal.
-     */
-    var equal = function(a, b, tolerance) {
-        if(a.length != b.length)
-            return false;
-        
-        for(var i=0; i<a.length; i++) {
-            if(tolerance !== undefined) {
-                if(Math.abs(a[i] - b[i]) > tolerance) {
-                    return false;
-                }
-            }
-            else if(a[i] != b[i])
-                return false;
-        }
-        return true;
-    };
-    
-    
-    
-    /** 
-     * Returns the length of a vector. 
-     * @param {vec} vector
-     * @return {number}
-     */
-    var length = function(vector) {
-        var length = 0;
-        for(var i=0; i < vector.length; i++) {
-            length += vector[i]*vector[i];
-        }
-        return Math.sqrt(length);
-    };
-    
-    
-    
-    /**
-     * Computes the normalization of a vector - its unit vector.
-     * @param {vec} v
-     * @return {vec}
-     */
-    var normalize = function(v) {
-        var vHat = [];
-        
-        var vLength = length(v);
-        for(var i=0; i < v.length; i++) {
-            vHat[i] = v[i]/vLength;
-        }
-        
-        return vHat;
-    };
-    
-    
-    /**
-     * Computes the projection of vector b onto vector a.
-     * @param {vec} a
-     * @param {vec} b
-     * @return {vec}
-     */
-    var projection = function(a, b) {
-        var scalar = scalarProjection(a, b);
-        var aHat = normalize(a);
-        
-        return scale(aHat, scalar);
-    };
-    
-    
-    /** 
-     * Computes the distance from a point to an infinitely stretching line. 
-     * Works for either 2D or 3D points.
-     * @param {vec2 || vec3} pt
-     * @param {vec2 || vec3} linePt1   A point on the line.
-     * @param {vec2 || vec3} linePt2   Another point on the line.
-     * @return {number}
-     */
-    var ptLineDist = function(pt, linePt1, linePt2) {
-        var a = vec(linePt1, linePt2);
-        var b = vec(linePt1, pt);
-        
-        // Make 2D vectors 3D to compute the cross product.
-        if(!a[2])
-            a[2] = 0;
-        if(!b[2])
-            b[2] = 0;
-        
-        var aHat = normalize(a);
-        var aHatCrossB = cross(aHat, b);
-        return length(aHatCrossB);
-    };
-    
-    
-    /** 
-     * Computes the distance from a point to a line segment. 
-     * Works for either 2D or 3D points.
-     * @param {vec2 || vec3} pt
-     * @param {vec2 || vec3} linePt1   The start point of the segment.
-     * @param {vec2 || vec3} linePt2   The end point of the segment.
-     * @return {number}
-     */
-    var ptSegDist = function(pt, linePt1, linePt2) {
-        var a = vec(linePt1, linePt2);
-        var b = vec(linePt1, pt);
-        var aDotb = dot(a,b);
-        
-        // Is pt behind linePt1?
-        if(aDotb < 0) {
-            return length(vec(pt, linePt1));
-        }
-        
-        // Is pt after linePt2?
-        else if(aDotb > dot(a,a)) {
-            return length(vec(pt, linePt2));
-        }
-        
-        // Pt must be between linePt1 and linePt2.
-        else {
-            return ptLineDist(pt, linePt1, linePt2);
-        }
-    };
-    
-    
-    /**
-     * Computes the scalar projection of b onto a.
-     * @param {vec2} a
-     * @param {vec2} b
-     * @return {vec2}
-     */
-    var scalarProjection = function(a, b) {
-        var aDotB = dot(a, b);
-        var aLength = length(a);
-        
-        return aDotB/aLength;
-    };
-    
-    
-    
-    /**
-     * Computes a scaled vector.
-     * @param {vec2} v
-     * @param {number} scalar
-     * @return {vec2}
-     */
-    var scale = function(v, scalar) {
-        var result = [];
-        
-        for(var i=0; i<v.length; i++) {
-            result[i] = v[i]*scalar;
-        }
-        return result;
-    };
-    
-    
-    /** 
-     * Computes the difference of two vectors.
-     * @param {vec} a
-     * @param {vec} b
-     * @return {vec}
-     */
-    var sub = function(a, b) {
-        var result = [];
-        for(var i=0; i<a.length; i++) {
-            result.push(a[i] - b[i]);
-        }
-        return result;
-    };
-    
-    
-    /** 
-     * Returns the vector from pt1 to pt2. 
-     * @param {vec} pt1
-     * @param {vec} pt2
-     * @return {vec}
-     */
-    var vec = function(pt1, pt2) {
-        var result = [];
-        for(var i=0; i<pt1.length; i++) {
-            result.push( pt2[i] - pt1[i] );
-        }
-        
-        return result;
-    };
-    
-    
-    // The exposed API.
-    return {
-        add: add,
-        clone: clone,
-        cross: cross,
-        degree: degree,
-        dist: dist,
-        dot: dot,
-        equal: equal,
-        length: length,
-        normalize: normalize,
-        projection: projection,
-        ptLineDist: ptLineDist,
-        ptSegDist: ptSegDist,
-        scalarProjection: scalarProjection,
-        scale: scale,
-        sub: sub,
-        vec: vec
-    };
-})();
-
-
-// Perform unit tests. Inform us in the log if any test fails. Otherwise,
-// succeed silently.
-(function() {
-    /**
-     * Does a unit test. If the test evaluates to false, then it displays with
-     * a message that the unit test failed. Otherwise it passes silently.
-     * @param {boolean} test    Some expression to test.
-     * @param {string} failMsg  A message displayed if the test fails.
-     */
-    var assert = function(test, failMsg) {
-        if(!test) {
-            log("UNIT TEST FAILED: " + failMsg);
-        }
-    };
-    
-    
-    var a = [1, 5];
-    var b = [17, -8];
-    
-    
-    // VecMath.equal
-    assert(
-        VecMath.equal([2, -3, 4, 8], [2, -3, 4, 8]),
-        "VecMath.equal([2, -3, 4, 8], [2, -3, 4, 8])"
-    );
-    assert(
-        !VecMath.equal([1, 3, 5], [-2, 4, -6]),
-        "!VecMath.equal([1, 3, 5], [-2, 4, -6])"
-    );
-    assert(
-        !VecMath.equal([1, 3, 5], [1, 3, 4]),
-        "!VecMath.equal([1, 3, 5], [1, 3, 4])"
-    );
-    assert(
-        !VecMath.equal([1,2,3], [1,2]),
-        "!VecMath.equal([1,2,3], [1,2])"
-    );
-    assert(
-        !VecMath.equal([1,2], [1,2,3]),
-        "!VecMath.equal([1,2], [1,2,3])"
-    );
-    
-    // VecMath.add
-    assert(
-        VecMath.equal(
-            VecMath.add([1, 2, 3], [3, -5, 10]),
-            [4, -3, 13]
-        ),
-        "VecMath.add([1, 2, 3], [3, -5, 10]) equals [4, -3, 13]"
-    );
-    assert(
-        VecMath.equal(
-            VecMath.add([0, 0, 0], [1, 2, 3]),
-            [1, 2, 3]
-        ),
-        "VecMath.add([0, 0, 0], [1, 2, 3]) equals [1, 2, 3]"
-    );
-    
-    // VecMath.clone
-    assert(
-        VecMath.equal( VecMath.clone(a), a),
-        "VecMath.equal( VecMath.clone(a), a)"
-    );
-    assert(
-        VecMath.clone(a) != a,
-        "VecMath.clone(a) != a"
-    );
-    
-    // VecMath.cross
-    assert(
-        VecMath.equal(
-            VecMath.cross([1, 0, 0], [0, 1, 0]),
-            [0, 0, 1]
-        ),
-        "VecMath.cross([1, 0, 0], [0, 1, 0]) equals [0, 0, 1]"
-    );
-    assert(
-        VecMath.equal(
-            VecMath.cross([1,2,3], [-10, 3, 5]),
-            [1, -35, 23]
-        ),
-        "VecMath.cross([1,2,3], [-10, 3, 5]) equals [1, -35, 23]"
-    );
-    
-    // VecMath.degree
-    assert(
-        VecMath.degree([1,2,3]) == 3,
-        "VecMath.degree([1,2,3]) == 3"
-    );
-    assert(
-        VecMath.degree([1]) == 1,
-        "VecMath.degree([1]) == 1"
-    );
-    assert(
-        VecMath.degree([1,1,1,1,1]) == 5,
-        "VecMath.degree([1,1,1,1,1]) == 5"
-    );
-    
-    // VecMath.dist
-    assert(
-        VecMath.dist([1,2], [4,6]) == 5,
-        "VecMath.dist([1,2], [4,6]) == 5"
-    );
-    assert(
-        VecMath.dist([3,4], [-3, -4]) == 10,
-        "VecMath.dist([3,4], [-3, -4]) == 10"
-    );
-    
-    // VecMath.dot
-    assert(
-        VecMath.dot([1, 2, 3], [-1, -2, -3]) == -14,
-        "VecMath.dot([1, 2, 3], [-1, -2, -3]) == -14"
-    );
-    assert(
-        VecMath.dot([1,0], [0,1]) == 0,
-        "VecMath.dot([1,0], [0,1]) == 0"
-    );
-    assert(
-        VecMath.dot([1,0], [0,-1]) == 0,
-        "VecMath.dot([1,0], [0,-1]) == 0"
-    );
-    assert(
-        VecMath.dot([1,0], [-1, 0]) == -1,
-        "VecMath.dot([1,0], [-1, 0]) == -1"
-    );
-    assert(
-        VecMath.dot([1,0], [1, 0]) == 1,
-        "VecMath.dot([1,0], [1, 0]) == 1"
-    );
-    
-    // VecMath.length
-    assert(
-        VecMath.length([1,0,0]) == 1,
-        "VecMath.length([1,0,0]) == 1"
-    );
-    assert(
-        VecMath.length([3,4]) == 5,
-        "VecMath.length([3,4]) == 5"
-    );
-    assert(
-        VecMath.length([-3, 0, 4, 0]) == 5,
-        "VecMath.length([-3, 0, 4, 0]) == 5"
-    );
-    
-    // VecMath.normalize
-    assert(
-        VecMath.equal(
-            VecMath.normalize([3,0]),
-            [1, 0]
-        ),
-        "VecMath.normalize([3,0]) equals [1,0]"
-    );
-    assert(
-        VecMath.equal(
-            VecMath.normalize([0,-3]),
-            [0, -1]
-        ),
-        "VecMath.normalize([0,-3]) equals [0,-1]"
-    );
-    
-    // VecMath.projection
-    assert(
-        VecMath.equal(
-            VecMath.projection([5,0], [3, 4]),
-            [3, 0]
-        ),
-        "VecMath.projection([5,0], [3, 4]) equals [3, 0]"
-    );
-    assert(
-        VecMath.equal(
-            VecMath.projection([5,5], [0, 6]),
-            [3, 3],
-            0.001
-        ),
-        "VecMath.projection([5,5], [0, 6]) equals [3, 3]"
-    );
-    
-    // VecMath.ptLineDist
-    assert(
-        VecMath.ptLineDist([0,3], [-100,5], [100,5]) == 2,
-        "VecMath.ptLineDist([0,3], [-100,5], [100,5]) == 2"
-    );
-    assert(
-        VecMath.ptLineDist([3,0], [5,5], [5,10]) == 2,
-        "VecMath.ptLineDist([3,0], [5,5], [5,10]) == 2"
-    );
-    
-    // VecMath.ptSegDist
-    assert(
-        VecMath.ptSegDist([0,3], [-5,5], [5,5]) == 2,
-        "VecMath.ptSegDist([0,3], [-5,5], [5,5]) == 2"
-    );
-    assert(
-        VecMath.ptSegDist([3,0], [5,-5], [5,5]) == 2,
-        "VecMath.ptSegDist([3,0], [5,-5], [5,5]) == 2"
-    );
-    assert(
-        VecMath.ptSegDist([3,4], [-5,0], [0,0]) == 5,
-        "VecMath.ptSegDist([3,4], [-5,0], [0,0]) == 5"
-    );
-    assert(
-        VecMath.ptSegDist([-2,-4], [1,0], [5,0]) == 5,
-        "VecMath.ptSegDist([-2,-4], [1,0], [5,0]) == 5"
-    );
-    
-    // VecMath.scalarProjection
-    assert(
-        VecMath.scalarProjection([5,0], [3, 4]) == 3,
-        "VecMath.scalarProjection([5,0], [3, 4]) == 3"
-    );
-    
-    // VecMath.scale
-    assert(
-        VecMath.equal(
-            VecMath.scale([1,-2,3], 6),
-            [6, -12, 18]
-        ),
-        "VecMath.scale([1,-2,3], 6) equals [6, -12, 18]"
-    );
-    
-    // VecMath.sub
-    assert(
-        VecMath.equal(
-            VecMath.sub([10, 8, 6], [-4, 6, 1]),
-            [14, 2, 5]
-        ),
-        "VecMath.sub([10, 8, 6], [-4, 6, 1]) equals [14, 2, 5]"
-    );
-    
-    // VecMath.vec
-    assert(
-        VecMath.equal(
-            VecMath.vec([1,1], [3,4]),
-            [2,3]
-        ),
-        "VecMath.vec([1,1], [3,4]) equals [2,3]"
-    );
-})();
-
-
-
-/**
- * This script provides a way for players and GMs to split paths by their
- * intersections with another splitting path.
- * This could especially be useful for when corrections need to be made to
- * paths used for dynamic lighting.
- *
- * Simply draw a polygonal path intersecting the path you want to split up.
- * Select the main path and then the splitting path.
- * Then with the main and splitting paths selected,
- * enter the command '!pathSplit'.
- * The original path will be divided into new paths separated at the points
- * where the splitting path intersected the original path.
- *
- * This script also works with paths that have been scaled and rotated.'
- *
- * Requires:
- *   VectorMath
- *   MatrixMath
- *   PathMath
- */
-
-(() => {
-  'use strict';
-
-  const PATHSPLIT_CMD = '!pathSplit';
-  const PATHSPLIT_COLOR_CMD = '!pathSplitColor';
-
-  /**
-   * A 3-tuple representing a point of intersection between two line segments.
-   * The first element is a Vector representing the point of intersection in
-   * 2D homogenous coordinates.
-   * The second element is the parametric coefficient for the intersection
-   * along the first segment.
-   * The third element is the parametric coefficient for the intersection
-   * along the second segment.
-   * @typedef {Array} Intersection
-   */
-
-   /**
-   * A vector used to define a homogeneous point or a direction.
-   * @typedef {number[]} Vector
-   */
-
-  /**
-   * A line segment defined by two homogenous 2D points.
-   * @typedef {Vector[]} Segment
-   */
-
-
-  // Initialize the script's state if it hasn't already been initialized.
-  state.PathSplitter = state.PathSplitter || {
-    splitPathColor: '#000000' // black
-  };
-
-
-  function _getSplitSegmentPaths(mainSegments, splitSegments) {
-    let resultSegPaths = [];
-    let curPathSegs = [];
-
-    _.each(mainSegments, seg1 => {
-
-      // Find the points of intersection and their parametric coefficients.
-      let intersections = [];
-      _.each(splitSegments, seg2 => {
-        let i = PathMath.segmentIntersection(seg1, seg2);
-        if(i)
-          intersections.push(i);
-      });
-
-      if(intersections.length > 0) {
-        // Sort the intersections in the order that they appear along seg1.
-        intersections.sort((a, b) => {
-          return a[1] - b[1];
-        });
-
-        let lastPt = seg1[0];
-        _.each(intersections, i => {
-          // Complete the current segment path.
-          curPathSegs.push([lastPt, i[0]]);
-          resultSegPaths.push(curPathSegs);
-
-          // Start a new segment path.
-          curPathSegs = [];
-          lastPt = i[0];
-        });
-        curPathSegs.push([lastPt, seg1[1]]);
-      }
-      else {
-        curPathSegs.push(seg1);
-      }
-    });
-    resultSegPaths.push(curPathSegs);
-
-    return resultSegPaths;
-  };
-
-  /**
-   * Splits mainPath at its intersections with splitPath. The original path
-   * is removed, being replaced by the new split up paths.
-   * @param {Path} mainPath
-   * @param {Path} splitPath
-   * @return {Path[]}
-   */
-  function splitPathAtIntersections(mainPath, splitPath) {
-    let mainSegments = PathMath.toSegments(mainPath);
-    let splitSegments = PathMath.toSegments(splitPath);
-    let segmentPaths = _getSplitSegmentPaths(mainSegments, splitSegments);
-
-    // Convert the list of segment paths into paths.
-    let _pageid = mainPath.get('_pageid');
-    let controlledby = mainPath.get('controlledby');
-    let fill = mainPath.get('fill');
-    let layer = mainPath.get('layer');
-    let stroke = mainPath.get('stroke');
-    let stroke_width = mainPath.get('stroke_width');
-
-    let results = [];
-    _.each(segmentPaths, segments => {
-      let pathData = PathMath.segmentsToPath(segments);
-      _.extend(pathData, {
-        _pageid,
-        controlledby,
-        fill,
-        layer,
-        stroke,
-        stroke_width
-      });
-      let path = createObj('path', pathData);
-      results.push(path);
-    });
-
-    // Remove the original path and the splitPath.
-    mainPath.remove();
-    splitPath.remove();
-
-    return results;
-  }
-
-  on('chat:message', msg => {
-    if(msg.type === 'api' && msg.content === PATHSPLIT_COLOR_CMD) {
-      try {
-        let selected = msg.selected;
-        let path = findObjs({
-          _type: 'path',
-          _id: selected[0]._id
-        })[0];
-
-        let stroke = path.get('stroke');
-        state.PathSplitter.splitPathColor = stroke;
-      }
-      catch(err) {
-        log('!pathSplit ERROR: ' + err.message);
-        log(err.stack);
-      }
-    }
-    else if(msg.type === 'api' && msg.content === PATHSPLIT_CMD) {
-      try {
-        let selected = msg.selected;
-        if(!selected || selected.length !== 2) {
-          let msg = `Two paths must be selected: the one you want to split, and the splitting path (color: <span style="background: ${state.PathSplitter.splitPathColor}; width: 16px; height: 16px; padding: 0.2em; font-weight: bold;">${state.PathSplitter.splitPathColor}</span>).`;
-          sendChat('Pathsplitter', msg);
-          throw new Error('Two paths must be selected.');
-        }
-
-        let path1 = findObjs({
-          _type: 'path',
-          _id: selected[0]._id
-        })[0];
-        let path2 = findObjs({
-          _type: 'path',
-          _id: selected[1]._id
-        })[0];
-
-        // Determine which path is the main path and which is the
-        // splitting path.
-        let mainPath, splitPath;
-        if(path1.get('stroke') === state.PathSplitter.splitPathColor) {
-          mainPath = path2;
-          splitPath = path1;
-        }
-        else if(path2.get('stroke') === state.PathSplitter.splitPathColor) {
-          mainPath = path1;
-          splitPath = path2;
-        }
-        else {
-          let msg = 'No splitting path selected. ';
-          msg += `Current split color: <span style="background: ${state.PathSplitter.splitPathColor}; width: 16px; height: 16px; padding: 0.2em; font-weight: bold;">${state.PathSplitter.splitPathColor}</span>`
-          sendChat('Pathsplitter', msg);
-
-          throw new Error('No splitting path selected.');
-        }
-        splitPathAtIntersections(mainPath, splitPath);
-      }
-      catch(err) {
-        log('!pathSplit ERROR: ' + err.message);
-        log(err.stack);
-      }
-    }
-  });
-})();
-
-//##############################################################################
-//################################## PROD WIZ BEGINS ###########################
-//###############################################################################
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+//       PRODWIZ 0.9.8
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
 const Roll20Pro = (() => {
@@ -2749,7 +20,7 @@ const Roll20Pro = (() => {
     }
     
     const scriptName = "Roll20 Production Wizard",
-        version = "0.9.7",
+        version = "0.9.8",
         
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -2940,6 +211,9 @@ const Roll20Pro = (() => {
 
             makeH4("Path Splitter-Use Black for Splitter") +
             makeButton("Split Path", "!pathSplit", styles.button) +
+            makeH4("Import Generic Battle Map") +
+            makeButton("Parchment", "!prod battlemap parchment", styles.button) + 
+            makeButton("Modern/SF", "!prod battlemap modern", styles.button) + 
             makeH4("Dynamic Lighting Tool") +
             makeButton("Full Report", "!dltool", styles.button) +
             makeButton("Page Tools", "!dltool --report|extra", styles.button) +
@@ -2999,6 +273,9 @@ const Roll20Pro = (() => {
             makeButton("DMsGuild", "!prod stock create thankyouDMsGuildHandout", styles.button) +
             makeButton("Pathfinder Infinite", "!prod stock create thankyouPFIHandout", styles.button) +
             makeButton("Miskatonic", "!prod stock create thankyouMiskatonicHandout", styles.button) +
+            makeH4("Generic Battlemats") + 
+            makeButton("Parchment", "!prod page create parchment", styles.button) +
+            makeButton("Modern", "!prod page create modern", styles.button) +
             //makeButton("!linking", "!prod stock linking", styles.button) + //UNDER CONSTRUCTION
             makeBackButton()
             ,
@@ -3073,6 +350,13 @@ const Roll20Pro = (() => {
                             case "process": processImageToHandout(selected); break;
                         } 
                         break;
+                    case "battlemap":
+                        switch (args[2]) {
+                            default: 
+                            case "parchment": battlemapMaker("parchment", msg); break;
+                            case "modern": battlemapMaker("modern", msg); break;
+                        } 
+                        break;
                     case "map": 
                         switch (args[2]) {
                             default: 
@@ -3092,6 +376,14 @@ const Roll20Pro = (() => {
                             case "linking": createLinkingHandout(); break;
                             case "changeName": state.Roll20Pro.productName = extString; break;
                             case "create": createStockHandout(args[3], caller, args[4]); break;
+                            //TO DO: actual handouts :/
+                        }
+                        break;
+                    case "page":
+                        switch (args[2]) {
+                            default: 
+                            case "parchment": createPage("Generic Battle Mat","https://s3.amazonaws.com/files.d20.io/images/402650450/HfnSkKN2C6P0akykDKV9SA/thumb.jpg?17221262475"); break;
+                            case "modern": createPage("Generic Battle Mat","https://s3.amazonaws.com/files.d20.io/images/396503153/gHUo59MwLQrQXMcM0Adpbw/thumb.jpg?17180502475"); break;
                             //TO DO: actual handouts :/
                         }
                         break;
@@ -3658,6 +950,37 @@ const Roll20Pro = (() => {
                 }
             }
         },
+
+        battlemapMaker = function(maptype, msg) {
+            let lastPageID = getObj('player', msg.playerid).get('_lastpage');
+            let pageID = Campaign().get("playerpageid")
+            let page = getObj("page", pageID);
+            let allObjects = findObjs
+            let currentPageGraphics = findObjs({
+                _pageid: Campaign().get("playerpageid"),
+                _type: "graphic",
+            });
+            let imageSource = maptype === "parchment" ? "https://s3.amazonaws.com/files.d20.io/images/396503153/gHUo59MwLQrQXMcM0Adpbw/thumb.jpg?17180502475" : "https://s3.amazonaws.com/files.d20.io/images/402650450/HfnSkKN2C6P0akykDKV9SA/thumb.jpg?17221262475";
+
+            if (pageID == lastPageID && currentPageGraphics.length === 0) {
+                page.set("width", 20);
+                page.set("height", 20);
+                page.set("name", "Generic Battle Map");
+                let battlemap = createObj('graphic', {
+                    pageid: pageID,
+                    left: 700,
+                    top: 700,
+                    height: 1400,
+                    width: 1400,
+                    imgsrc: imageSource,
+                    layer: "map"
+                });
+
+            } else {
+                makeAndSendMenu("For safety, The player bookmark must be on your page, and the page must contain no existing graphics!", "Roll20 Producer Error", 'gm');
+            }
+        },
+        
         
         locateBuddies = function() {
             buddies = findObjs({                              
@@ -3667,7 +990,7 @@ const Roll20Pro = (() => {
             //log(buddies.length);
             return buddies;
             
-        }
+        },
 
         buddyActions = function (msg) {
             buddies = locateBuddies();
@@ -3710,7 +1033,7 @@ const Roll20Pro = (() => {
             } else {
                 sendChat ("ProdWiz","/w gm No buddies exist in the game. Create a buddy before using this command")
         }
-        }
+        },
         
         toggleBuddy = function (msg) {
             buddies = locateBuddies();
@@ -3935,10 +1258,34 @@ handoutHTML = {
         };
 
 
+    createPage = function(name, url) {
+        log("HELLO! QQ");
+        createObj('page', {
+            name: name,
+            width: 20,
+            height: 20
+        });
+/*
+        createObj('graphic', {
+            width: 20*70,
+            height: 20*70,
+            top: 10*70,
+            width: 10*70,
+            imgsrc: url,
+            layer: "map",
+            //pageid: ___________________,
+        });
+*/
+    }
+
+
         
         createStockHandout = function(name, caller, copies) {
             title = "";
                                 if (undefined === copies){copies = 1}
+                                
+                                
+                                
 
             switch (name) {
                 case "battleMap": title = "Map Handout"; findAndMakeHandout(title, "", handoutHTML.battleMap()); break;
@@ -4252,36 +1599,9 @@ handoutHTML = {
     });
 })();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+//       TOKEN-MOD
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 // Github:   https://github.com/shdwjk/Roll20API/blob/master/TokenMod/TokenMod.js
 // By:       The Aaron, Arcane Scriptomancer
@@ -8288,11 +5608,9 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
 
 
 
-//########################################################
-//############### TOKEN ACTION MAKER #####################
-//########################################################
-
-
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+//   TOKEN ACTION MAKER
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
 var tokenAction = tokenAction || (function () {
     'use strict';
     // Create dropdown Query menu
@@ -9150,7 +6468,9 @@ on('ready', function () {
 });
 
 
-
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+//       MATRIXMATH
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
 // Github:   https://github.com/shdwjk/Roll20API/blob/master/TableExport/TableExport.js
 // By:       The Aaron, Arcane Scriptomancer
 // Contact:  https://app.roll20.net/users/104025/the-aaron
@@ -9449,7 +6769,9 @@ on("ready",function(){
 });
 
 
-
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+//   DYNAMIC LIGHTING TOOL
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
 //####################################
 // Dynamic Lighting Tool
 // Also available through one-click
@@ -10205,7 +7527,7 @@ on('ready', () => {
                             (isProd ?
                             HR + 
                             openRolll20Subhead + `Roll 20 CNV</div>`+ 
-                            dlButton("Toggle Buddy", "!prod map buddy") + dlButton("Split Path", "!pathSplit") +'<br>' +
+                            dlButton("Toggle Buddy", "!prod map buddy") + dlButton("Split Path", "!pathSplit") + dlButton(`&nbsp;<span style="font-family:Pictos;">(</span>&nbsp;`, "!token-mod --on lockMovement") + dlButton(" "+`&nbsp;<span style="font-family:Pictos;">)</span>&nbsp;`+" ", "!token-mod --off lockMovement") +'<br>' +
                             `<b>${label("Grid Presets:", "Grid Presets.")} <b><BR>` + 
                             gridButton("weak","1", "#000000", "0.1", "!dltool-mod --snapping_increment|1" +  "&#10;!dltool-mod --gridcolor|000000" + "&#10;!dltool-mod --grid_opacity|0.1") + gridButton("Strong","1", "#000000", "0.5", "!dltool-mod --snapping_increment|1" +  "&#10;!dltool-mod --gridcolor|000000" +  "&#10;!dltool-mod --grid_opacity|0.5") + gridButton("Invisible","1", "#000000", "0", "!dltool-mod --snapping_increment|1" +  "&#10;!dltool-mod --gridcolor|000000" +  "&#10;!dltool-mod --grid_opacity|0") + gridButton("Template","0.125", "000000", "0.25", "!dltool --snapping_increment|0.125" +  "&#10;!dltool --gridcolor|FF00FF" +  "&#10;!dltool --grid_opacity|0.25")
                             : "")+
@@ -10526,4 +7848,2754 @@ on('ready', () => {
     } catch (e) {
         API_Meta.dltool.lineCount = (parseInt(e.stack.split(/\n/)[1].replace(/^.*:(\d+):.*$/, '$1'), 10) - API_Meta.dltool.offset);
     }
-}
+};
+
+
+
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+//       PATH SPLITTER
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+/**
+ * This script provides a way for players and GMs to split paths by their
+ * intersections with another splitting path.
+ * This could especially be useful for when corrections need to be made to
+ * paths used for dynamic lighting.
+ *
+ * Simply draw a polygonal path intersecting the path you want to split up.
+ * Select the main path and then the splitting path.
+ * Then with the main and splitting paths selected,
+ * enter the command '!pathSplit'.
+ * The original path will be divided into new paths separated at the points
+ * where the splitting path intersected the original path.
+ *
+ * This script also works with paths that have been scaled and rotated.'
+ *
+ * Requires:
+ *   VectorMath
+ *   MatrixMath
+ *   PathMath
+ */
+
+(() => {
+  'use strict';
+
+  const PATHSPLIT_CMD = '!pathSplit';
+  const PATHSPLIT_COLOR_CMD = '!pathSplitColor';
+
+  /**
+   * A 3-tuple representing a point of intersection between two line segments.
+   * The first element is a Vector representing the point of intersection in
+   * 2D homogenous coordinates.
+   * The second element is the parametric coefficient for the intersection
+   * along the first segment.
+   * The third element is the parametric coefficient for the intersection
+   * along the second segment.
+   * @typedef {Array} Intersection
+   */
+
+   /**
+   * A vector used to define a homogeneous point or a direction.
+   * @typedef {number[]} Vector
+   */
+
+  /**
+   * A line segment defined by two homogenous 2D points.
+   * @typedef {Vector[]} Segment
+   */
+
+
+  // Initialize the script's state if it hasn't already been initialized.
+  state.PathSplitter = state.PathSplitter || {
+    splitPathColor: '#000000' // black
+  };
+
+
+  function _getSplitSegmentPaths(mainSegments, splitSegments) {
+    let resultSegPaths = [];
+    let curPathSegs = [];
+
+    _.each(mainSegments, seg1 => {
+
+      // Find the points of intersection and their parametric coefficients.
+      let intersections = [];
+      _.each(splitSegments, seg2 => {
+        let i = PathMath.segmentIntersection(seg1, seg2);
+        if(i)
+          intersections.push(i);
+      });
+
+      if(intersections.length > 0) {
+        // Sort the intersections in the order that they appear along seg1.
+        intersections.sort((a, b) => {
+          return a[1] - b[1];
+        });
+
+        let lastPt = seg1[0];
+        _.each(intersections, i => {
+          // Complete the current segment path.
+          curPathSegs.push([lastPt, i[0]]);
+          resultSegPaths.push(curPathSegs);
+
+          // Start a new segment path.
+          curPathSegs = [];
+          lastPt = i[0];
+        });
+        curPathSegs.push([lastPt, seg1[1]]);
+      }
+      else {
+        curPathSegs.push(seg1);
+      }
+    });
+    resultSegPaths.push(curPathSegs);
+
+    return resultSegPaths;
+  };
+
+  /**
+   * Splits mainPath at its intersections with splitPath. The original path
+   * is removed, being replaced by the new split up paths.
+   * @param {Path} mainPath
+   * @param {Path} splitPath
+   * @return {Path[]}
+   */
+  function splitPathAtIntersections(mainPath, splitPath) {
+    let mainSegments = PathMath.toSegments(mainPath);
+    let splitSegments = PathMath.toSegments(splitPath);
+    let segmentPaths = _getSplitSegmentPaths(mainSegments, splitSegments);
+
+    // Convert the list of segment paths into paths.
+    let _pageid = mainPath.get('_pageid');
+    let controlledby = mainPath.get('controlledby');
+    let fill = mainPath.get('fill');
+    let layer = mainPath.get('layer');
+    let stroke = mainPath.get('stroke');
+    let stroke_width = mainPath.get('stroke_width');
+
+    let results = [];
+    _.each(segmentPaths, segments => {
+      let pathData = PathMath.segmentsToPath(segments);
+      _.extend(pathData, {
+        _pageid,
+        controlledby,
+        fill,
+        layer,
+        stroke,
+        stroke_width
+      });
+      let path = createObj('path', pathData);
+      results.push(path);
+    });
+
+    // Remove the original path and the splitPath.
+    mainPath.remove();
+    splitPath.remove();
+
+    return results;
+  }
+
+  on('chat:message', msg => {
+    if(msg.type === 'api' && msg.content === PATHSPLIT_COLOR_CMD) {
+      try {
+        let selected = msg.selected;
+        let path = findObjs({
+          _type: 'path',
+          _id: selected[0]._id
+        })[0];
+
+        let stroke = path.get('stroke');
+        state.PathSplitter.splitPathColor = stroke;
+      }
+      catch(err) {
+        log('!pathSplit ERROR: ' + err.message);
+        log(err.stack);
+      }
+    }
+    else if(msg.type === 'api' && msg.content === PATHSPLIT_CMD) {
+      try {
+        let selected = msg.selected;
+        if(!selected || selected.length !== 2) {
+          let msg = `Two paths must be selected: the one you want to split, and the splitting path (color: <span style="background: ${state.PathSplitter.splitPathColor}; width: 16px; height: 16px; padding: 0.2em; font-weight: bold;">${state.PathSplitter.splitPathColor}</span>).`;
+          sendChat('Pathsplitter', msg);
+          throw new Error('Two paths must be selected.');
+        }
+
+        let path1 = findObjs({
+          _type: 'path',
+          _id: selected[0]._id
+        })[0];
+        let path2 = findObjs({
+          _type: 'path',
+          _id: selected[1]._id
+        })[0];
+
+        // Determine which path is the main path and which is the
+        // splitting path.
+        let mainPath, splitPath;
+        if(path1.get('stroke') === state.PathSplitter.splitPathColor) {
+          mainPath = path2;
+          splitPath = path1;
+        }
+        else if(path2.get('stroke') === state.PathSplitter.splitPathColor) {
+          mainPath = path1;
+          splitPath = path2;
+        }
+        else {
+          let msg = 'No splitting path selected. ';
+          msg += `Current split color: <span style="background: ${state.PathSplitter.splitPathColor}; width: 16px; height: 16px; padding: 0.2em; font-weight: bold;">${state.PathSplitter.splitPathColor}</span>`
+          sendChat('Pathsplitter', msg);
+
+          throw new Error('No splitting path selected.');
+        }
+        splitPathAtIntersections(mainPath, splitPath);
+      }
+      catch(err) {
+        log('!pathSplit ERROR: ' + err.message);
+        log(err.stack);
+      }
+    }
+  });
+})();
+
+
+
+
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+//       LIBRARIES
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+//       MATRIXMATH
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+/**
+ * This script provides a library for performing affine matrix operations
+ * inspired by the [glMatrix library](http://glmatrix.net/) developed by
+ * Toji and SinisterChipmunk.
+ *
+ * Unlike glMatrix, this library does not have operations for vectors.
+ * However, my VectorMath script provides a library providing many kinds of
+ * common vector operations.
+ *
+ * This project has no behavior on its own, but its functions are used by
+ * other scripts to do some cool things, particular for math involving 2D and
+ * 3D geometry.
+ */
+var MatrixMath = (function() {
+  /**
+   * An NxN square matrix, represented as a 2D array of numbers in column-major
+   * order. For example, mat[3][2] would get the value in column 3 and row 2.
+   * order.
+   * @typedef {number[][]} Matrix
+   */
+
+  /**
+   * An N-degree vector.
+   * @typedef {number[]} Vector
+   */
+
+  /**
+   * Gets the adjugate of a matrix, the tranpose of its cofactor matrix.
+   * @param  {Matrix} mat
+   * @return {Matrix}
+   */
+  function adjoint(mat) {
+    var cofactorMat = MatrixMath.cofactorMatrix(mat);
+    return MatrixMath.transpose(cofactorMat);
+  }
+
+   /**
+    * Produces a clone of an NxN square matrix.
+    * @param  {Matrix} mat
+    * @return {Matrix}
+    */
+  function clone(mat) {
+    return _.map(mat, function(column) {
+      return _.map(column, function(value) {
+        return value;
+      });
+    });
+  }
+
+  /**
+   * Gets the cofactor of a matrix at a specified column and row.
+   * @param  {Matrix} mat
+   * @param  {uint} col
+   * @param  {uint} row
+   * @return {number}
+   */
+  function cofactor(mat, col, row) {
+    return Math.pow(-1, col+row)*MatrixMath.minor(mat, col, row);
+  }
+
+  /**
+   * Gets the cofactor matrix of a matrix.
+   * @param  {Matrix} mat
+   * @return {Matrix}
+   */
+  function cofactorMatrix(mat) {
+    var result = [];
+    var size = MatrixMath.size(mat);
+    for(var col=0; col<size; col++) {
+      result[col] = [];
+      for(var row=0; row<size; row++) {
+        result[col][row] = MatrixMath.cofactor(mat, col, row);
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Gets the determinant of an NxN matrix.
+   * @param  {Matrix} mat
+   * @return {number}
+   */
+  function determinant(mat) {
+    var size = MatrixMath.size(mat);
+
+    if(size === 2)
+      return mat[0][0]*mat[1][1] - mat[1][0]*mat[0][1];
+    else {
+      var sum = 0;
+      for(var col=0; col<size; col++) {
+        sum += mat[col][0] * MatrixMath.cofactor(mat, col, 0);
+      }
+      return sum;
+    }
+  }
+
+  /**
+   * Tests if two matrices are equal.
+   * @param  {Matrix} a
+   * @param  {Matrix} b
+   * @param {number} [tolerance=0]
+   *        If specified, this specifies the amount of tolerance to use for
+   *        each value of the matrices when testing for equality.
+   * @return {boolean}
+   */
+  function equal(a, b, tolerance) {
+    tolerance = tolerance || 0;
+    var sizeA = MatrixMath.size(a);
+    var sizeB = MatrixMath.size(b);
+
+    if(sizeA !== sizeB)
+      return false;
+
+    for(var col=0; col<sizeA; col++) {
+      for(var row=0; row<sizeA; row++) {
+        if(Math.abs(a[col][row] - b[col][row]) > tolerance)
+          return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Produces an identity matrix of some size.
+   * @param  {uint} size
+   * @return {Matrix}
+   */
+  function identity(size) {
+    var mat = [];
+    for(var col=0; col<size; col++) {
+      mat[col] = [];
+      for(var row=0; row<size; row++) {
+        if(row === col)
+          mat[col][row] = 1;
+        else
+          mat[col][row] = 0;
+      }
+    }
+    return mat;
+  }
+
+  /**
+   * Gets the inverse of a matrix.
+   * @param  {Matrix} mat
+   * @return {Matrix}
+   */
+  function inverse(mat) {
+    var determinant = MatrixMath.determinant(mat);
+    if(determinant === 0)
+      return undefined;
+
+    var adjoint = MatrixMath.adjoint(mat);
+    var result = [];
+    var size = MatrixMath.size(mat);
+    for(var col=0; col<size; col++) {
+      result[col] = [];
+      for(var row=0; row<size; row++) {
+        result[col][row] = adjoint[col][row]/determinant;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Gets the determinant of a matrix omitting some column and row.
+   * @param  {Matrix} mat
+   * @param  {uint} col
+   * @param  {uint} row
+   * @return {number}
+   */
+  function minor(mat, col, row) {
+    var reducedMat = MatrixMath.omit(mat, col, row);
+    return determinant(reducedMat);
+  }
+
+
+  /**
+   * Returns the matrix multiplication of a*b.
+   * This function works for non-square matrices (and also for transforming
+   * vectors by a matrix).
+   * For matrix multiplication to work, the # of columns in A must be equal
+   * to the # of rows in B.
+   * The resulting matrix will have the same number of rows as A and the
+   * same number of columns as B.
+   * If b was given as a vector, then the result will also be a vector.
+   * @param  {Matrix} a
+   * @param  {Matrix|Vector} b
+   * @return {Matrix|Vector}
+   */
+  function multiply(a, b) {
+    // If a vector is given for b, convert it to a nx1 matrix, where n
+    // is the length of b.
+    var bIsVector = _.isNumber(b[0]);
+    if(bIsVector)
+      b = [b];
+
+    var colsA = a.length;
+    var rowsA = a[0].length;
+    var colsB = b.length;
+    var rowsB = b[0].length;
+    if(colsA !== rowsB)
+      throw new Error('MatrixMath.multiply ERROR: # columns in A must be ' +
+        'the same as the # rows in B. Got A: ' + rowsA + 'x' + colsA +
+        ', B: ' + rowsB + 'x' + colsB + '.');
+
+    var result = [];
+    for(var col=0; col<colsB; col++) {
+      result[col] = [];
+      for(var row=0; row<rowsA; row++) {
+        result[col][row] = 0;
+        for(var i=0; i<colsA; i++) {
+          result[col][row] += a[i][row] * b[col][i];
+        }
+      }
+    }
+
+    if(bIsVector)
+      result = result[0];
+    return result;
+  }
+
+  /**
+   * Returns a matrix with a column and row omitted.
+   * @param  {Matrix} mat
+   * @param  {uint} col
+   * @param  {uint} row
+   * @return {Matrix}
+   */
+  function omit(mat, col, row) {
+    var result = [];
+
+    var size = MatrixMath.size(mat);
+    for(var i=0; i<size; i++) {
+      if(i === col)
+        continue;
+
+      var column = [];
+      result.push(column);
+      for(var j=0; j<size; j++) {
+        if(j !== row)
+          column.push(mat[i][j]);
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Produces a 2D rotation affine transformation. The direction of the
+   * rotation depends upon the coordinate system.
+   * @param  {number} angle
+   *         The angle, in radians.
+   * @return {Matrix}
+   */
+  function rotate(angle) {
+    var cos = Math.cos(angle);
+    var sin = Math.sin(angle);
+    return [[cos, sin, 0], [-sin, cos, 0], [0,0,1]];
+  }
+
+  /**
+   * Produces a 2D scale affine transformation matrix.
+   * The matrix is used to transform homogenous coordinates, so it is
+   * actually size 3 instead of size 2, despite being used for 2D geometry.
+   * @param  {(number|Vector)} amount
+   *         If specified as a number, then it is a uniform scale. Otherwise,
+   *         it defines a scale by parts.
+   * @return {Matrix}
+   */
+  function scale(amount) {
+    if(_.isNumber(amount))
+      amount = [amount, amount];
+    return [[amount[0], 0, 0], [0, amount[1], 0], [0, 0, 1]];
+  }
+
+  /**
+   * Gets the size N of a NxN square matrix.
+   * @param  {Matrix} mat
+   * @return {uint}
+   */
+  function size(mat) {
+    return mat[0].length;
+  }
+
+  /**
+   * Produces a 2D translation affine transformation matrix.
+   * The matrix is used to transform homogenous coordinates, so it is
+   * actually size 3 instead of size 2, despite being used for 2D geometry.
+   * @param  {Vector} vec
+   * @return {Matrix}
+   */
+  function translate(vec) {
+    return [[1,0,0], [0,1,0],[vec[0], vec[1], 1]];
+  }
+
+  /**
+   * Returns the transpose of a matrix.
+   * @param  {Matrix} mat
+   * @return {Matrix}
+   */
+  function transpose(mat) {
+    var result = [];
+
+    var size = MatrixMath.size(mat);
+    for(var col=0; col<size; col++) {
+      result[col] = [];
+      for(var row=0; row<size; row++) {
+        result[col][row] = mat[row][col];
+      }
+    }
+    return result;
+  }
+
+
+  return {
+    adjoint: adjoint,
+    clone: clone,
+    cofactor: cofactor,
+    cofactorMatrix: cofactorMatrix,
+    determinant: determinant,
+    equal: equal,
+    identity: identity,
+    inverse: inverse,
+    minor: minor,
+    multiply: multiply,
+    omit: omit,
+    rotate: rotate,
+    scale: scale,
+    size: size,
+    translate: translate,
+    transpose: transpose
+  };
+})();
+
+
+
+// Perform unit tests. Inform us in the log if any test fails. Otherwise,
+// succeed silently.
+(function() {
+  /**
+   * Asserts that some boolean expression is true. Otherwise, it throws
+   * an error.
+   * @param {boolean} test    Some expression to test.
+   * @param {string} failMsg  A message displayed if the test fails.
+   */
+  function assert(test, failMsg) {
+    if(!test)
+      throw new Error(failMsg);
+  }
+
+  function assertEqual(actual, expected, tolerance) {
+    assert(MatrixMath.equal(actual, expected, tolerance),
+      'Expected: ' + JSON.stringify(expected) +
+      '\nActual: ' + JSON.stringify(actual));
+  }
+
+  /**
+   * Performs a unit test.
+   * If it fails, then the test's name and the error is displayed.
+   * It is silent if the test passes.
+   * @param  {string} testName
+   * @param  {function} testFn
+   */
+  function unitTest(testName, testFn) {
+    try {
+      testFn();
+    }
+    catch(err) {
+      log('TEST ' + testName);
+      log('ERROR: ');
+      var messageLines = err.message.split('\n');
+      _.each(messageLines, function(line) {
+        log(line);
+      });
+    }
+  }
+
+
+  unitTest('MatrixMath.equal()', function() {
+    var a = [[1,2,3], [4,5,6], [7,8,9]];
+    var b = [[1,2,3], [4,5,6], [7,8,9]];
+    var c = [[0,0,0], [1,1,1], [2,2,2]];
+    assert(MatrixMath.equal(a,b));
+    assert(!MatrixMath.equal(a,c));
+  });
+
+  unitTest('MatrixMath.adjoint()', function() {
+    // Example taken from http://www.mathwords.com/a/adjoint.htm
+    var a = [[1,0,1], [2,4,0], [3,5,6]];
+
+    var actual = MatrixMath.adjoint(a);
+    var expected = [[24, 5, -4], [-12,3,2], [-2,-5,4]];
+
+    assertEqual(actual, expected);
+  });
+
+  unitTest('MatrixMath.clone()', function() {
+    var a = [[1,2,3], [4,5,6], [7,8,9]];
+    var clone = MatrixMath.clone(a);
+    assertEqual(a, clone);
+    assert(a !== clone, 'should not be equal by reference.');
+  });
+
+  unitTest('MatrixMath.cofactor()', function() {
+    // Example taken from http://www.mathwords.com/c/cofactor_matrix.htm.
+    var a = [[1,0,1], [2,4,0], [3,5,6]];
+
+    var actual = MatrixMath.cofactor(a,0,0);
+    var expected = 24;
+    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
+
+    var actual = MatrixMath.cofactor(a,1,0);
+    var expected = 5;
+    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
+
+    var actual = MatrixMath.cofactor(a,2,0);
+    var expected = -4;
+    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
+
+    var actual = MatrixMath.cofactor(a,0,1);
+    var expected = -12;
+    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
+
+    var actual = MatrixMath.cofactor(a,1,1);
+    var expected = 3;
+    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
+
+    var actual = MatrixMath.cofactor(a,2,1);
+    var expected = 2;
+    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
+
+    var actual = MatrixMath.cofactor(a,0,2);
+    var expected = -2;
+    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
+
+    var actual = MatrixMath.cofactor(a,1,2);
+    var expected = -5;
+    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
+
+    var actual = MatrixMath.cofactor(a,2,2);
+    var expected = 4;
+    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
+  });
+
+  unitTest('MatrixMath.cofactorMatrix()', function() {
+    // Example taken from http://www.mathwords.com/c/cofactor_matrix.htm.
+    var a = [[1,0,1], [2,4,0], [3,5,6]];
+    var actual = MatrixMath.cofactorMatrix(a);
+    var expected = [[24, -12, -2], [5, 3, -5], [-4, 2, 4]];
+    assertEqual(actual, expected);
+  });
+
+  unitTest('MatrixMath.determinant()', function() {
+    var a = [[1,2], [3,4]];
+    var actual = MatrixMath.determinant(a);
+    var expected = -2;
+    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
+
+    var a = [[1,5,0,2], [3,1,1,-1], [-2,0,0,0], [1,-1,-2,3]];
+    var actual = MatrixMath.determinant(a);
+    var expected = -6;
+    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
+  });
+
+  unitTest('MatrixMath.identity()', function() {
+    var actual = MatrixMath.identity(3);
+    var expected = [[1,0,0], [0,1,0], [0,0,1]];
+    assertEqual(actual, expected);
+
+    var actual = MatrixMath.identity(2);
+    var expected = [[1,0], [0,1]];
+    assertEqual(actual, expected);
+  });
+
+  unitTest('MatrixMath.inverse()', function() {
+    // Example taken from http://www.mathwords.com/i/inverse_of_a_matrix.htm
+    var a = [[1,0,1], [2,4,0], [3,5,6]];
+    var actual = MatrixMath.inverse(a);
+    var expected = [[12/11, 5/22, -2/11],
+                    [-6/11, 3/22, 1/11],
+                    [-1/11, -5/22, 2/11]];
+    assertEqual(actual, expected);
+
+    var inverse = MatrixMath.multiply(a, actual);
+    var expected = MatrixMath.identity(3);
+    assertEqual(inverse, expected, 0.001);
+  });
+
+  unitTest('MatrixMath.minor()', function() {
+    var a = [[1,2,3], [4,5,6], [7,8,9]];
+    var actual = MatrixMath.minor(a, 1, 1);
+    var expected = -12;
+    assert(actual === expected, 'Got ' + actual + '\nExpected ' + expected);
+  });
+
+  unitTest('MatrixMath.multiply()', function() {
+    var a = [[1,2,3], [4,5,6], [7,8,9]];
+    var b = [[9,8,7], [6,5,4], [3,2,1]];
+    var actual = MatrixMath.multiply(a,b);
+    var expected = [[90, 114, 138], [54,69,84], [18,24,30]];
+    assertEqual(actual, expected);
+  });
+
+  unitTest('Matrix.multiply() to transform a vector', function() {
+    // A 2D point in homogenous coordinates.
+    var pt = [1,2,1];
+
+    var scale = MatrixMath.scale([10,20]);
+    var rotate = MatrixMath.rotate(Math.PI/2);
+    var translate = MatrixMath.translate([2,-8]);
+
+    var m = MatrixMath.multiply(scale, rotate);
+    m = MatrixMath.multiply(m, translate);
+
+    // Transform the point.
+    var actual = MatrixMath.multiply(m, pt);
+    var expected = [60, 60, 1];
+    assertEqual(actual, expected, 0.01);
+  });
+
+  unitTest('MatrixMath.omit()', function() {
+    var a = [[1,2,3], [4,5,6], [7,8,9]];
+    var actual = MatrixMath.omit(a, 1, 2);
+    var expected = [[1,2], [7,8]];
+    assertEqual(actual, expected);
+  });
+
+  unitTest('MatrixMath.size()', function() {
+    var a = [[1,2,3], [4,5,6], [7,8,9]];
+    assert(MatrixMath.size(a) === 3);
+
+    var b = [[1,2],[3,4]];
+    assert(MatrixMath.size(b) === 2);
+  });
+
+  unitTest('MatrixMath.transpose()', function() {
+    var a = [[1,2,3], [4,5,6], [7,8,9]];
+    var expected = [[1,4,7], [2,5,8], [3,6,9]];
+    var transpose = MatrixMath.transpose(a);
+    assertEqual(transpose, expected);
+  });
+
+
+
+})();
+
+
+
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+//       PATHMATH
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+/**
+ * PathMath script
+ *
+ * This is a library that provides mathematical operations involving Paths.
+ * It intended to be used by other scripts and has no stand-alone
+ * functionality of its own. All the library's operations are exposed by the
+ * PathMath object created by this script.
+ */
+var PathMath = (() => {
+    'use strict';
+
+    /** The size of a single square on a page, in pixels. */
+    const UNIT_SIZE_PX = 70;
+
+    /**
+     * A vector used to define a homogeneous point or a direction.
+     * @typedef {number[]} Vector
+     */
+
+    /**
+     * A line segment defined by two homogeneous 2D points.
+     * @typedef {Vector[]} Segment
+     */
+
+    /**
+     * Information about a path's 2D transform.
+     * @typedef {Object} PathTransformInfo
+     * @property {number} angle
+     *           The path's rotation angle in radians.
+     * @property {number} cx
+     *           The x coordinate of the center of the path's bounding box.
+     * @property {number} cy
+     *           The y coordinate of the center of the path's bounding box.
+     * @property {number} height
+     *           The unscaled height of the path's bounding box.
+     * @property {number} scaleX
+     *           The path's X-scale.
+     * @property {number} scaleY
+     *           The path's Y-scale.
+     * @property {number} width
+     *           The unscaled width of the path's bounding box.
+     */
+
+    /**
+     * Rendering information for shapes.
+     * @typedef {Object} RenderInfo
+     * @property {string} [controlledby]
+     * @property {string} [fill]
+     * @property {string} [stroke]
+     * @property {string} [strokeWidth]
+     */
+
+    /**
+     * Some shape defined by a path.
+     * @abstract
+     */
+    class PathShape {
+      constructor(vertices) {
+        this.vertices = vertices || [];
+      }
+
+      /**
+       * Gets the distance from this shape to some point.
+       * @abstract
+       * @param {vec3} pt
+       * @return {number}
+       */
+      distanceToPoint(pt) {
+        throw new Error('Must be defined by subclass.');
+      }
+
+      /**
+       * Gets the bounding box of this shape.
+       * @return {BoundingBox}
+       */
+      getBoundingBox() {
+        if(!this._bbox) {
+          let left, right, top, bottom;
+          _.each(this.vertices, (v, i) => {
+            if(i === 0) {
+              left = v[0];
+              right = v[0];
+              top = v[1];
+              bottom = v[1];
+            }
+            else {
+              left = Math.min(left, v[0]);
+              right = Math.max(right, v[0]);
+              top = Math.min(top, v[1]);
+              bottom = Math.max(bottom, v[1]);
+            }
+          });
+          let width = right - left;
+          let height = bottom - top;
+          this._bbox = new BoundingBox(left, top, width, height);
+        }
+        return this._bbox;
+      }
+
+      /**
+       * Checks if this shape intersects another shape.
+       * @abstract
+       * @param {PathShape} other
+       * @return {boolean}
+       */
+      intersects(other) {
+        throw new Error('Must be defined by subclass.');
+      }
+
+      /**
+       * Renders this path.
+       * @param {string} pageId
+       * @param {string} layer
+       * @param {RenderInfo} renderInfo
+       * @return {Roll20.Path}
+       */
+      render(pageId, layer, renderInfo) {
+        let segments = this.toSegments();
+        let pathData = segmentsToPath(segments);
+        _.extend(pathData, renderInfo, {
+          _pageid: pageId,
+          layer
+        });
+        return createObj('path', pathData);
+      }
+
+      /**
+       * Returns the segments that make up this shape.
+       * @abstract
+       * @return {Segment[]}
+       */
+      toSegments() {
+        throw new Error('Must be defined by subclass.');
+      }
+
+      /**
+       * Produces a copy of this shape, transformed by an affine
+       * transformation matrix.
+       * @param {MatrixMath.Matrix} matrix
+       * @return {PathShape}
+       */
+      transform(matrix) {
+        let vertices = _.map(this.vertices, v => {
+          return MatrixMath.multiply(matrix, v);
+        });
+        let Clazz = this.constructor;
+        return new Clazz(vertices);
+      }
+    }
+
+    /**
+     * An open shape defined by a path or list of vertices.
+     */
+    class Path extends PathShape {
+
+      /**
+       * @param {(Roll20Path|vec3[])} path
+       */
+      constructor(path) {
+        super();
+        if(_.isArray(path))
+          this.vertices = path;
+        else {
+          this._segments = toSegments(path);
+          _.each(this._segments, (seg, i) => {
+            if(i === 0)
+              this.vertices.push(seg[0]);
+            this.vertices.push(seg[1]);
+          });
+        }
+
+        this.numVerts = this.vertices.length;
+      }
+
+      /**
+       * Gets the distance from this path to some point.
+       * @param {vec3} pt
+       * @return {number}
+       */
+      distanceToPoint(pt) {
+        let dist = _.chain(this.toSegments())
+        .map(seg => {
+          let [ p, q ] = seg;
+          return VecMath.ptSegDist(pt, p, q);
+        })
+        .min()
+        .value();
+        return dist;
+      }
+
+      /**
+       * Checks if this path intersects with another path.
+       * @param {Polygon} other
+       * @return {boolean}
+       */
+      intersects(other) {
+        let thisBox = this.getBoundingBox();
+        let otherBox = other.getBoundingBox();
+
+        // If the bounding boxes don't intersect, then the paths won't
+        // intersect.
+        if(!thisBox.intersects(otherBox))
+          return false;
+
+        // Naive approach: Since our shortcuts didn't return, check each
+        // path's segments for intersections with each of the other
+        // path's segments. This takes O(n^2) time.
+        return !!_.find(this.toSegments(), seg1 => {
+          return !!_.find(other.toSegments(), seg2 => {
+            return !!segmentIntersection(seg1, seg2);
+          });
+        });
+      }
+
+      /**
+       * Produces a list of segments defining this path.
+       * @return {Segment[]}
+       */
+      toSegments() {
+        if(!this._segments) {
+          if (this.numVerts <= 1)
+            return [];
+
+          this._segments = _.map(_.range(this.numVerts - 1), i => {
+            let v = this.vertices[i];
+            let vNext = this.vertices[i + 1];
+            return [v, vNext];
+          });
+        }
+        return this._segments;
+      }
+    }
+
+    /**
+     * A closed shape defined by a path or a list of vertices.
+     */
+    class Polygon extends PathShape {
+
+      /**
+       * @param {(Roll20Path|vec3[])} path
+       */
+      constructor(path) {
+        super();
+        if(_.isArray(path))
+          this.vertices = path;
+        else {
+          this._segments = toSegments(path);
+          this.vertices = _.map(this._segments, seg => {
+            return seg[0];
+          });
+        }
+
+        this.numVerts = this.vertices.length;
+        if(this.numVerts < 3)
+          throw new Error('A polygon must have at least 3 vertices.');
+      }
+
+      /**
+       * Determines whether a point lies inside the polygon using the
+       * winding algorithm.
+       * See: http://geomalgorithms.com/a03-_inclusion.html
+       * @param {vec3} p
+       * @return {boolean}
+       */
+      containsPt(p) {
+        // A helper function that tests if a point is "left" of a line segment.
+        let _isLeft = (p0, p1, p2) => {
+          return (p1[0] - p0[0])*(p2[1] - p0[1]) - (p2[0]-p0[0])*(p1[1]-p0[1]);
+        };
+
+        let total = 0;
+        _.each(this.vertices, (v1, i) => {
+          let v2 = this.vertices[(i+1) % this.numVerts];
+
+          // Check for valid up intersect.
+          if(v1[1] <= p[1] && v2[1] > p[1]) {
+            if(_isLeft(v1, v2, p) > 0)
+              total++;
+          }
+
+          // Check for valid down intersect.
+          else if(v1[1] > p[1] && v2[1] <= p[1]) {
+            if(_isLeft(v1, v2, p) < 0)
+              total--;
+          }
+        });
+        return !!total; // We are inside if our total windings are non-zero.
+      }
+
+      /**
+       * Gets the distance from this polygon to some point.
+       * @param {vec3} pt
+       * @return {number}
+       */
+      distanceToPoint(pt) {
+        if(this.containsPt(pt))
+          return 0;
+        else
+          return _.chain(this.toSegments())
+          .map(seg => {
+            let [ p, q ] = seg;
+            return VecMath.ptSegDist(pt, p, q);
+          })
+          .min()
+          .value();
+      }
+
+      /**
+       * Gets the area of this polygon.
+       * @return {number}
+       */
+      getArea() {
+        let triangles = this.tessellate();
+        return _.reduce(triangles, (area, tri) => {
+          return area + tri.getArea();
+        }, 0);
+      }
+
+      /**
+       * Determines whether each vertex along the polygon is convex (1)
+       * or concave (-1). A vertex lying on a straight line is assined 0.
+       * @return {int[]}
+       */
+      getConvexness() {
+        return Polygon.getConvexness(this.vertices);
+      }
+
+      /**
+       * Gets the convexness information about each vertex.
+       * @param {vec3[]}
+       * @return {int[]}
+       */
+      static getConvexness(vertices) {
+        let totalAngle = 0;
+        let numVerts = vertices.length;
+        let vertexCurves = _.map(vertices, (v, i) => {
+          let vPrev = vertices[(i-1 + numVerts) % numVerts];
+          let vNext = vertices[(i+1 + numVerts) % numVerts];
+
+          let u = VecMath.sub(v, vPrev);
+          let w = VecMath.sub(vNext, v);
+          let uHat = VecMath.normalize(u);
+          let wHat = VecMath.normalize(w);
+
+          let cross = VecMath.cross(uHat, wHat);
+          let sign = cross[2];
+          if(sign)
+            sign = sign/Math.abs(sign);
+
+          let dot = VecMath.dot(uHat, wHat);
+          let angle = Math.acos(dot)*sign;
+          totalAngle += angle;
+
+          return sign;
+        });
+
+        if(totalAngle < 0)
+          return _.map(vertexCurves, curve => {
+            return -curve;
+          });
+        else
+          return vertexCurves;
+      }
+
+      /**
+       * Checks if this polygon intersects with another polygon.
+       * @param {(Polygon|Path)} other
+       * @return {boolean}
+       */
+      intersects(other) {
+        let thisBox = this.getBoundingBox();
+        let otherBox = other.getBoundingBox();
+
+        // If the bounding boxes don't intersect, then the polygons won't
+        // intersect.
+        if(!thisBox.intersects(otherBox))
+          return false;
+
+        // If either polygon contains the first point of the other, then
+        // they intersect.
+        if(this.containsPt(other.vertices[0]) ||
+          (other instanceof Polygon && other.containsPt(this.vertices[0])))
+          return true;
+
+        // Naive approach: Since our shortcuts didn't return, check each
+        // polygon's segments for intersections with each of the other
+        // polygon's segments. This takes O(n^2) time.
+        return !!_.find(this.toSegments(), seg1 => {
+          return !!_.find(other.toSegments(), seg2 => {
+            return !!segmentIntersection(seg1, seg2);
+          });
+        });
+      }
+
+      /**
+       * Checks if this polygon intersects a Path.
+       * @param {Path} path
+       * @return {boolean}
+       */
+      intersectsPath(path) {
+        let segments1 = this.toSegments();
+        let segments2 = PathMath.toSegments(path);
+
+        // The path intersects if any point is inside this polygon.
+        if(this.containsPt(segments2[0][0]))
+          return true;
+
+        // Check if any of the segments intersect.
+        return !!_.find(segments1, seg1 => {
+          return _.find(segments2, seg2 => {
+            return PathMath.segmentIntersection(seg1, seg2);
+          });
+        });
+      }
+
+      /**
+       * Tessellates a closed path representing a simple polygon
+       * into a bunch of triangles.
+       * @return {Triangle[]}
+       */
+      tessellate() {
+        let triangles = [];
+        let vertices = _.clone(this.vertices);
+
+        // Tessellate using ear-clipping algorithm.
+        while(vertices.length > 0) {
+          if(vertices.length === 3) {
+            triangles.push(new Triangle(vertices[0], vertices[1], vertices[2]));
+            vertices = [];
+          }
+          else {
+            // Determine whether each vertex is convex, concave, or linear.
+            let convexness = Polygon.getConvexness(vertices);
+            let numVerts = vertices.length;
+
+            // Find the next ear to clip from the polygon.
+            let earIndex = _.find(_.range(numVerts), i => {
+              let v = vertices[i];
+              let vPrev = vertices[(numVerts + i -1) % numVerts];
+              let vNext = vertices[(numVerts + i + 1) % numVerts];
+
+              let vConvexness = convexness[i];
+              if(vConvexness === 0) // The vertex lies on a straight line. Clip it.
+                return true;
+              else if(vConvexness < 0) // The vertex is concave.
+                return false;
+              else { // The vertex is convex and might be an ear.
+                let triangle = new Triangle(vPrev, v, vNext);
+
+                // The vertex is not an ear if there is at least one other
+                // vertex inside its triangle.
+                return !_.find(vertices, (v2, j) => {
+                  if(v2 === v || v2 === vPrev || v2 === vNext)
+                    return false;
+                  else {
+                    return triangle.containsPt(v2);
+                  }
+                });
+              }
+            });
+
+            let v = vertices[earIndex];
+            let vPrev = vertices[(numVerts + earIndex -1) % numVerts];
+            let vNext = vertices[(numVerts + earIndex + 1) % numVerts];
+            triangles.push(new Triangle(vPrev, v, vNext));
+            vertices.splice(earIndex, 1);
+          }
+        }
+        return triangles;
+      }
+
+      /**
+       * Produces a list of segments defining this polygon.
+       * @return {Segment[]}
+       */
+      toSegments() {
+        if(!this._segments) {
+          this._segments = _.map(this.vertices, (v, i) => {
+            let vNext = this.vertices[(i + 1) % this.numVerts];
+            return [v, vNext];
+          });
+        }
+        return this._segments;
+      }
+    }
+
+    /**
+     * A 3-sided polygon that is great for tessellation!
+     */
+    class Triangle extends Polygon {
+      /**
+       * @param {vec3} p1
+       * @param {vec3} p2
+       * @param {vec3} p3
+       */
+      constructor(p1, p2, p3) {
+        if(_.isArray(p1))
+          [p1, p2, p3] = p1;
+        super([p1, p2, p3]);
+
+        this.p1 = p1;
+        this.p2 = p2;
+        this.p3 = p3;
+      }
+
+      /**
+       * @inheritdoc
+       */
+      getArea() {
+        let base = VecMath.sub(this.p2, this.p1);
+        let width = VecMath.length(base);
+        let height = VecMath.ptLineDist(this.p3, this.p1, this.p2);
+
+        return width*height/2;
+      }
+    }
+
+    /**
+     * A circle defined by its center point and radius.
+     */
+    class Circle extends PathShape {
+
+      /**
+       * @param {vec3} pt
+       * @param {number} r
+       */
+      constructor(pt, r) {
+        super();
+        this.center = pt;
+        this.radius = r;
+        this.diameter = 2*r;
+      }
+
+      /**
+       * Checks if a point is contained within this circle.
+       * @param {vec3} pt
+       * @return {boolean}
+       */
+      containsPt(pt) {
+        let dist = VecMath.dist(this.center, pt);
+        return dist <= this.radius;
+      }
+
+      /**
+       * Gets the distance from this circle to some point.
+       * @param {vec3} pt
+       * @return {number}
+       */
+      distanceToPoint(pt) {
+        if(this.containsPt(pt))
+          return 0;
+        else {
+          return VecMath.dist(this.center, pt) - this.radius;
+        }
+      }
+
+      /**
+       * Gets this circle's area.
+       * @return {number}
+       */
+      getArea() {
+        return Math.PI*this.radius*this.radius;
+      }
+
+      /**
+       * Gets the circle's bounding box.
+       * @return {BoundingBox}
+       */
+      getBoundingBox() {
+        let left = this.center[0] - this.radius;
+        let top = this.center[1] - this.radius;
+        let dia = this.radius*2;
+        return new BoundingBox(left, top, dia, dia);
+      }
+
+      /**
+       * Gets this circle's circumference.
+       * @return {number}
+       */
+      getCircumference() {
+        return Math.PI*this.diameter;
+      }
+
+      /**
+       * Checks if this circle intersects another circle.
+       * @param {Circle} other
+       * @return {boolean}
+       */
+      intersects(other) {
+        let dist = VecMath.dist(this.center, other.center);
+        return dist <= this.radius + other.radius;
+      }
+
+      /**
+       * Checks if this circle intersects a polygon.
+       * @param {Polygon} poly
+       * @return {boolean}
+       */
+      intersectsPolygon(poly) {
+
+        // Quit early if the bounding boxes don't overlap.
+        let thisBox = this.getBoundingBox();
+        let polyBox = poly.getBoundingBox();
+        if(!thisBox.intersects(polyBox))
+          return false;
+
+        if(poly.containsPt(this.center))
+          return true;
+        return !!_.find(poly.toSegments(), seg => {
+          return this.segmentIntersection(seg);
+        });
+      }
+
+      /**
+       * Renders this circle.
+       * @param {string} pageId
+       * @param {string} layer
+       * @param {RenderInfo} renderInfo
+       */
+      render(pageId, layer, renderInfo) {
+        let data = createCircleData(this.radius)
+        _.extend(data, renderInfo, {
+          _pageid: pageId,
+          layer,
+          left: this.center[0],
+          top: this.center[1]
+        });
+        createObj('path', data);
+      }
+
+      /**
+       * Gets the intersection coefficient between this circle and a Segment,
+       * if such an intersection exists. Otherwise, undefined is returned.
+       * @param {Segment} segment
+       * @return {Intersection}
+       */
+      segmentIntersection(segment) {
+        if(this.containsPt(segment[0])) {
+          let pt = segment[0];
+          let s = 0;
+          let t = VecMath.dist(this.center, segment[0])/this.radius;
+          return [pt, s, t];
+        }
+        else {
+          let u = VecMath.sub(segment[1], segment[0]);
+          let uHat = VecMath.normalize(u);
+          let uLen = VecMath.length(u);
+          let v = VecMath.sub(this.center, segment[0]);
+
+          let height = VecMath.ptLineDist(this.center, segment[0], segment[1]);
+          let base = Math.sqrt(this.radius*this.radius - height*height);
+
+          if(isNaN(base))
+            return undefined;
+
+          let scalar = VecMath.scalarProjection(u, v)-base;
+          let s = scalar/uLen;
+
+          if(s >= 0 && s <= 1) {
+            let t = 1;
+            let pt = VecMath.add(segment[0], VecMath.scale(uHat, scalar));
+            return [pt, s, t];
+          }
+          else
+            return undefined;
+        }
+      }
+    }
+
+    /**
+     * The bounding box for a path/polygon.
+     */
+    class BoundingBox {
+      /**
+       * @param {Number} left
+       * @param {Number} top
+       * @param {Number} width
+       * @param {Number} height
+       */
+      constructor(left, top, width, height) {
+        this.left = left;
+        this.top = top;
+        this.width = width;
+        this.height = height;
+        this.right = left + width;
+        this.bottom = top + height;
+      }
+
+      /**
+       * Adds two bounding boxes.
+       * @param  {BoundingBox} a
+       * @param  {BoundingBox} b
+       * @return {BoundingBox}
+       */
+      static add(a, b) {
+        var left = Math.min(a.left, b.left);
+        var top = Math.min(a.top, b.top);
+        var right = Math.max(a.left + a.width, b.left + b.width);
+        var bottom = Math.max(a.top + a.height, b.top + b.height);
+
+        return new BoundingBox(left, top, right - left, bottom - top);
+      }
+
+      /**
+       * Gets the area of this bounding box.
+       * @return {number}
+       */
+      getArea() {
+        return this.width * this.height;
+      }
+
+      /**
+       * Checks if this bounding box intersects another bounding box.
+       * @param {BoundingBox} other
+       * @return {boolean}
+       */
+      intersects(other) {
+        return !( this.left > other.right ||
+                  this.right < other.left ||
+                  this.top > other.bottom ||
+                  this.bottom < other.top);
+      }
+
+      /**
+       * Renders the bounding box.
+       * @param {string} pageId
+       * @param {string} layer
+       * @param {RenderInfo} renderInfo
+       */
+      render(pageId, layer, renderInfo) {
+        let verts = [
+          [this.left, this.top, 1],
+          [this.right, this.top, 1],
+          [this.right, this.bottom, 1],
+          [this.left, this.bottom, 1]
+        ];
+        let poly = new Polygon(verts);
+        poly.render(pageId, layer, renderInfo);
+      }
+    }
+
+    /**
+     * Returns the partial path data for creating a circular path.
+     * @param  {number} radius
+     * @param {int} [sides]
+     *        If specified, then a polygonal path with the specified number of
+     *        sides approximating the circle will be created instead of a true
+     *        circle.
+     * @return {PathData}
+     */
+    function createCircleData(radius, sides) {
+      var _path = [];
+      if(sides) {
+        var cx = radius;
+        var cy = radius;
+        var angleInc = Math.PI*2/sides;
+        path.push(['M', cx + radius, cy]);
+        _.each(_.range(1, sides+1), function(i) {
+          var angle = angleInc*i;
+          var x = cx + radius*Math.cos(angle);
+          var y = cy + radius*Math.sin(angle);
+          path.push(['L', x, y]);
+        });
+      }
+      else {
+        var r = radius;
+        _path = [
+          ['M', 0,      r],
+          ['C', 0,      r*0.5,  r*0.5,  0,      r,      0],
+          ['C', r*1.5,  0,      r*2,    r*0.5,  r*2.0,  r],
+          ['C', r*2.0,  r*1.5,  r*1.5,  r*2.0,  r,      r*2.0],
+          ['C', r*0.5,  r*2,    0,      r*1.5,  0,      r]
+        ];
+      }
+      return {
+        height: radius*2,
+        _path: JSON.stringify(_path),
+        width: radius*2
+      };
+    }
+
+    /**
+     * Computes the distance from a point to some path.
+     * @param {vec3} pt
+     * @param {(Roll20Path|PathShape)} path
+     */
+    function distanceToPoint(pt, path) {
+      if(!(path instanceof PathShape))
+        path = new Path(path);
+      return path.distanceToPoint(pt);
+    }
+
+    /**
+     * Gets a point along some Bezier curve of arbitrary degree.
+     * @param {vec3[]} points
+     *        The points of the Bezier curve. The points between the first and
+     *        last point are the control points.
+     * @param {number} scalar
+     *        The parametric value for the point we want along the curve.
+     *        This value is expected to be in the range [0, 1].
+     * @return {vec3}
+     */
+    function getBezierPoint(points, scalar) {
+      if(points.length < 2)
+        throw new Error('Bezier curve cannot have less than 2 points.');
+      else if(points.length === 2) {
+        let u = VecMath.sub(points[1], points[0]);
+        u = VecMath.scale(u, scalar);
+        return VecMath.add(points[0], u);
+      }
+      else {
+        let newPts = _.chain(points)
+        .map((cur, i) => {
+          if(i === 0)
+            return undefined;
+
+          let prev = points[i-1];
+          return getBezierPoint([prev, cur], scalar);
+        })
+        .compact()
+        .value();
+
+        return getBezierPoint(newPts, scalar);
+      }
+    }
+
+
+    /**
+     * Calculates the bounding box for a list of paths.
+     * @param {Roll20Path | Roll20Path[]} paths
+     * @return {BoundingBox}
+     */
+    function getBoundingBox(paths) {
+      if(!_.isArray(paths))
+        paths = [paths];
+
+      var result;
+      _.each(paths, function(p) {
+        var pBox = _getSingleBoundingBox(p);
+        if(result)
+          result = BoundingBox.add(result, pBox);
+        else
+          result = pBox;
+      });
+      return result;
+    }
+
+    /**
+     * Returns the center of the bounding box countaining a path or list
+     * of paths. The center is returned as a 2D homongeneous point
+     * (It has a third component which is always 1 which is helpful for
+     * affine transformations).
+     * @param {(Roll20Path|Roll20Path[])} paths
+     * @return {Vector}
+     */
+    function getCenter(paths) {
+        if(!_.isArray(pathjs))
+            paths = [paths];
+
+        var bbox = getBoundingBox(paths);
+        var cx = bbox.left + bbox.width/2;
+        var cy = bbox.top + bbox.height/2;
+
+        return [cx, cy, 1];
+    }
+
+    /**
+     * @private
+     * Calculates the bounding box for a single path.
+     * @param  {Roll20Path} path
+     * @return {BoundingBox}
+     */
+    function _getSingleBoundingBox(path) {
+        var pathData = normalizePath(path);
+
+        var width = pathData.width;
+        var height = pathData.height;
+        var left = pathData.left - width/2;
+        var top = pathData.top - height/2;
+
+        return new BoundingBox(left, top, width, height);
+    }
+
+    /**
+     * Gets the 2D transform information about a path.
+     * @param  {Roll20Path} path
+     * @return {PathTransformInfo}
+     */
+    function getTransformInfo(path) {
+        var scaleX = path.get('scaleX');
+        var scaleY = path.get('scaleY');
+        var angle = path.get('rotation')/180*Math.PI;
+
+        // The transformed center of the path.
+        var cx = path.get('left');
+        var cy = path.get('top');
+
+        // The untransformed width and height.
+        var width = path.get('width');
+        var height = path.get('height');
+
+        return {
+            angle: angle,
+            cx: cx,
+            cy: cy,
+            height: height,
+            scaleX: scaleX,
+            scaleY: scaleY,
+            width: width
+        };
+    }
+
+    /**
+     * Checks if a path is closed, and is therefore a polygon.
+     * @param {(Roll20Path|Segment[])}
+     * @return {boolean}
+     */
+    function isClosed(path) {
+      // Convert to segments.
+      if(!_.isArray(path))
+        path = toSegments(path);
+      return (_.isEqual(path[0][0], path[path.length-1][1]));
+    }
+
+
+    /**
+     * Produces a merged path string from a list of path objects.
+     * @param {Roll20Path[]} paths
+     * @return {String}
+     */
+    function mergePathStr(paths) {
+        var merged = [];
+        var bbox = getBoundingBox(paths);
+
+        _.each(paths, function(p) {
+            var pbox = getBoundingBox(p);
+
+            // Convert the path to a normalized polygonal path.
+            p = normalizePath(p);
+            var parsed = JSON.parse(p._path);
+            _.each(parsed, function(pathTuple, index) {
+                var dx = pbox.left - bbox.left;
+                var dy = pbox.top - bbox.top;
+
+                // Move and Line tuples
+                var x = pathTuple[1] + dx;
+                var y = pathTuple[2] + dy;
+                merged.push([pathTuple[0], x, y]);
+            });
+        });
+
+        return JSON.stringify(merged);
+    }
+
+    /**
+     * Reproduces the data for a polygonal path such that the scales are 1 and
+     * its rotate is 0.
+     * This can also normalize freehand paths, but they will be converted to
+     * polygonal paths. The quatric Bezier curves used in freehand paths are
+     * so short though, that it doesn't make much difference though.
+     * @param {Roll20Path}
+     * @return {PathData}
+     */
+    function normalizePath(path) {
+        var segments = toSegments(path);
+        return segmentsToPath(segments);
+    }
+
+    /**
+     * Produces a UDL window from a Path.
+     * This UDL window path will be created on the walls layer
+     * and its _path consists entirely of 'M' components.
+     * This may have unexpected behavior for paths that have breaks in them
+     * ('M' components between other components).
+     * Special thanks to Scott C. and Aaron for discovering this hidden UDL
+     * functionality.
+     * @param {Roll20Path} path
+     * @return {Roll20Path} The Path object for the new UDL window.
+     */
+    function pathToUDLWindow(path) {
+      let pathData = normalizePath(path);
+
+      let curPage = path.get('_pageid');
+      _.extend(pathData, {
+        stroke: '#ff0000',
+        _pageid: curPage,
+        layer: 'walls'
+      });
+      pathData._path = pathData._path.replace(/L|C|Q/g, 'M');
+
+      return createObj('path', pathData);
+    }
+
+    /**
+     * Computes the intersection between the projected lines of
+     * two homogenous 2D line segments.
+     *
+     * Explanation of the fancy mathemagics:
+     * Let A be the first point in seg1 and B be the second point in seg1.
+     * Let C be the first point in seg2 and D be the second point in seg2.
+     * Let U be the vector from A to B.
+     * Let V be the vector from C to D.
+     * Let UHat be the unit vector of U.
+     * Let VHat be the unit vector of V.
+     *
+     * Observe that if the dot product of UHat and VHat is 1 or -1, then
+     * seg1 and seg2 are parallel, so they will either never intersect or they
+     * will overlap. We will ignore the case where seg1 and seg2 are parallel.
+     *
+     * We can represent any point P along the line projected by seg1 as
+     * P = A + SU, where S is some scalar value such that S = 0 yeilds A,
+     * S = 1 yields B, and P is on seg1 if and only if 0 <= S <= 1.
+     *
+     * We can also represent any point Q along the line projected by seg2 as
+     * Q = C + TV, where T is some scalar value such that T = 0 yeilds C,
+     * T = 1 yields D, and Q is on seg2 if and only if 0 <= T <= 1.
+     *
+     * Assume that seg1 and seg2 are not parallel and that their
+     * projected lines intersect at some point P.
+     * Therefore, we have A + SU = C + TV.
+     *
+     * We can rearrange this such that we have C - A = SU - TV.
+     * Let vector W = C - A, thus W = SU - TV.
+     * Also, let coeffs = [S, T, 1].
+     *
+     * We can now represent this system of equations as the matrix
+     * multiplication problem W = M * coeffs, where in column-major
+     * form, M = [U, -V, [0,0,1]].
+     *
+     * By matrix-multiplying both sides by M^-1, we get
+     * M^-1 * W = M^-1 * M * coeffs = coeffs, from which we can extract the
+     * values for S and T.
+     *
+     * We can now get the point of intersection on the projected lines of seg1
+     * and seg2 by substituting S in P = A + SU or T in Q = C + TV.
+     *
+     * @param {Segment} seg1
+     * @param {Segment} seg2
+     * @return {Intersection}
+     *      The point of intersection in homogenous 2D coordiantes and its
+     *      scalar coefficients along seg1 and seg2,
+     *      or undefined if the segments are parallel.
+     */
+    function raycast(seg1, seg2) {
+      var u = VecMath.sub(seg1[1], seg1[0]);
+      var v = VecMath.sub(seg2[1], seg2[0]);
+      var w = VecMath.sub(seg2[0], seg1[0]);
+
+      // Can't use 0-length vectors.
+      if(VecMath.length(u) === 0 || VecMath.length(v) === 0)
+          return undefined;
+
+      // If the two segments are parallel, then either they never intersect
+      // or they overlap. Either way, return undefined in this case.
+      var uHat = VecMath.normalize(u);
+      var vHat = VecMath.normalize(v);
+      var uvDot = VecMath.dot(uHat,vHat);
+      if(Math.abs(uvDot) > 0.9999)
+          return undefined;
+
+      // Build the inverse matrix for getting the intersection point's
+      // parametric coefficients along the projected segments.
+      var m = [[u[0], u[1], 0], [-v[0], -v[1], 0], [0, 0, 1]];
+      var mInv = MatrixMath.inverse(m);
+
+      // Get the parametric coefficients for getting the point of intersection
+      // on the projected semgents.
+      var coeffs = MatrixMath.multiply(mInv, w);
+      var s = coeffs[0];
+      var t = coeffs[1];
+
+      var uPrime = VecMath.scale(u, s);
+      return [VecMath.add(seg1[0], uPrime), s, t];
+    }
+
+    /**
+     * Computes the intersection between two homogenous 2D line segments,
+     * if it exists. To figure out the intersection, a raycast is performed
+     * between the two segments.
+     * Seg1 and seg2 also intersect at that point if and only if 0 <= S, T <= 1.
+     * @param {Segment} seg1
+     * @param {Segment} seg2
+     * @return {Intersection}
+     *      The point of intersection in homogenous 2D coordiantes and its
+     *      parametric coefficients along seg1 and seg2,
+     *      or undefined if the segments don't intersect.
+     */
+    function segmentIntersection(seg1, seg2) {
+      let intersection = raycast(seg1, seg2);
+      if(!intersection)
+        return undefined;
+
+      // Return the intersection only if it lies on both the segments.
+      let s = intersection[1];
+      let t = intersection[2];
+      if(s >= 0 && s <= 1 && t >= 0 && t <= 1)
+        return intersection;
+      else
+        return undefined;
+    }
+
+
+    /**
+     * Produces the data for creating a path from a list of segments forming a
+     * continuous path.
+     * @param {Segment[]}
+     * @return {PathData}
+     */
+    function segmentsToPath(segments) {
+        var left = segments[0][0][0];
+        var right = segments[0][0][0];
+        var top = segments[0][0][1];
+        var bottom = segments[0][0][1];
+
+        // Get the bounds of the segment.
+        var pts = [];
+        var isFirst = true;
+        _.each(segments, function(segment) {
+            var p1 = segment[0];
+            if(isFirst) {
+                isFirst = false;
+                pts.push(p1);
+            }
+
+            var p2 = segment[1];
+
+            left = Math.min(left, p1[0], p2[0]);
+            right = Math.max(right, p1[0], p2[0]);
+            top = Math.min(top, p1[1], p2[1]);
+            bottom = Math.max(bottom, p1[1], p2[1]);
+
+            pts.push(p2);
+        });
+
+        // Get the path's left and top coordinates.
+        var width = right-left;
+        var height = bottom-top;
+        var cx = left + width/2;
+        var cy = top + height/2;
+
+        // Convert the points to a _path.
+        var _path = [];
+        var firstPt = true;
+        _.each(pts, function(pt) {
+            var type = 'L';
+            if(firstPt) {
+                type = 'M';
+                firstPt = false;
+            }
+            _path.push([type, pt[0]-left, pt[1]-top]);
+        });
+
+        return {
+            _path: JSON.stringify(_path),
+            left: cx,
+            top: cy,
+            width: width,
+            height: height
+        };
+    }
+
+    /**
+     * Converts a path into a list of line segments.
+     * This supports freehand paths, but not elliptical paths.
+     * @param {(Roll20Path|Roll20Path[])} path
+     * @return {Segment[]}
+     */
+    function toSegments(path) {
+        if(_.isArray(path))
+            return _toSegmentsMany(path);
+
+        var _path;
+        try {
+          let page = getObj('page', path.get('_pageid'));
+          let pageWidth = page.get('width') * UNIT_SIZE_PX;
+          let pageHeight = page.get('height') * UNIT_SIZE_PX;
+
+          let rawPath = path.get('_path')
+            .replace(/mapWidth/g, pageWidth)
+            .replace(/mapHeight/g, pageHeight);
+          _path = JSON.parse(rawPath);
+        }
+        catch (err) {
+          log(`Error parsing Roll20 path JSON: ${path.get('_path')}`);
+          sendChat('Path Math', '/w gm An error was encountered while trying to parse the JSON for a path. See the API Console Log for details.');
+          return [];
+        }
+
+        var transformInfo = getTransformInfo(path);
+
+        var segments = [];
+        var prevPt;
+        let prevType;
+
+        _.each(_path, tuple => {
+            let type = tuple[0];
+
+            // Convert the previous point and tuple into segments.
+            let newSegs = [];
+
+            // Cubic Bezier
+            if(type === 'C') {
+              newSegs = _toSegmentsC(prevPt, tuple, transformInfo);
+              if(newSegs.length > 0)
+                prevPt = newSegs[newSegs.length - 1][1];
+            }
+
+            // Line or two successive Moves. A curious quirk of the latter
+            // case is that UDL treats them as segments for windows.
+            // Thanks to Scott C and Aaron for letting me know about this,
+            // whether it's an intended feature or not.
+            if(type === 'L' || (type === 'M' && prevType === 'M')) {
+              newSegs = _toSegmentsL(prevPt, tuple, transformInfo);
+              if(newSegs.length > 0)
+                prevPt = newSegs[0][1];
+            }
+
+            // Move, not preceded by another move (not a UDL window)
+            if(type === 'M' && prevType !== 'M') {
+              prevPt = tupleToPoint(tuple, transformInfo);
+            }
+
+            // Freehand (tiny Quadratic Bezier)
+            if(type === 'Q') {
+              newSegs = _toSegmentsQ(prevPt, tuple, transformInfo);
+              if(newSegs.length > 0)
+                prevPt = newSegs[0][1];
+            }
+
+            _.each(newSegs, s => {
+              segments.push(s);
+            });
+            prevType = type;
+        });
+
+        return _.compact(segments);
+    }
+
+    /**
+     * Converts a 'C' type path point to a list of segments approximating the
+     * curve.
+     * @private
+     * @param {vec3} prevPt
+     * @param {PathTuple} tuple
+     * @param {PathTransformInfo} transformInfo
+     * @return {Segment[]}
+     */
+    function _toSegmentsC(prevPt, tuple, transformInfo) {
+      let cPt1 = tupleToPoint(['L', tuple[1], tuple[2]], transformInfo);
+      let cPt2 = tupleToPoint(['L', tuple[3], tuple[4]], transformInfo);
+      let pt = tupleToPoint(['L', tuple[5], tuple[6]], transformInfo);
+      let points = [prevPt, cPt1, cPt2, pt];
+
+      // Choose the number of segments based on the rough approximate arc length.
+      // Each segment should be <= 10 pixels.
+      let approxArcLength = VecMath.dist(prevPt, cPt1) + VecMath.dist(cPt1, cPt2) + VecMath.dist(cPt2, pt);
+      let numSegs = Math.max(Math.ceil(approxArcLength/10), 1);
+
+      let bezierPts = [prevPt];
+      _.each(_.range(1, numSegs), i => {
+        let scalar = i/numSegs;
+        let bPt = getBezierPoint(points, scalar);
+        bezierPts.push(bPt);
+      });
+      bezierPts.push(pt);
+
+      return _.chain(bezierPts)
+      .map((cur, i) => {
+        if(i === 0)
+          return undefined;
+
+        let prev = bezierPts[i-1];
+        return [prev, cur];
+      })
+      .compact()
+      .value();
+    }
+
+    /**
+     * Converts an 'L' type path point to a segment.
+     * @private
+     * @param {vec3} prevPt
+     * @param {PathTuple} tuple
+     * @param {PathTransformInfo} transformInfo
+     * @return {Segment[]}
+     */
+    function _toSegmentsL(prevPt, tuple, transformInfo) {
+      // Transform the point to 2D homogeneous map coordinates.
+      let pt = tupleToPoint(tuple, transformInfo);
+      let segments = [];
+      if(!(prevPt[0] == pt[0] && prevPt[1] == pt[1]))
+        segments.push([prevPt, pt]);
+      return segments;
+    }
+
+    /**
+     * Converts a 'Q' type path point to a segment approximating
+     * the freehand curve.
+     * @private
+     * @param {vec3} prevPt
+     * @param {PathTuple} tuple
+     * @param {PathTransformInfo} transformInfo
+     * @return {Segment[]}
+     */
+    function _toSegmentsQ(prevPt, tuple, transformInfo) {
+      // Freehand Bezier paths are very small, so let's just
+      // ignore the control point for it entirely.
+      tuple[1] = tuple[3];
+      tuple[2] = tuple[4];
+
+      // Transform the point to 2D homogeneous map coordinates.
+      let pt = tupleToPoint(tuple, transformInfo);
+
+      let segments = [];
+      if(!(prevPt[0] == pt[0] && prevPt[1] == pt[1]))
+        segments.push([prevPt, pt]);
+      return segments;
+    }
+
+    /**
+     * Converts several paths into a single list of segments.
+     * @private
+     * @param  {Roll20Path[]} paths
+     * @return {Segment[]}
+     */
+    function _toSegmentsMany(paths) {
+      return _.chain(paths)
+        .reduce(function(allSegments, path) {
+            return allSegments.concat(toSegments(path));
+        }, [])
+        .value();
+    }
+
+    /**
+     * Transforms a tuple for a point in a path into a point in
+     * homogeneous 2D map coordinates.
+     * @param  {PathTuple} tuple
+     * @param  {PathTransformInfo} transformInfo
+     * @return {Vector}
+     */
+    function tupleToPoint(tuple, transformInfo) {
+      var width = transformInfo.width;
+      var height = transformInfo.height;
+      var scaleX = transformInfo.scaleX;
+      var scaleY = transformInfo.scaleY;
+      var angle = transformInfo.angle;
+      var cx = transformInfo.cx;
+      var cy = transformInfo.cy;
+
+      // The point in path coordinates, relative to the path center.
+      var x = tuple[1] - width/2;
+      var y = tuple[2] - height/2;
+      var pt = [x,y,1];
+
+      // The transform of the point from path coordinates to map
+      // coordinates.
+      var scale = MatrixMath.scale([scaleX, scaleY]);
+      var rotate = MatrixMath.rotate(angle);
+      var transform = MatrixMath.translate([cx, cy]);
+      transform = MatrixMath.multiply(transform, rotate);
+      transform = MatrixMath.multiply(transform, scale);
+
+      return MatrixMath.multiply(transform, pt);
+    }
+
+    on('chat:message', function(msg) {
+      if(msg.type === 'api' && msg.content.indexOf('!pathInfo') === 0) {
+        log('!pathInfo');
+
+        try {
+          var path = findObjs({
+            _type: 'path',
+            _id: msg.selected[0]._id
+          })[0];
+          log(path);
+          log(path.get('_path'));
+
+          var segments = toSegments(path);
+          log('Segments: ');
+          log(segments);
+
+          var pathData = segmentsToPath(segments);
+          log('New path data: ');
+          log(pathData);
+
+          var curPage = path.get('_pageid');
+          _.extend(pathData, {
+            stroke: '#ff0000',
+            _pageid: curPage,
+            layer: path.get('layer')
+          });
+
+          var newPath = createObj('path', pathData);
+          log(newPath);
+        }
+        catch(err) {
+          log('!pathInfo ERROR: ');
+          log(err.message);
+        }
+      }
+      if (msg.type === 'api' && msg.content.startsWith('!pathToUDLWindow')) {
+        try {
+          var path = findObjs({
+            _type: 'path',
+            _id: msg.selected[0]._id
+          })[0];
+          pathToUDLWindow(path);
+        }
+        catch(err) {
+          log('!pathInfo ERROR: ');
+          log(err.message);
+        }
+      }
+    });
+
+    return {
+        BoundingBox,
+        Circle,
+        Path,
+        Polygon,
+        Triangle,
+
+        createCircleData,
+        distanceToPoint,
+        getBezierPoint,
+        getBoundingBox,
+        getCenter,
+        getTransformInfo,
+        mergePathStr,
+        normalizePath,
+        pathToUDLWindow,
+        raycast,
+        segmentIntersection,
+        segmentsToPath,
+        toSegments,
+        tupleToPoint
+    };
+})();
+
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+//       VECTORMATH
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+/**
+ * This is a small library for (mostly 2D) vector mathematics.
+ * Internally, the vectors used by this library are simple arrays of numbers.
+ * The functions provided by this library do not alter the input vectors, 
+ * treating each vector as an immutable object.
+ */
+var VecMath = (function() {
+    
+    /**
+     * Adds two vectors.
+     * @param {vec} a
+     * @param {vec} b
+     * @return {vec}
+     */
+    var add = function(a, b) {
+        var result = [];
+        for(var i=0; i<a.length; i++) {
+            result[i] = a[i] + b[i];
+        }
+        return result;
+    };
+    
+    
+    /**
+     * Creates a cloned copy of a vector.
+     * @param {vec} v
+     * @return {vec}
+     */
+    var clone = function(v) {
+        var result = [];
+        for(var i=0; i < v.length; i++) {
+            result.push(v[i]);
+        }
+        return result;
+    };
+    
+    
+    /** 
+     * Returns an array representing the cross product of two 3D vectors. 
+     * @param {vec3} a
+     * @param {vec3} b
+     * @return {vec3}
+     */
+    var cross = function(a, b) {
+        var x = a[1]*b[2] - a[2]*b[1];
+        var y = a[2]*b[0] - a[0]*b[2];
+        var z = a[0]*b[1] - a[1]*b[0];
+        return [x, y, z];
+    };
+    
+    
+    /** 
+     * Returns the degree of a vector - the number of dimensions it has.
+     * @param {vec} vector
+     * @return {int}
+     */
+    var degree = function(vector) {
+        return vector.length;
+    };
+    
+    
+    /**
+     * Computes the distance between two points.
+     * @param {vec} pt1
+     * @param {vec} pt2
+     * @return {number}
+     */
+    var dist = function(pt1, pt2) {
+        var v = vec(pt1, pt2);
+        return length(v);
+    };
+    
+    
+    /** 
+     * Returns the dot product of two vectors. 
+     * @param {vec} a
+     * @param {vec} b
+     * @return {number}
+     */
+    var dot = function(a, b) {
+        var result = 0;
+        for(var i = 0; i < a.length; i++) {
+            result += a[i]*b[i];
+        }
+        return result;
+    };
+    
+    
+    /**
+     * Tests if two vectors are equal.
+     * @param {vec} a
+     * @param {vec} b
+     * @param {float} [tolerance] A tolerance threshold for comparing vector 
+     *                            components.  
+     * @return {boolean} true iff the each of the vectors' corresponding 
+     *                  components are equal.
+     */
+    var equal = function(a, b, tolerance) {
+        if(a.length != b.length)
+            return false;
+        
+        for(var i=0; i<a.length; i++) {
+            if(tolerance !== undefined) {
+                if(Math.abs(a[i] - b[i]) > tolerance) {
+                    return false;
+                }
+            }
+            else if(a[i] != b[i])
+                return false;
+        }
+        return true;
+    };
+    
+    
+    
+    /** 
+     * Returns the length of a vector. 
+     * @param {vec} vector
+     * @return {number}
+     */
+    var length = function(vector) {
+        var length = 0;
+        for(var i=0; i < vector.length; i++) {
+            length += vector[i]*vector[i];
+        }
+        return Math.sqrt(length);
+    };
+    
+    
+    
+    /**
+     * Computes the normalization of a vector - its unit vector.
+     * @param {vec} v
+     * @return {vec}
+     */
+    var normalize = function(v) {
+        var vHat = [];
+        
+        var vLength = length(v);
+        for(var i=0; i < v.length; i++) {
+            vHat[i] = v[i]/vLength;
+        }
+        
+        return vHat;
+    };
+    
+    
+    /**
+     * Computes the projection of vector b onto vector a.
+     * @param {vec} a
+     * @param {vec} b
+     * @return {vec}
+     */
+    var projection = function(a, b) {
+        var scalar = scalarProjection(a, b);
+        var aHat = normalize(a);
+        
+        return scale(aHat, scalar);
+    };
+    
+    
+    /** 
+     * Computes the distance from a point to an infinitely stretching line. 
+     * Works for either 2D or 3D points.
+     * @param {vec2 || vec3} pt
+     * @param {vec2 || vec3} linePt1   A point on the line.
+     * @param {vec2 || vec3} linePt2   Another point on the line.
+     * @return {number}
+     */
+    var ptLineDist = function(pt, linePt1, linePt2) {
+        var a = vec(linePt1, linePt2);
+        var b = vec(linePt1, pt);
+        
+        // Make 2D vectors 3D to compute the cross product.
+        if(!a[2])
+            a[2] = 0;
+        if(!b[2])
+            b[2] = 0;
+        
+        var aHat = normalize(a);
+        var aHatCrossB = cross(aHat, b);
+        return length(aHatCrossB);
+    };
+    
+    
+    /** 
+     * Computes the distance from a point to a line segment. 
+     * Works for either 2D or 3D points.
+     * @param {vec2 || vec3} pt
+     * @param {vec2 || vec3} linePt1   The start point of the segment.
+     * @param {vec2 || vec3} linePt2   The end point of the segment.
+     * @return {number}
+     */
+    var ptSegDist = function(pt, linePt1, linePt2) {
+        var a = vec(linePt1, linePt2);
+        var b = vec(linePt1, pt);
+        var aDotb = dot(a,b);
+        
+        // Is pt behind linePt1?
+        if(aDotb < 0) {
+            return length(vec(pt, linePt1));
+        }
+        
+        // Is pt after linePt2?
+        else if(aDotb > dot(a,a)) {
+            return length(vec(pt, linePt2));
+        }
+        
+        // Pt must be between linePt1 and linePt2.
+        else {
+            return ptLineDist(pt, linePt1, linePt2);
+        }
+    };
+    
+    
+    /**
+     * Computes the scalar projection of b onto a.
+     * @param {vec2} a
+     * @param {vec2} b
+     * @return {vec2}
+     */
+    var scalarProjection = function(a, b) {
+        var aDotB = dot(a, b);
+        var aLength = length(a);
+        
+        return aDotB/aLength;
+    };
+    
+    
+    
+    /**
+     * Computes a scaled vector.
+     * @param {vec2} v
+     * @param {number} scalar
+     * @return {vec2}
+     */
+    var scale = function(v, scalar) {
+        var result = [];
+        
+        for(var i=0; i<v.length; i++) {
+            result[i] = v[i]*scalar;
+        }
+        return result;
+    };
+    
+    
+    /** 
+     * Computes the difference of two vectors.
+     * @param {vec} a
+     * @param {vec} b
+     * @return {vec}
+     */
+    var sub = function(a, b) {
+        var result = [];
+        for(var i=0; i<a.length; i++) {
+            result.push(a[i] - b[i]);
+        }
+        return result;
+    };
+    
+    
+    /** 
+     * Returns the vector from pt1 to pt2. 
+     * @param {vec} pt1
+     * @param {vec} pt2
+     * @return {vec}
+     */
+    var vec = function(pt1, pt2) {
+        var result = [];
+        for(var i=0; i<pt1.length; i++) {
+            result.push( pt2[i] - pt1[i] );
+        }
+        
+        return result;
+    };
+    
+    
+    // The exposed API.
+    return {
+        add: add,
+        clone: clone,
+        cross: cross,
+        degree: degree,
+        dist: dist,
+        dot: dot,
+        equal: equal,
+        length: length,
+        normalize: normalize,
+        projection: projection,
+        ptLineDist: ptLineDist,
+        ptSegDist: ptSegDist,
+        scalarProjection: scalarProjection,
+        scale: scale,
+        sub: sub,
+        vec: vec
+    };
+})();
+
+
+// Perform unit tests. Inform us in the log if any test fails. Otherwise,
+// succeed silently.
+(function() {
+    /**
+     * Does a unit test. If the test evaluates to false, then it displays with
+     * a message that the unit test failed. Otherwise it passes silently.
+     * @param {boolean} test    Some expression to test.
+     * @param {string} failMsg  A message displayed if the test fails.
+     */
+    var assert = function(test, failMsg) {
+        if(!test) {
+            log("UNIT TEST FAILED: " + failMsg);
+        }
+    };
+    
+    
+    var a = [1, 5];
+    var b = [17, -8];
+    
+    
+    // VecMath.equal
+    assert(
+        VecMath.equal([2, -3, 4, 8], [2, -3, 4, 8]),
+        "VecMath.equal([2, -3, 4, 8], [2, -3, 4, 8])"
+    );
+    assert(
+        !VecMath.equal([1, 3, 5], [-2, 4, -6]),
+        "!VecMath.equal([1, 3, 5], [-2, 4, -6])"
+    );
+    assert(
+        !VecMath.equal([1, 3, 5], [1, 3, 4]),
+        "!VecMath.equal([1, 3, 5], [1, 3, 4])"
+    );
+    assert(
+        !VecMath.equal([1,2,3], [1,2]),
+        "!VecMath.equal([1,2,3], [1,2])"
+    );
+    assert(
+        !VecMath.equal([1,2], [1,2,3]),
+        "!VecMath.equal([1,2], [1,2,3])"
+    );
+    
+    // VecMath.add
+    assert(
+        VecMath.equal(
+            VecMath.add([1, 2, 3], [3, -5, 10]),
+            [4, -3, 13]
+        ),
+        "VecMath.add([1, 2, 3], [3, -5, 10]) equals [4, -3, 13]"
+    );
+    assert(
+        VecMath.equal(
+            VecMath.add([0, 0, 0], [1, 2, 3]),
+            [1, 2, 3]
+        ),
+        "VecMath.add([0, 0, 0], [1, 2, 3]) equals [1, 2, 3]"
+    );
+    
+    // VecMath.clone
+    assert(
+        VecMath.equal( VecMath.clone(a), a),
+        "VecMath.equal( VecMath.clone(a), a)"
+    );
+    assert(
+        VecMath.clone(a) != a,
+        "VecMath.clone(a) != a"
+    );
+    
+    // VecMath.cross
+    assert(
+        VecMath.equal(
+            VecMath.cross([1, 0, 0], [0, 1, 0]),
+            [0, 0, 1]
+        ),
+        "VecMath.cross([1, 0, 0], [0, 1, 0]) equals [0, 0, 1]"
+    );
+    assert(
+        VecMath.equal(
+            VecMath.cross([1,2,3], [-10, 3, 5]),
+            [1, -35, 23]
+        ),
+        "VecMath.cross([1,2,3], [-10, 3, 5]) equals [1, -35, 23]"
+    );
+    
+    // VecMath.degree
+    assert(
+        VecMath.degree([1,2,3]) == 3,
+        "VecMath.degree([1,2,3]) == 3"
+    );
+    assert(
+        VecMath.degree([1]) == 1,
+        "VecMath.degree([1]) == 1"
+    );
+    assert(
+        VecMath.degree([1,1,1,1,1]) == 5,
+        "VecMath.degree([1,1,1,1,1]) == 5"
+    );
+    
+    // VecMath.dist
+    assert(
+        VecMath.dist([1,2], [4,6]) == 5,
+        "VecMath.dist([1,2], [4,6]) == 5"
+    );
+    assert(
+        VecMath.dist([3,4], [-3, -4]) == 10,
+        "VecMath.dist([3,4], [-3, -4]) == 10"
+    );
+    
+    // VecMath.dot
+    assert(
+        VecMath.dot([1, 2, 3], [-1, -2, -3]) == -14,
+        "VecMath.dot([1, 2, 3], [-1, -2, -3]) == -14"
+    );
+    assert(
+        VecMath.dot([1,0], [0,1]) == 0,
+        "VecMath.dot([1,0], [0,1]) == 0"
+    );
+    assert(
+        VecMath.dot([1,0], [0,-1]) == 0,
+        "VecMath.dot([1,0], [0,-1]) == 0"
+    );
+    assert(
+        VecMath.dot([1,0], [-1, 0]) == -1,
+        "VecMath.dot([1,0], [-1, 0]) == -1"
+    );
+    assert(
+        VecMath.dot([1,0], [1, 0]) == 1,
+        "VecMath.dot([1,0], [1, 0]) == 1"
+    );
+    
+    // VecMath.length
+    assert(
+        VecMath.length([1,0,0]) == 1,
+        "VecMath.length([1,0,0]) == 1"
+    );
+    assert(
+        VecMath.length([3,4]) == 5,
+        "VecMath.length([3,4]) == 5"
+    );
+    assert(
+        VecMath.length([-3, 0, 4, 0]) == 5,
+        "VecMath.length([-3, 0, 4, 0]) == 5"
+    );
+    
+    // VecMath.normalize
+    assert(
+        VecMath.equal(
+            VecMath.normalize([3,0]),
+            [1, 0]
+        ),
+        "VecMath.normalize([3,0]) equals [1,0]"
+    );
+    assert(
+        VecMath.equal(
+            VecMath.normalize([0,-3]),
+            [0, -1]
+        ),
+        "VecMath.normalize([0,-3]) equals [0,-1]"
+    );
+    
+    // VecMath.projection
+    assert(
+        VecMath.equal(
+            VecMath.projection([5,0], [3, 4]),
+            [3, 0]
+        ),
+        "VecMath.projection([5,0], [3, 4]) equals [3, 0]"
+    );
+    assert(
+        VecMath.equal(
+            VecMath.projection([5,5], [0, 6]),
+            [3, 3],
+            0.001
+        ),
+        "VecMath.projection([5,5], [0, 6]) equals [3, 3]"
+    );
+    
+    // VecMath.ptLineDist
+    assert(
+        VecMath.ptLineDist([0,3], [-100,5], [100,5]) == 2,
+        "VecMath.ptLineDist([0,3], [-100,5], [100,5]) == 2"
+    );
+    assert(
+        VecMath.ptLineDist([3,0], [5,5], [5,10]) == 2,
+        "VecMath.ptLineDist([3,0], [5,5], [5,10]) == 2"
+    );
+    
+    // VecMath.ptSegDist
+    assert(
+        VecMath.ptSegDist([0,3], [-5,5], [5,5]) == 2,
+        "VecMath.ptSegDist([0,3], [-5,5], [5,5]) == 2"
+    );
+    assert(
+        VecMath.ptSegDist([3,0], [5,-5], [5,5]) == 2,
+        "VecMath.ptSegDist([3,0], [5,-5], [5,5]) == 2"
+    );
+    assert(
+        VecMath.ptSegDist([3,4], [-5,0], [0,0]) == 5,
+        "VecMath.ptSegDist([3,4], [-5,0], [0,0]) == 5"
+    );
+    assert(
+        VecMath.ptSegDist([-2,-4], [1,0], [5,0]) == 5,
+        "VecMath.ptSegDist([-2,-4], [1,0], [5,0]) == 5"
+    );
+    
+    // VecMath.scalarProjection
+    assert(
+        VecMath.scalarProjection([5,0], [3, 4]) == 3,
+        "VecMath.scalarProjection([5,0], [3, 4]) == 3"
+    );
+    
+    // VecMath.scale
+    assert(
+        VecMath.equal(
+            VecMath.scale([1,-2,3], 6),
+            [6, -12, 18]
+        ),
+        "VecMath.scale([1,-2,3], 6) equals [6, -12, 18]"
+    );
+    
+    // VecMath.sub
+    assert(
+        VecMath.equal(
+            VecMath.sub([10, 8, 6], [-4, 6, 1]),
+            [14, 2, 5]
+        ),
+        "VecMath.sub([10, 8, 6], [-4, 6, 1]) equals [14, 2, 5]"
+    );
+    
+    // VecMath.vec
+    assert(
+        VecMath.equal(
+            VecMath.vec([1,1], [3,4]),
+            [2,3]
+        ),
+        "VecMath.vec([1,1], [3,4]) equals [2,3]"
+    );
+})();
