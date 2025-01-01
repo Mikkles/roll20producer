@@ -1,5 +1,5 @@
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
-//       PRODWIZ 0.9.8
+//       PRODWIZ 0.9.9
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
@@ -20,7 +20,7 @@ const Roll20Pro = (() => {
     }
     
     const scriptName = "Roll20 Production Wizard",
-        version = "0.9.8",
+        version = "0.9.9",
         
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -211,6 +211,8 @@ const Roll20Pro = (() => {
 
             makeH4("Path Splitter-Use Black for Splitter") +
             makeButton("Split Path", "!pathSplit", styles.button) +
+            makeButton("Join Path", "!pathJoin", styles.button) +
+            makeButton("Close Path", "!pathClose", styles.button) +
             makeH4("Import Generic Battle Map") +
             makeButton("Parchment", "!prod battlemap parchment", styles.button) + 
             makeButton("Modern/SF", "!prod battlemap modern", styles.button) + 
@@ -255,9 +257,11 @@ const Roll20Pro = (() => {
             makeButton("Game Settings", "!prod stock create gameSettings", styles.button) +
             makeButton("Module Shortcuts", "!prod stock create moduleShortcutHandout", styles.button) +
             makeButton("Accessing Compendium Content", "!prod stock create accessingCompendiumContentHandout", styles.button) +
+            makeButton("Accessing Demiplane Content", "!prod stock create accessingDemiplaneContentHandout", styles.button) +
             makeButton("NPC Initiative", "!prod stock create npcInitiativeHandout", styles.button) +
             makeButton("Rollable Tokens", "!prod stock create rollableTokensHandout", styles.button) +
             makeButton("Navigation Links", "!prod stock create navigationLinksExampleHandout", styles.button) +
+            makeButton("Patch Notes", "!prod stock create patchNotesExampleHandout", styles.button) +
             makeH4("DnD5e Spellbook Templates Handouts") + 
             makeButton("Drow Mage Spell", "!prod stock create drowMageBaseSpellHandout", styles.button) +
             makeH4("Pathfinder 1 Templates") + 
@@ -1172,7 +1176,7 @@ const Roll20Pro = (() => {
                                         log("charNotes null" + charName)
                                     }
                                     if (mentions.length && !charNotes.includes("can be found")){
-                                        let newText = "<p>" + charName + " can be found in the following locations.</p>"
+                                        let newText = "<h3>Location(s):</h3>";
                                         newText += "<ul>"
                                         _.each(mentions, function(mention){
                                             mentionName = mention.get("name")
@@ -1222,6 +1226,7 @@ handoutHTML = {
     gameSetttingsHandout: () => `<p>This module has been set up with the following Game Settings. For more information on how to change these settings, please check out the&nbsp;<a href=\"https://roll20.zendesk.com/hc/en-us/articles/360039715753-Game-Management\">Game Management page on the Help Center</a>.</p><h3>Map Settings</h3><p><i>For pages which benefit from Dynamic Lighting</i></p><p><b>Dynamic Lighting:&nbsp;</b>On<br><b>Explorer Mode:</b>&nbsp;Off, for performance<br><b>Restrict Movement:&nbsp;</b>Off</p><h3>Token Settings</h3><p><b>Bar 1:</b>&nbsp;hp (link set to None to aid placement of multiple monsters using the same stat block) (5e, Starfinder, PF1, BurnBryte, Fallout RPG - NPC), pc_hp (Fallout RPG - PC), hit_points (PF2) Vitality (Haunted West), damage_threshold (Zweihänder), health (Marvel), Hit points (vida) (Tormenta), might (cypher systems - PC), health (link set to None) (cypher systems - NPC), hitpoints (Cyberpunk Red, CoC)<br><b style=\"background-color: \">Bar 2:</b><span style=\"background-color: \">&nbsp;</span><span style=\"background-color: \">npc_ac (5e), armor_class (pf2), eac (starfinder), ac (PF1 or starfinder ships), movement (BurnBryte), Lucidity (Haunted West), movement (Zweihänder), agility_defense (Marvel), Defense (defesatotal) (Tormenta), speed (cypher systems - PC), armor (cypher systems - NPC), luck-points (Fallout RPG), Intentionally left blank for GM use (Cyberpunk RED, CoC)<br></span><b style=\"background-color: \">Bar 3:</b><span style=\"background-color: \">&nbsp;</span><span style=\"background-color: \">Intentionally left blank for GM use (5e, pf2, Zweihänder, cypher systems - NPC, Cyberpunk Red, CoC, Fallout RPG), kac (starfinder), tl (starfinder ships), shield (BurnBryte- set to none. if no shields, delete 0/0 to remove bar), Stamina (Haunted West), might_defense (Marvel), Mana (mana) (Tormenta), intellect (cypher systems - PC)<br></span><b style=\"background-color: \">Show Nameplate Toggle:</b><span style=\"background-color: \">&nbsp;</span><span style=\"background-color: \">On, not visible to players</span></p><p><b>Bright/Low Light Distance:&nbsp;</b>Used if an NPC exudes light.<br><b>Vision Toggle:</b>&nbsp;Off, for performance<br><b>Night Vision Toggle:</b>&nbsp;Off. Night vision distance is set if NPC can see in dark or has special senses, such that they are already built into the module if a GM toggles Night Vision back on.</p><p style=\"margin-left: 25px\"><b>Roll20 Note:&nbsp;</b>&nbsp;This module uses Updated Dynamic Lighting.&nbsp; For your convenience, we have entered the night vision radius in the token settings for all tokens that can see in the dark, but we have toggled off Vision and Night Vision for ease of user experience.&nbsp; To display the limits of a token’s night vision, simply turn on Vision and Night Vision in the token’s Updated Dynamic Lighting settings tab. For more information on Updated Dynamic Lighting, see the&nbsp;<a href=\"https://help.roll20.net/hc/en-us/articles/360053106074-Default-Settings-for-Lighting-and-Vision\">Help Center</a>.</p><h3>Sheet Settings</h3><p><b>Roll Queries:&nbsp;</b>Always Roll Advantage<br><b>Whisper Rolls to GM:</b>&nbsp;Always Whisper Rolls<br><b>Auto Roll Damage:</b>&nbsp;Auto Roll Damage and Crit</p>`,
     moduleShortcutHandout: () => `<p>The Roll20 Tabletop is equipped with keyboard shortcuts. Some of the most popular are listed below. <a href=\"https://roll20.zendesk.com/hc/en-us/articles/360039675393-Default-Shortcuts\">A full list of shortcuts can be found on the Help Center</a>.</p><p><b>Double click:</b> Opens Token options, including light radius and \"Has Sight\" options.<br><b>Shift+ Double click:</b><span> Opens up token's character sheet</span></p><p><b>Ctrl/Cmd+Shift+O:</b> Move selected object to the Objects &amp; Tokens Layer<br><b>Ctrl/Cmd+Shift+K: </b><span>Move selected object to GM Info Overlay Layer</span></p><p><b>Pressing \"Z\" with an object selected</b> shows a larger version of that object in a modal popup<br><b>Pressing Shift+Z as the GM</b><span> shows all players the larger version of that object</span></p><p><b>Press Ctrl/Cmd+L with a token selected as the GM</b> to view the the basic Dynamic Lighting as experienced by that token. Tokens and areas that are invisible to the token will not display.<br><i>Additional Note: </i><span>The token retains GM powers: The GM will be able to move it across Dynamic Lighting barriers, see objects on the GM Info Overlay Layer, and continue to see all areas of Explored Darkness exposed by all tokens on the page.</span></p>`,
     accessingCompendiumContentHandout: () => `<p>This module comes with content that has been stored in the Compendium so you can use it in any of your games that use this system. To access your Compendium content, simply click on the Compendium button in the top right corner above the chat sidebar. It looks like three books next to each other.</p><p>You can search for a term or scroll through the categories of content available, then drag anything out to the VTT to create a handout.</p><p>Dragging out particular content like monsters, NPCs, and ships may create a character sheet instead of a handout.</p><p>For systems with drag and drop functionality, you can drag content like items or even classes and races to your character sheet to see them automatically update. (This functionality is on a system-by-system basis.)</p><p>To find all the content for any particular book, search the title of the book to find the Compendium's table of contents.</p>`,
+    accessingDemiplaneContentHandout: () => ` <h3>A <i><i>${state.Roll20Pro.productName}</i> Companion</h3><p>This Roll20 Playset is a companion to the complete ***adventure/sourcebook*** on Demiplane. It includes ready-to-play maps and tokens to enhance your digital and in-person gaming experience.</p><p><b>Note: <i>This playset does not include X rules or adventure text, which are available on the </i><i>${state.Roll20Pro.productName}<i> Demiplane Nexus. For the full experience, you’ll require the following products:</i></b></p><ul><li><i>${state.Roll20Pro.productName}</i> adventure on Demiplane</li><li><i>${state.Roll20Pro.productName}</i> Rules and Character Sheet on Demiplane</li></ul>`,
     npcInitiativeHandout: () => `<p>Like PCs, the ***Game System*** by Roll20 character sheet allows you to roll NPC Initiative directly from it. For NPCs, just press \"Initiative\" near the top of the NPC's stat block on the sheet and it will roll for initiative.</p><p>If you have the <a href=\"https://roll20.zendesk.com/hc/en-us/articles/360039178634-Turn-Tracker\">Turn Tracker</a> tool open, having the NPC token selected while rolling Initiative will automatically add the NPC and its initiative roll to the tracker. Creatures on the GM layer that are added to the tracker in this fashion will have their entries hidden from the players.</p><p>You can also create a global <a href=\"https://roll20.zendesk.com/hc/en-us/articles/360037256794-Macros\">Macro</a> that will pop up as a Token Action button in the upper left-hand corner of the tabletop every time a token is selected. This will allow you to roll without looking at the NPC sheet at all. The macro formula should look just like this:</p><pre>%{selected|INITIATIVE}</pre>`,
     rollableTokensHandout: () => `<p>The tokens for the following creatures are multi-sided Rollable Table Tokens. Each side of one of these tokens is a different form for the creature. To swap between the different sides, right click on one of these tokens and choose <b>Multi-Sided</b> -&gt; <b>Choose Side</b>.</p><ul><li>***Insert link to statblock***</li><li>***Insert link to statblock***</li><li>***Insert link to statblock***</li></ul>"`,
     creditsPublisherHandout: () => `<p>Check out the <i>${state.Roll20Pro.productName}</i> Compendium for the full ***Text: ***Publisher*** Credits; Link Url: Link to the Credits page for this product***!</p><hr><p><span style=\"background-color: \">***Copy and Paste <a href=\"https://roll20.atlassian.net/wiki/spaces/CP/pages/804159653/Roll20+Credits+List\">Roll20 Credits List</a>***</span><br></p>`,
@@ -1229,6 +1234,7 @@ handoutHTML = {
     drowMageBaseSpellHandout: () => `<p>&lt;Spellbook Name&gt; contains the following spells:</p><h4>Cantrips</h4><ul><li><i>mage hand</i></li><li><i>minor illusion</i></li><li><i>poison spray</i></li><li><i>ray of frost</i><br></li></ul><h4>1st</h4><ul><li><i>mage armor</i></li><li><i>magic missile</i></li><li><i>shield</i></li><li><i>witch bolt</i><br></li></ul><h4>2nd</h4><ul><li><i>alter self</i></li><li><i>misty step</i></li><li><i>web</i><br></li></ul><h4>3rd</h4><ul><li><i>fly</i></li><li><i>lightning bolt</i><br></li></ul><h4>4th</h4><ul><li><i>Evard's black tentacles</i></li><li><i>greater invisibility</i><br></li></ul><h4>5th</h4><ul><li>cloudkill</li><li><br></li></ul>`,
     cardDecksHandout: () => `<p>With&nbsp;<span style=\"font-size: 13px\"><i>**PRODUCT**</i></span>, Roll20 has provided digital card decks for GM and Player use. These appear in the Collection tab for the game creator and users with game master privileges. Below are instructions for using card decks on the Roll20 virtual tabletop. For more information on using card decks and the Safety Deck, visit the<span style=\"font-family: &#34;helvetica neue&#34; , &#34;helvetica&#34; , &#34;arial&#34; , sans-serif ; font-size: 13px ; color: rgb( 64 , 64 , 64 )\">&nbsp;</span><a href=\"https://help.roll20.net/hc/en-us/articles/360039178754-Collections#Collections-CardDecks\" style=\"font-family: &#34;helvetica neue&#34; , &#34;helvetica&#34; , &#34;arial&#34; , sans-serif ; font-size: 13px\">Roll20 Help Center</a><span style=\"font-family: &#34;helvetica neue&#34; , &#34;helvetica&#34; , &#34;arial&#34; , sans-serif ; font-size: 13px ; color: rgb( 64 , 64 , 64 )\">.</span></p><p><b>To show or hide a deck:</b></p><ul><li>With Game Master privileges: Click on the Collection tab in the top-right of the screen.</li><li>Next to the deck name, click the button that says \"Show\" or \"Hide\" to toggle the deck.</li></ul><p><b>To look through the cards in a deck:</b><br></p><ul><li>With the deck visible, hover over it and select \"Choose.\"</li></ul><p><b>To remove a card from the game:</b><br></p><ul><li>With the deck visible, hover over it and select \"Choose.\"</li><li>Drag the card out of the deck and onto the virtual tabletop.</li><li>Right-click the card and choose \"Remove Card.\" This will prevent the card from being shuffled with the deck during play.</li></ul><p><b>To return a removed card back into play:</b><br></p><ul><li>With the deck visible, hover over it and select \"Removed.\"</li><li>Drag the card onto the virtual tabletop.</li><li>Deleting the card on the tabletop will return it to the deck.</li></ul><p><b>To draw the top card and place it on the virtual tabletop:</b><br></p><ul><li>The deck must be shuffled first.</li><li>With the deck visible, hover over it, and click &amp; drag a card from the top onto the tabletop.</li></ul><p><b>To flip a card over:</b><br></p><ul><li>Right-click a card on the virtual tabletop and select “Flip Card.”</li></ul>`,
     navigationLinksExampleHandout: () => `<p>Example Text</p><hr><p style=\"text-align: center\"><span style=\"font-family: &#34;pictos&#34;\">8&nbsp;</span><span><a href=\"http://journal.roll20.net/handout/-NpRDbk1OpPZJ7v3hRRR\">Placeholder 1</a> | <a href=\"http://journal.roll20.net/handout/-NpRDf73LBgd3wtOPTEQ\">Placeholder 2</a>&nbsp;</span><span style=\"font-family: &#34;pictos&#34;\">7</span></p>`,
+    patchNotesExampleHandout: () => `<p>This space is reserved for future patch notes.<br></p>`,
     wandHandout: () => `<p><b>Wands</b></p><p>A wand is a thin baton that contains a single spell of 4th level or lower. A wand has 50 charges when created—each charge allows the use of the wand’s spell one time. A wand that runs out of charges is just a stick. The price of a wand is equal to the level of the spell × the creator’s caster level × 750 gp. If the wand has a material component cost, it is added to the base price and cost to create once for each charge (50 × material component cost).&nbsp;<b>Table: Wands</b>&nbsp;gives sample prices for wands created at the lowest possible caster level for each spellcasting class. Note that some spells appear at different levels for different casters. The level of such spells depends on the caster crafting the wand.</p><p><b>Physical Description:&nbsp;</b>A wand is 6 to 12 inches long, 1/4 inch thick, and weighs no more than 1 ounce. Most wands are wood, but some are bone, metal, or even crystal. A typical wand has Armor Class 7, 5 hit points, hardness 5, and a break DC of 16.</p><p><b>Activation:&nbsp;</b>Wands use the spell trigger activation method, so casting a spell from a wand is usually a standard action that doesn’t provoke attacks of opportunity. (If the spell being cast has a longer casting time than 1 action, however, it takes that long to cast the spell from a wand.) To activate a wand, a character must hold it in hand (or whatever passes for a hand, for non-humanoid creatures) and point it in the general direction of the target or area. A wand may be used while grappling or while swallowed whole.</p><p>Special Qualities: Roll&nbsp;d%. A 01–30 result indicates that something (a design, inscription, or the like) provides some clue to the wand’s function, and 31–100 indicates no special qualities.</p><h5>Table: Wands</h5><table class=\"userscript-table userscript-table-bordered\"><thead><tr><th>Minor<br></th><th>Medium<br></th><th>Major<br></th><th>Spell Level<br></th><th>Caster Level<br></th></tr></thead><tbody><tr><td>01-05<br></td><td>-<br></td><td>-<br></td><td>0<br></td><td>1st<br></td></tr><tr><td>06-60<br></td><td>-<br></td><td>-<br></td><td>1st<br></td><td>1st<br></td></tr><tr><td>61-100<br></td><td>01-60<br></td><td>-<br></td><td>2nd<br></td><td>3rd<br></td></tr><tr><td>-<br></td><td>61-100<br></td><td>01-60<br></td><td>3rd<br></td><td>5th<br></td></tr><tr><td>-<br></td><td>-<br></td><td>61-100<br></td><td>4th<br></td><td>7th<br></td></tr></tbody></table><h5><b>Table: Wand Costs</b></h5><table class=\"userscript-table userscript-table-bordered\"><thead><tr><th>Spell Level<br></th><th>Cleric, Druid, Wizard<br></th><th>Sorcerer<br></th><th>Bard<br></th><th>Paladin, Ranger<br></th></tr></thead><tbody><tr><td>0<br></td><td>375 gp<br></td><td>375 gp<br></td><td>375 gp<br></td><td>-<br></td></tr><tr><td>1st<br></td><td>750 gp<br></td><td>750 gp<br></td><td>750 gp<br></td><td>750 gp<br></td></tr><tr><td>2nd<br></td><td>4,500 gp<br></td><td>6,000 gp<br></td><td>6,000 gp<br></td><td>6,000 gp<br></td></tr><tr><td>3rd<br></td><td>11,250 gp<br></td><td>13,500 gp<br></td><td>15,750 gp<br></td><td>15,750 gp<br></td></tr><tr><td>4th<br></td><td>21,000 gp<br></td><td>24,000 gp<br></td><td>30,000 gp<br></td><td>30,000gp<br></td></tr></tbody></table><p></p>`,
     potionHandout: () => `<div class=\"userscript-row-fluid\"><div class=\"userscript-span12\" style=\"width: 479px\"><div class=\"userscript-content userscript-note-editor userscript-notes\" style=\"margin-bottom: 20px\"><p><b>Potions</b></p><p>A potion is a magic liquid that produces its effect when imbibed. Potions vary incredibly in appearance. Magic oils are similar to potions, except that oils are applied externally rather than imbibed. A potion or oil can be used only once. It can duplicate the effect of a spell of up to 3rd level that has a casting time of less than 1 minute and targets one or more creatures or objects.</p><p>The price of a potion is equal to the level of the spell × the creator’s caster level × 50 gp. If the potion has a material component cost, it is added to the base price and cost to create. Table: Potions gives sample prices for potions created at the lowest possible caster level for each spellcasting class. Note that some spells appear at different levels for different casters. The level of such spells depends on the caster brewing the potion.</p><p>Potions are like spells cast upon the imbiber. The character taking the potion doesn’t get to make any decisions about the effect—the caster who brewed the potion has already done so. The drinker of a potion is both the effective target and the caster of the effect (though the potion indicates the caster level, the drinker still controls the effect).</p><p>The person applying an oil is the effective caster, but the object is the target.</p><p><b>Physical Description</b>: A typical potion or oil consists of 1 ounce of liquid held in a ceramic or glass vial fitted with a tight stopper. The stoppered container is usually no more than 1 inch wide and 2 inches high. The vial has Armor Class 13, 1 hit point, hardness 1, and a break DC of 12.</p><p><b>Identifying Potions</b>: In addition to the standard methods of identification, PCs can sample from each container they find to attempt to determine the nature of the liquid inside with a Perception check. The DC of this check is equal to 15 + the spell level of the potion (although this DC might be higher for rare or unusual potions).</p><p><b>Activation</b>: Drinking a potion or applying an oil requires no special skill. The user merely removes the stopper and swallows the potion or smears on the oil. The following rules govern potion and oil use.</p><p>Drinking a potion or using an oil is a standard action. The potion or oil takes effect immediately. Using a potion or oil provokes attacks of opportunity. An enemy may direct an attack of opportunity against the potion or oil container rather than against the character. A successful attack of this sort can destroy the container, preventing the character from drinking the potion or applying the oil.</p><p>A creature must be able to swallow a potion or smear on an oil. Because of this, incorporeal creatures cannot use potions or oils. Any corporeal creature can imbibe a potion or use an oil.</p><p>A character can carefully administer a potion to an unconscious creature as a full-round action, trickling the liquid down the creature’s throat. Likewise, it takes a full-round action to apply an oil to an unconscious creature.</p><h5>Table: Potions</h5><table class=\"userscript-table userscript-table-bordered\" style=\"width: 479px\"><thead><tr><th style=\"line-height: 1.42857\">Minor&nbsp;&nbsp;</th><th style=\"line-height: 1.42857\">Medium&nbsp;&nbsp;</th><th style=\"line-height: 1.42857\">Major&nbsp;&nbsp;</th><th style=\"line-height: 1.42857\">Spell level&nbsp;&nbsp;</th><th style=\"line-height: 1.42857\">Caster Level</th></tr></thead><tbody><tr><td style=\"line-height: 1.42857\">01-20</td><td style=\"line-height: 1.42857\">-</td><td style=\"line-height: 1.42857\">-</td><td style=\"line-height: 1.42857\">0</td><td style=\"line-height: 1.42857\">1st</td></tr><tr><td style=\"line-height: 1.42857\">21-60<br></td><td style=\"line-height: 1.42857\">01-20<br></td><td style=\"line-height: 1.42857\">-</td><td style=\"line-height: 1.42857\">1st</td><td style=\"line-height: 1.42857\">1st</td></tr><tr><td style=\"line-height: 1.42857\">61-100</td><td style=\"line-height: 1.42857\">21-60<br></td><td style=\"line-height: 1.42857\">01-20<br></td><td style=\"line-height: 1.42857\">2nd</td><td style=\"line-height: 1.42857\">3rd</td></tr><tr><td style=\"line-height: 1.42857\">-</td><td style=\"line-height: 1.42857\">61-100</td><td style=\"line-height: 1.42857\">21-100<br></td><td style=\"line-height: 1.42857\">3rd</td><td style=\"line-height: 1.42857\">5th</td></tr></tbody></table><h5><b>Table: Potion Costs</b></h5><table class=\"userscript-table userscript-table-bordered\" style=\"width: 479px\"><thead><tr><th style=\"line-height: 1.42857\">Spell Level&nbsp;&nbsp;</th><th style=\"line-height: 1.42857\">Cleric, Druid, Wizard&nbsp;&nbsp;</th><th style=\"line-height: 1.42857\">Sorcerer&nbsp;&nbsp;</th><th style=\"line-height: 1.42857\">Bard&nbsp;&nbsp;</th><th style=\"line-height: 1.42857\">Paladin, Ranger</th></tr></thead><tbody><tr><td style=\"line-height: 1.42857\">0</td><td style=\"line-height: 1.42857\">25 gp</td><td style=\"line-height: 1.42857\"><p>25 gp<br></p></td><td style=\"line-height: 1.42857\">25 gp<br></td><td style=\"line-height: 1.42857\">-</td></tr><tr><td style=\"line-height: 1.42857\">1st</td><td style=\"line-height: 1.42857\">50 gp</td><td style=\"line-height: 1.42857\">50 gp</td><td style=\"line-height: 1.42857\">50 gp</td><td style=\"line-height: 1.42857\">50 gp</td></tr><tr><td style=\"line-height: 1.42857\">2nd</td><td style=\"line-height: 1.42857\">300 gp</td><td style=\"line-height: 1.42857\">400 gp</td><td style=\"line-height: 1.42857\">400 gp</td><td style=\"line-height: 1.42857\">400 gp</td></tr><tr><td style=\"line-height: 1.42857\">3rd</td><td style=\"line-height: 1.42857\">750 gp</td><td style=\"line-height: 1.42857\">900 gp</td><td style=\"line-height: 1.42857\">1,050 gp</td><td style=\"line-height: 1.42857\">1,050 gp</td></tr></tbody></table></div></div></div><div class=\"userscript-row-fluid\"><br></div><p></p>"`,
     spellScrollHandout: () => `<h4>Spell Scroll</h4><p><span style=\"font-family: &#34;proxima nova&#34; , , , &#34;system-ui&#34; , &#34;segoe ui&#34; , &#34;roboto&#34; , , &#34;ubuntu&#34; , &#34;cantarell&#34; , &#34;helvetica neue&#34; , sans-serif\">A scroll is a spell (or collection of spells) that has been stored in written form. A spell on a scroll can be used only once. The writing vanishes from the scroll when the spell is activated. Using a scroll is basically like casting a spell. The price of a scroll is equal to the level of the spell × the creator's caster level × 25 gp. If the scroll has a material component cost, it is added to the base price and cost to create.</span></p><p></p><p><strong>Physical Description</strong>: A scroll is a heavy sheet of fine vellum or high-quality paper. An area about 8-1/2 inches wide and 11 inches long is sufficient to hold one spell. The sheet is reinforced at the top and bottom with strips of leather slightly longer than the sheet is wide. A scroll holding more than one spell has the same width (about 8-1/2 inches) but is an extra foot or so long for each additional spell. Scrolls that hold three or more spells are usually fitted with reinforcing rods at each end rather than simple strips of leather. A scroll has AC 9, 1 hit point, hardness 0, and a break DC of 8.</p><p>To protect it from wrinkling or tearing, a scroll is rolled up from both ends to form a double cylinder. (This also helps the user unroll the scroll quickly.) The scroll is placed in a tube of ivory, jade, leather, metal, or wood. Most scroll cases are inscribed with magic symbols which often identify the owner or the spells stored on the scrolls inside. The symbols sometimes hide magic traps.</p><p><strong>Activation</strong>: To activate a scroll, a spellcaster must read the spell written on it. This involves several steps and conditions.</p><p><em>Decipher the Writing</em>: The writing on a scroll must be deciphered before a character can use it or know exactly what spell it contains. This requires a&nbsp;<i>read magic</i><em>&nbsp;</em>spell or a successful Spellcraft check (DC 20 + spell level). Deciphering a scroll is a full-round action.</p><p>Deciphering a scroll to determine its contents does not activate its magic unless it is a specially prepared cursed scroll. A character can decipher the writing on a scroll in advance so that she can proceed directly to the next step when the time comes to use the scroll.</p><p><em>Activate the Spell</em>: Activating a scroll requires reading the spell from the scroll. The character must be able to see and read the writing on the scroll. Activating a scroll spell requires no material components or focus. (The creator of the scroll provided these when scribing the scroll.) Note that some spells are effective only when cast on an item or items. In such a case, the scroll user must provide the item when activating the spell. Activating a scroll spell is subject to disruption just as casting a normally prepared spell would be. Using a scroll is like casting a spell for purposes of arcane spell failure chance.</p><p>To have any chance of activating a scroll spell, the scroll user must meet the following requirements.</p><ul><li>The spell must be of the correct type (arcane or divine). Arcane spellcasters (wizards, sorcerers, and bards) can only use scrolls containing arcane spells, and divine spellcasters (clerics, druids, paladins, and rangers) can only use scrolls containing divine spells. (The type of scroll a character creates is also determined by his class.)</li><li>The user must have the spell on her class list.</li><li>The user must have the requisite ability score.</li></ul><p>If the user meets all the requirements noted above, and her caster level is at least equal to the spell's caster level, she can automatically activate the spell without a check. If she meets all three requirements but her own caster level is lower than the scroll spell's caster level, then she has to make a caster level check (DC = scroll's caster level + 1) to cast the spell successfully. If she fails, she must make a DC 5 Wisdom check to avoid a mishap (see Scroll Mishaps). A natural roll of 1 always fails, whatever the modifiers. Activating a scroll is a standard action (or the spell's casting time, whichever is longer) and it provokes attacks of opportunity exactly as casting a spell does.</p><p><em>Determine Effect</em>: A spell successfully activated from a scroll works exactly like a spell prepared and cast the normal way. Assume the scroll spell's caster level is always the minimum level required to cast the spell for the character who scribed the scroll, unless the scriber specifically desired otherwise.</p><p>The writing for an activated spell disappears from the scroll as the spell is cast.</p><p><em>Scroll Mishaps</em>: When a mishap occurs, the spell on the scroll has a reversed or harmful effect. Possible mishaps are given below.<br></p><ul><li>A surge of uncontrolled magical energy deals&nbsp;1d6 points&nbsp;of damage per spell level to the scroll user.</li><li>Spell strikes the scroll user or an ally instead of the intended target, or a random target nearby if the scroll user was the intended recipient.</li><li>Spell takes effect at some random location within spell range.</li><li>Spell's effect on the target is contrary to the spell's normal effect.</li><li>The scroll user suffers some minor but bizarre effect related to the spell in some way. Most such effects should last only as long as the original spell's duration, or&nbsp;2d10 minutes&nbsp;for instantaneous spells.</li><li>Some innocuous item or items appear in the spell's area.</li><li>Spell has delayed effect. Sometime within the next&nbsp;1d12 hours, the spell activates. If the scroll user was the intended recipient, the spell takes effect normally. If the user was not the intended recipient, the spell goes off in the general direction of the original recipient or target, up to the spell's maximum range, if the target has moved away.</li></ul><h5><span style=\"background-color: inherit\">Table: Scrolls</span></h5><table class=\"userscript-table userscript-table-bordered\"><thead><tr><th>Minor<br></th><th>Medium<br></th><th>Major<br></th><th>Spell Level<br></th><th>Caster Level<br></th></tr></thead><tbody><tr><td>01-05<br></td><td>-<br></td><td>-<br></td><td>0<br></td><td>1st<br></td></tr><tr><td>06-50<br></td><td>-<br></td><td>-<br></td><td>1st<br></td><td>1st<br></td></tr><tr><td>51-95<br></td><td>01-05<br></td><td>-<br></td><td>2nd<br></td><td>3rd<br></td></tr><tr><td>96-100<br></td><td>06-65<br></td><td>-<br></td><td>3rd<br></td><td>5th<br></td></tr><tr><td>-<br></td><td>66-95<br></td><td>01-05<br></td><td>4th<br></td><td>7th<br></td></tr><tr><td>-<br></td><td>96-100<br></td><td>06-50<br></td><td>5th<br></td><td>9th<br></td></tr><tr><td>-<br></td><td>-<br></td><td>51-70<br></td><td>6th<br></td><td>11th<br></td></tr><tr><td>-<br></td><td>-<br></td><td>71-85<br></td><td>7th<br></td><td>13th<br></td></tr><tr><td>-<br></td><td>-<br></td><td>86-95<br></td><td>8th<br></td><td>15th<br></td></tr><tr><td>-<br></td><td>-<br></td><td>96-100<br></td><td>9th<br></td><td><p>17th</p></td></tr></tbody></table><p></p><h5><span style=\"background-color: inherit\">Table: Scroll Costs</span></h5><table class=\"userscript-table userscript-table-bordered\"><thead><tr><th>Spell Level<br></th><th>Cleric, Druid, Wizard<br></th><th>Sorcerer<br></th><th>Bard<br></th><th>Paladin, Ranger<br></th></tr></thead><tbody><tr><td>0<br></td><td>12.5 gp<br></td><td>12.5 gp<br></td><td>12.5 gp<br></td><td>-<br></td></tr><tr><td>1st<br></td><td>25 gp<br></td><td>25 gp<br></td><td>25 gp<br></td><td>25 gp<br></td></tr><tr><td>2nd<br></td><td>150 gp<br></td><td>200 gp<br></td><td>200 gp<br></td><td>200 gp<br></td></tr><tr><td>3rd<br></td><td>375 gp<br></td><td>450 gp<br></td><td>525 gp<br></td><td>525 gp<br></td></tr><tr><td>4th<br></td><td>700 gp<br></td><td>800 gp<br></td><td>1,000 gp<br></td><td>1,000 gp<br></td></tr><tr><td>5th<br></td><td>1,125 gp<br></td><td>1,250 gp<br></td><td>1,625 gp<br></td><td>-<br></td></tr><tr><td>6th<br></td><td>1,650 gp<br></td><td>1,800 gp<br></td><td>2,400 gp<br></td><td>-<br></td></tr><tr><td>7th<br></td><td>2,275<br></td><td>2,450 gp<br></td><td>-<br></td><td>-<br></td></tr><tr><td>8th<br></td><td>3,000 gp<br></td><td>3,200 gp<br></td><td>-<br></td><td>-<br></td></tr><tr><td>9th<br></td><td>3,825 gp<br></td><td>4,050 gp<br></td><td>-<br></td><td>-<br></td></tr></tbody></table><p></p>`,
@@ -1259,7 +1265,7 @@ handoutHTML = {
 
 
     createPage = function(name, url) {
-        log("HELLO! QQ");
+        log("IF CREATING A PAGE FAILED TO WORK - PLEASE SWITCH API SANDBOX TO 'EXPERIMENTAL'");
         createObj('page', {
             name: name,
             width: 20,
@@ -1316,12 +1322,14 @@ handoutHTML = {
                 case "gameSetttingsHandout": title = "Game Settings"; findAndMakeHandout(title,  handoutHTML.gameSetttingsHandout(),""); break;
                 case "moduleShortcutHandout": title = "Module Shortcuts"; findAndMakeHandout(title,  handoutHTML.moduleShortcutHandout(),""); break;
                 case "accessingCompendiumContentHandout": title = "Accessing Compendium Content"; findAndMakeHandout(title,  handoutHTML.accessingCompendiumContentHandout(),""); break;
+                case "accessingDemiplaneContentHandout": title = "Accessing Demiplane Content"; findAndMakeHandout(title,  handoutHTML.accessingDemiplaneContentHandout(),""); break;
                 case "npcInitiativeHandout": title = "NPC Initiative"; findAndMakeHandout(title,  handoutHTML.npcInitiativeHandout(),""); break;
                 case "rollableTokensHandout": title = "Rollable Tokens"; findAndMakeHandout(title,  handoutHTML.rollableTokensHandout(),""); break;
                 case "creditsPublisherHandout": title = "Credits"; findAndMakeHandout(title,  handoutHTML.creditsPublisherHandout(),""); break;
                 case "creditsRoll20Handout": title = "Credits"; findAndMakeHandout(title,  handoutHTML.creditsRoll20Handout(),""); break;
                 case "cardDecksHandout": title = "Using Roll20 Card Decks"; findAndMakeHandout(title,  handoutHTML.cardDecksHandout(),""); break;
                 case "navigationLinksExampleHandout": title = "Navigation Links Example"; findAndMakeHandout(title,  handoutHTML.navigationLinksExampleHandout(),""); break;
+                case "patchNotesExampleHandout": title = "Patch Notes"; findAndMakeHandout(title,  handoutHTML.patchNotesExampleHandout(),""); break;
                 case "drowMageBaseSpellHandout": title = "Drow Mage Base Spellbook"; findAndMakeHandout(title,  handoutHTML.drowMageBaseSpellHandout(),""); break;
                 case "wandHandout": title = "Wand, Level 1"; findAndMakeHandout(title,  handoutHTML.wandHandout(),""); break;
                 case "potionHandout": title = "Potion, Level 1"; findAndMakeHandout(title,  handoutHTML.potionHandout(),""); break;
@@ -7159,7 +7167,7 @@ on('ready', () => {
             let finalButton = "";
             let conditionalStyle = onStyle;
 
-            if (pageData.get("grid_opacity")  === transparency) {
+            if (pageData.get("grid_opacity")  === transparency && pageData.get("gridcolor")  === color) {
                     conditionalStyle = onStyle;
             
 
@@ -7527,9 +7535,9 @@ on('ready', () => {
                             (isProd ?
                             HR + 
                             openRolll20Subhead + `Roll 20 CNV</div>`+ 
-                            dlButton("Toggle Buddy", "!prod map buddy") + dlButton("Split Path", "!pathSplit") + dlButton(`&nbsp;<span style="font-family:Pictos;">(</span>&nbsp;`, "!token-mod --on lockMovement") + dlButton(" "+`&nbsp;<span style="font-family:Pictos;">)</span>&nbsp;`+" ", "!token-mod --off lockMovement") +'<br>' +
+                            dlButton("Toggle Buddy", "!prod map buddy") + dlButton(`&nbsp;<span style="font-family:Pictos;">(</span>&nbsp;`, "!token-mod --on lockMovement") + dlButton(" "+`&nbsp;<span style="font-family:Pictos;">)</span>&nbsp;`+" ", "!token-mod --off lockMovement") + '<br>' + dlButton("Split Path", "!pathSplit") + dlButton("Join Path", "!pathJoin") + dlButton("Close Path", "!pathClose") + '<br>' +
                             `<b>${label("Grid Presets:", "Grid Presets.")} <b><BR>` + 
-                            gridButton("weak","1", "#000000", "0.1", "!dltool-mod --snapping_increment|1" +  "&#10;!dltool-mod --gridcolor|000000" + "&#10;!dltool-mod --grid_opacity|0.1") + gridButton("Strong","1", "#000000", "0.5", "!dltool-mod --snapping_increment|1" +  "&#10;!dltool-mod --gridcolor|000000" +  "&#10;!dltool-mod --grid_opacity|0.5") + gridButton("Invisible","1", "#000000", "0", "!dltool-mod --snapping_increment|1" +  "&#10;!dltool-mod --gridcolor|000000" +  "&#10;!dltool-mod --grid_opacity|0") + gridButton("Template","0.125", "000000", "0.25", "!dltool --snapping_increment|0.125" +  "&#10;!dltool --gridcolor|FF00FF" +  "&#10;!dltool --grid_opacity|0.25")
+                            gridButton("standard","1", "#COCOCO", "0.5", "!dltool-mod --snapping_increment|1" +  "&#10;!dltool-mod --gridcolor|C0C0C0" + "&#10;!dltool-mod --grid_opacity|0.5") + gridButton("weak","1", "#000000", "0.1", "!dltool-mod --snapping_increment|1" +  "&#10;!dltool-mod --gridcolor|000000" + "&#10;!dltool-mod --grid_opacity|0.1") + gridButton("Strong","1", "#000000", "0.5", "!dltool-mod --snapping_increment|1" +  "&#10;!dltool-mod --gridcolor|000000" +  "&#10;!dltool-mod --grid_opacity|0.5") + `<BR>` + gridButton("Invisible","1", "#000000", "0", "!dltool-mod --snapping_increment|1" +  "&#10;!dltool-mod --gridcolor|000000" +  "&#10;!dltool-mod --grid_opacity|0") + gridButton("Template","0.125", "000000", "0.25", "!dltool --snapping_increment|0.125" +  "&#10;!dltool --gridcolor|FF00FF" +  "&#10;!dltool --grid_opacity|0.25")
                             : "")+
                             `</div>`;
 
@@ -7876,11 +7884,42 @@ on('ready', () => {
  *   PathMath
  */
 
+var API_Meta = API_Meta||{}; //eslint-disable-line no-var
+API_Meta.PathSplitter={offset:Number.MAX_SAFE_INTEGER,lineCount:-1};
+{try{throw new Error('');}catch(e){API_Meta.PathSplitter.offset=(parseInt(e.stack.split(/\n/)[1].replace(/^.*:(\d+):.*$/,'$1'),10)-3);}}
+API_Meta.PathSplitter.version = '1.1.2';
+/* globals PathMath */
+/**
+ * This script provides a way for players and GMs to split paths by their
+ * intersections with another splitting path.
+ * This could especially be useful for when corrections need to be made to
+ * paths used for dynamic lighting.
+ *
+ * Simply draw a polygonal path intersecting the path you want to split up.
+ * Select the main path and then the splitting path.
+ * Then with the main and splitting paths selected,
+ * enter the command '!pathSplit'.
+ * The original path will be divided into new paths separated at the points
+ * where the splitting path intersected the original path.
+ *
+ * This script also works with paths that have been scaled and rotated.'
+ *
+ * Requires:
+ *   VectorMath
+ *   MatrixMath
+ *   PathMath
+ */
+
 (() => {
-  'use strict';
+
+  const DEFAULT_SPLIT_COLOR = '#000000';
+  const MAKE_MACROS = false;
 
   const PATHSPLIT_CMD = '!pathSplit';
+  const PATHJOIN_CMD = '!pathJoin';
+  const PATHCLOSE_CMD = '!pathClose';
   const PATHSPLIT_COLOR_CMD = '!pathSplitColor';
+  const EPSILON = 0.001;
 
   /**
    * A 3-tuple representing a point of intersection between two line segments.
@@ -7903,10 +7942,19 @@ on('ready', () => {
    * @typedef {Vector[]} Segment
    */
 
+  let isJumpgate = ()=>{
+    if(['jumpgate'].includes(Campaign().get('_release'))) {
+      isJumpgate = () => true;
+    } else {
+      isJumpgate = () => false;
+    }
+    return isJumpgate();
+  };
+
 
   // Initialize the script's state if it hasn't already been initialized.
   state.PathSplitter = state.PathSplitter || {
-    splitPathColor: '#000000' // black
+    splitPathColor: DEFAULT_SPLIT_COLOR // pink
   };
 
 
@@ -7914,11 +7962,11 @@ on('ready', () => {
     let resultSegPaths = [];
     let curPathSegs = [];
 
-    _.each(mainSegments, seg1 => {
+    mainSegments.forEach( seg1 => {
 
       // Find the points of intersection and their parametric coefficients.
       let intersections = [];
-      _.each(splitSegments, seg2 => {
+      splitSegments.forEach(seg2 => {
         let i = PathMath.segmentIntersection(seg1, seg2);
         if(i)
           intersections.push(i);
@@ -7931,7 +7979,7 @@ on('ready', () => {
         });
 
         let lastPt = seg1[0];
-        _.each(intersections, i => {
+        intersections.forEach( i => {
           // Complete the current segment path.
           curPathSegs.push([lastPt, i[0]]);
           resultSegPaths.push(curPathSegs);
@@ -7949,7 +7997,147 @@ on('ready', () => {
     resultSegPaths.push(curPathSegs);
 
     return resultSegPaths;
-  };
+  }
+
+  const ptDist = (p1,p2) => Math.sqrt(Math.pow(p2[0]-p1[0],2)+Math.pow(p2[1]-p1[1],2));
+
+  const reverseSegs = (segs) => [...segs.map(seg=>seg.reverse())].reverse();
+
+  function closePath(path1){
+    let segments = PathMath.toSegments(path1);
+    let len = segments.length;
+
+    let _pageid = path1.get('_pageid');
+    let controlledby = path1.get('controlledby');
+    let fill = path1.get('fill');
+    let layer = path1.get('layer');
+    let stroke = path1.get('stroke');
+    let stroke_width = path1.get('stroke_width');
+    let pathExtra = {
+        _pageid,
+        controlledby,
+        fill,
+        layer,
+        stroke,
+        stroke_width
+    };
+
+    if(isJumpgate()){
+      switch(path1.get('shape')){
+        case 'free':
+          pathExtra.shape='free'; // force back to freehand
+          break;
+        case 'pol':
+        case 'eli':
+        case 'rec':
+          break;
+      }
+    }
+
+    let p1 = [...segments[len-1][1]];
+    let p2 = [...segments[0][0]];
+    let mp = [(p1[0]+p2[0])/2, (p1[1]+p2[1])/2,1];
+
+    // add closing segment
+    segments.unshift(
+      [mp,p2]
+    );
+    segments.push(
+      [p1,mp]
+    );
+
+    let pathData = {
+      ...PathMath.segmentsToPath(segments),
+      ...pathExtra
+    };
+    let path = createObj(isJumpgate() ? 'pathv2' : 'path', pathData);
+    if(path){
+      path1.remove();
+    }
+  }
+
+  function joinPaths(path1,path2){
+    let p1Segments = PathMath.toSegments(path1);
+    let p2Segments = PathMath.toSegments(path2);
+    let p1Len = p1Segments.length;
+    let p2Len = p2Segments.length;
+
+    let _pageid = path1.get('_pageid');
+    let controlledby = path1.get('controlledby');
+    let fill = path1.get('fill');
+    let layer = path1.get('layer');
+    let stroke = path1.get('stroke');
+    let stroke_width = path1.get('stroke_width');
+    let pathExtra = {
+        _pageid,
+        controlledby,
+        fill,
+        layer,
+        stroke,
+        stroke_width
+    };
+
+//    $d({p1Segments,p1Len,p2Segments,p2Len});
+
+    let strategy = [
+      { st: 'ss', dist: ptDist(p1Segments[0][0],p2Segments[0][0]) },
+      { st: 'se', dist: ptDist(p1Segments[0][0],p2Segments[p2Len-1][1]) },
+      { st: 'es', dist: ptDist(p1Segments[p1Len-1][1],p2Segments[0][0]) },
+      { st: 'ee', dist: ptDist(p1Segments[p1Len-1][1],p2Segments[p2Len-1][1]) }
+    ].sort((a,b)=>a.dist-b.dist)[0];
+
+    switch(strategy.st){
+      case 'es':
+        break;
+      case 'ss':
+        p1Segments = reverseSegs(p1Segments);
+        break;
+      case 'se':
+        p1Segments = reverseSegs(p1Segments);
+        p2Segments = reverseSegs(p2Segments);
+        break;
+      case 'ee':
+        p2Segments = reverseSegs(p2Segments);
+        break;
+    }
+
+    let segments;
+
+    if(strategy.dist>0){
+      segments = [
+        ...p1Segments,
+        [p1Segments[p1Len-1][1],p2Segments[0][0]],
+        ...p2Segments
+      ];
+    } else {
+      segments = [
+        ...p1Segments,
+        ...p2Segments
+      ];
+    }
+
+    if(isJumpgate()){
+      switch(path1.get('shape')){
+        case 'free':
+          pathExtra.shape='free'; // force back to freehand
+          break;
+        case 'pol':
+        case 'eli':
+        case 'rec':
+          break;
+      }
+    }
+
+    let pathData = {
+      ...PathMath.segmentsToPath(segments),
+      ...pathExtra
+    };
+    let path = createObj(isJumpgate() ? 'pathv2' : 'path', pathData);
+    if(path){
+      path1.remove();
+      path2.remove();
+    }
+  }
 
   /**
    * Splits mainPath at its intersections with splitPath. The original path
@@ -7970,19 +8158,58 @@ on('ready', () => {
     let layer = mainPath.get('layer');
     let stroke = mainPath.get('stroke');
     let stroke_width = mainPath.get('stroke_width');
-
-    let results = [];
-    _.each(segmentPaths, segments => {
-      let pathData = PathMath.segmentsToPath(segments);
-      _.extend(pathData, {
+    let pathExtra = {
         _pageid,
         controlledby,
         fill,
         layer,
         stroke,
         stroke_width
-      });
-      let path = createObj('path', pathData);
+    };
+
+    const ptSame = (p1,p2)=> p1[0]===p2[0] && p1[1]===p2[1] && p1[2]===p2[2] ;
+
+    // remove zero length lines
+    segmentPaths = segmentPaths
+      .map(segs=> segs.filter(s => !ptSame(s[0],s[1])))
+      .filter(segs => segs.length);
+
+    if(isJumpgate()){
+      switch(mainPath.get('shape')){
+        case 'free':
+          pathExtra.shape='free'; // force back to freehand
+          break;
+        case 'pol':
+          break;
+
+        case 'eli':
+        case 'rec':
+            // fix up endpoints 
+          if(segmentPaths.length > 1){
+            let distCheck = PathMath.distanceToPoint(segmentPaths[0][0][0],splitPath);
+            if(distCheck > EPSILON) {
+              segmentPaths[0] = [
+                ...segmentPaths[segmentPaths.length-1],
+                ...segmentPaths[0]
+              ];
+              delete segmentPaths[segmentPaths.length-1];
+              segmentPaths = segmentPaths.filter(p=>null !== p && undefined !== p);
+            }
+          }
+          break;
+
+        default:
+          // pathv1 path, do nothing
+      }
+    }
+
+    let results = [];
+    segmentPaths.forEach(segments => {
+      let pathData = {
+        ...PathMath.segmentsToPath(segments),
+        ...pathExtra
+      };
+      let path = createObj(isJumpgate() ? 'pathv2' : 'path', pathData);
       results.push(path);
     });
 
@@ -7992,6 +8219,67 @@ on('ready', () => {
 
     return results;
   }
+
+  on('ready', () => {
+    if(MAKE_MACROS){
+      let macro = findObjs({
+        _type: 'macro',
+        name: 'Pathsplitter'
+      })[0];
+
+      if(!macro) {
+        findObjs({
+          _type: 'player'
+        })
+        .filter( player => playerIsGM(player.id))
+        .forEach( gm => {
+          createObj('macro', {
+            _playerid: gm.get('_id'),
+            name: 'Pathsplitter',
+            action: PATHSPLIT_CMD
+          });
+        });
+      }
+
+      let macro2 = findObjs({
+        _type: 'macro',
+        name: 'Pathjoiner'
+      })[0];
+
+      if(!macro2) {
+        findObjs({
+          _type: 'player'
+        })
+        .filter( player => playerIsGM(player.id))
+        .forEach( gm => {
+          createObj('macro', {
+            _playerid: gm.get('_id'),
+            name: 'Pathjoiner',
+            action: PATHJOIN_CMD
+          });
+        });
+      }
+
+      let macro3 = findObjs({
+        _type: 'macro',
+        name: 'Pathcloser'
+      })[0];
+
+      if(!macro3) {
+        findObjs({
+          _type: 'player'
+        })
+        .filter( player => playerIsGM(player.id))
+        .forEach( gm => {
+          createObj('macro', {
+            _playerid: gm.get('_id'),
+            name: 'Pathcloser',
+            action: PATHCLOSE_CMD
+          });
+        });
+      }
+    }
+  });
 
   on('chat:message', msg => {
     if(msg.type === 'api' && msg.content === PATHSPLIT_COLOR_CMD) {
@@ -8013,20 +8301,17 @@ on('ready', () => {
     else if(msg.type === 'api' && msg.content === PATHSPLIT_CMD) {
       try {
         let selected = msg.selected;
-        if(!selected || selected.length !== 2) {
-          let msg = `Two paths must be selected: the one you want to split, and the splitting path (color: <span style="background: ${state.PathSplitter.splitPathColor}; width: 16px; height: 16px; padding: 0.2em; font-weight: bold;">${state.PathSplitter.splitPathColor}</span>).`;
+        if(!selected || selected.length !== 2 || ! /^path/.test(selected[0]._type) ||  ! /^path/.test(selected[1]._type) ) {
+          let num = selected?.length || 0;
+          let types = (selected?.map(o=>o._type)||[]).join(", ");
+
+          let msg = `Two paths must be selected: the one you want to split, and the splitting path (color: <span style="background: ${state.PathSplitter.splitPathColor}; width: 16px; height: 16px; padding: 0.2em; font-weight: bold;">${state.PathSplitter.splitPathColor}</span>).  Selected: (${num}): ${types}`;
           sendChat('Pathsplitter', msg);
-          throw new Error('Two paths must be selected.');
+          throw new Error(msg);
         }
 
-        let path1 = findObjs({
-          _type: 'path',
-          _id: selected[0]._id
-        })[0];
-        let path2 = findObjs({
-          _type: 'path',
-          _id: selected[1]._id
-        })[0];
+        let path1 = getObj(selected[0]._type,selected[0]._id);
+        let path2 = getObj(selected[1]._type,selected[1]._id);
 
         // Determine which path is the main path and which is the
         // splitting path.
@@ -8041,7 +8326,7 @@ on('ready', () => {
         }
         else {
           let msg = 'No splitting path selected. ';
-          msg += `Current split color: <span style="background: ${state.PathSplitter.splitPathColor}; width: 16px; height: 16px; padding: 0.2em; font-weight: bold;">${state.PathSplitter.splitPathColor}</span>`
+          msg += `Current split color: <span style="background: ${state.PathSplitter.splitPathColor}; width: 16px; height: 16px; padding: 0.2em; font-weight: bold;">${state.PathSplitter.splitPathColor}</span>`;
           sendChat('Pathsplitter', msg);
 
           throw new Error('No splitting path selected.');
@@ -8053,8 +8338,51 @@ on('ready', () => {
         log(err.stack);
       }
     }
+    else if(msg.type === 'api' && msg.content === PATHJOIN_CMD) {
+      try {
+        let selected = msg.selected;
+        if(!selected || selected.length !== 2 || ! /^path/.test(selected[0]._type) ||  ! /^path/.test(selected[1]._type) ) {
+          let num = selected?.length || 0;
+          let types = (selected?.map(o=>o._type)||[]).join(", ");
+
+          let msg = `Two paths must be selected for joining.  Selected: (${num}): ${types}`;
+          sendChat('Pathsplitter', msg);
+          throw new Error(msg);
+        }
+
+        let path1 = getObj(selected[0]._type,selected[0]._id);
+        let path2 = getObj(selected[1]._type,selected[1]._id);
+
+        joinPaths(path1,path2);
+      }
+      catch(err) {
+        log('!pathSplit ERROR: ' + err.message);
+        log(err.stack);
+      }
+    } else if(msg.type === 'api' && msg.content === PATHCLOSE_CMD) {
+      try {
+        let selected = msg.selected;
+        if(!selected || selected.length !== 1 || ! /^path/.test(selected[0]._type) ) {
+          let num = selected?.length || 0;
+          let types = (selected?.map(o=>o._type)||[]).join(", ");
+
+          let msg = `One path must be selected for closing.  Selected: (${num}): ${types}`;
+          sendChat('Pathsplitter', msg);
+          throw new Error(msg);
+        }
+
+        let path1 = getObj(selected[0]._type,selected[0]._id);
+
+        closePath(path1);
+      }
+      catch(err) {
+        log('!pathSplit ERROR: ' + err.message);
+        log(err.stack);
+      }
+    }
   });
 })();
+{try{throw new Error('');}catch(e){API_Meta.PathSplitter.lineCount=(parseInt(e.stack.split(/\n/)[1].replace(/^.*:(\d+):.*$/,'$1'),10)-API_Meta.PathSplitter.offset);}}
 
 
 
@@ -8617,6 +8945,12 @@ var MatrixMath = (function() {
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
 //       PATHMATH
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
+/* globals VecMath MatrixMath */
+var API_Meta = API_Meta||{}; //eslint-disable-line no-var
+API_Meta.PathMath={offset:Number.MAX_SAFE_INTEGER,lineCount:-1};
+{try{throw new Error('');}catch(e){API_Meta.PathMath.offset=(parseInt(e.stack.split(/\n/)[1].replace(/^.*:(\d+):.*$/,'$1'),10)-4);}}
+API_Meta.PathMath.version = '1.7';
+
 
 /**
  * PathMath script
@@ -8626,11 +8960,19 @@ var MatrixMath = (function() {
  * functionality of its own. All the library's operations are exposed by the
  * PathMath object created by this script.
  */
-var PathMath = (() => {
-    'use strict';
+const PathMath = (() => {
 
     /** The size of a single square on a page, in pixels. */
     const UNIT_SIZE_PX = 70;
+
+    let isJumpgate = ()=>{
+      if(['jumpgate'].includes(Campaign().get('_release'))) {
+        isJumpgate = () => true;
+      } else {
+        isJumpgate = () => false;
+      }
+      return isJumpgate();
+    };
 
     /**
      * A vector used to define a homogeneous point or a direction.
@@ -8685,7 +9027,7 @@ var PathMath = (() => {
        * @param {vec3} pt
        * @return {number}
        */
-      distanceToPoint(pt) {
+      distanceToPoint(/* pt */) {
         throw new Error('Must be defined by subclass.');
       }
 
@@ -8723,7 +9065,7 @@ var PathMath = (() => {
        * @param {PathShape} other
        * @return {boolean}
        */
-      intersects(other) {
+      intersects(/* other */) {
         throw new Error('Must be defined by subclass.');
       }
 
@@ -8741,7 +9083,7 @@ var PathMath = (() => {
           _pageid: pageId,
           layer
         });
-        return createObj('path', pathData);
+        return createObj(isJumpgate() ? 'pathv2' : 'path', pathData);
       }
 
       /**
@@ -9069,7 +9411,7 @@ var PathMath = (() => {
 
                 // The vertex is not an ear if there is at least one other
                 // vertex inside its triangle.
-                return !_.find(vertices, (v2, j) => {
+                return !_.find(vertices, (v2) => {
                   if(v2 === v || v2 === vPrev || v2 === vNext)
                     return false;
                   else {
@@ -9238,14 +9580,26 @@ var PathMath = (() => {
        * @param {RenderInfo} renderInfo
        */
       render(pageId, layer, renderInfo) {
-        let data = createCircleData(this.radius)
+        let data;
+        if(isJumpgate()){
+          data = {
+            shape: 'eli',
+            x: this.center[0],
+            y: this.center[1],
+            points: `[[0,0],[${this.diameter*(renderInfo.scaleX??1)},${this.diameter*(renderInfo.scaleY??1)}]]`
+          };
+        } else {
+          data = createCircleData(this.radius);
+          data.left = this.center[0];
+          data.top = this.center[1];
+        }
         _.extend(data, renderInfo, {
           _pageid: pageId,
           layer,
           left: this.center[0],
           top: this.center[1]
         });
-        createObj('path', data);
+        return createObj(isJumpgate() ? 'pathv2' : 'path', data);
       }
 
       /**
@@ -9313,10 +9667,10 @@ var PathMath = (() => {
        * @return {BoundingBox}
        */
       static add(a, b) {
-        var left = Math.min(a.left, b.left);
-        var top = Math.min(a.top, b.top);
-        var right = Math.max(a.left + a.width, b.left + b.width);
-        var bottom = Math.max(a.top + a.height, b.top + b.height);
+        let left = Math.min(a.left, b.left);
+        let top = Math.min(a.top, b.top);
+        let right = Math.max(a.left + a.width, b.left + b.width);
+        let bottom = Math.max(a.top + a.height, b.top + b.height);
 
         return new BoundingBox(left, top, right - left, bottom - top);
       }
@@ -9369,21 +9723,21 @@ var PathMath = (() => {
      * @return {PathData}
      */
     function createCircleData(radius, sides) {
-      var _path = [];
+      let _path = [];
       if(sides) {
-        var cx = radius;
-        var cy = radius;
-        var angleInc = Math.PI*2/sides;
-        path.push(['M', cx + radius, cy]);
+        let cx = radius;
+        let cy = radius;
+        let angleInc = Math.PI*2/sides;
+        _path.push(['M', cx + radius, cy]);
         _.each(_.range(1, sides+1), function(i) {
-          var angle = angleInc*i;
-          var x = cx + radius*Math.cos(angle);
-          var y = cy + radius*Math.sin(angle);
-          path.push(['L', x, y]);
+          let angle = angleInc*i;
+          let x = cx + radius*Math.cos(angle);
+          let y = cy + radius*Math.sin(angle);
+          _path.push(['L', x, y]);
         });
       }
       else {
-        var r = radius;
+        let r = radius;
         _path = [
           ['M', 0,      r],
           ['C', 0,      r*0.5,  r*0.5,  0,      r,      0],
@@ -9454,9 +9808,9 @@ var PathMath = (() => {
       if(!_.isArray(paths))
         paths = [paths];
 
-      var result;
+      let result;
       _.each(paths, function(p) {
-        var pBox = _getSingleBoundingBox(p);
+        let pBox = _getSingleBoundingBox(p);
         if(result)
           result = BoundingBox.add(result, pBox);
         else
@@ -9474,12 +9828,12 @@ var PathMath = (() => {
      * @return {Vector}
      */
     function getCenter(paths) {
-        if(!_.isArray(pathjs))
+        if(!_.isArray(paths))
             paths = [paths];
 
-        var bbox = getBoundingBox(paths);
-        var cx = bbox.left + bbox.width/2;
-        var cy = bbox.top + bbox.height/2;
+        let bbox = getBoundingBox(paths);
+        let cx = bbox.left + bbox.width/2;
+        let cy = bbox.top + bbox.height/2;
 
         return [cx, cy, 1];
     }
@@ -9491,14 +9845,26 @@ var PathMath = (() => {
      * @return {BoundingBox}
      */
     function _getSingleBoundingBox(path) {
-        var pathData = normalizePath(path);
+        let pathData = normalizePath(path);
 
-        var width = pathData.width;
-        var height = pathData.height;
-        var left = pathData.left - width/2;
-        var top = pathData.top - height/2;
+        let width = pathData.width;
+        let height = pathData.height;
+        let left = pathData.left - width/2;
+        let top = pathData.top - height/2;
 
         return new BoundingBox(left, top, width, height);
+    }
+
+    function _pathV2Bounds(path) {
+      let p = JSON.parse(path.get('points'))??[];
+      let {Mx,mx,My,my} = p.reduce((m,[x,y])=>({
+        Mx:Math.max(m.Mx,x),
+        mx:Math.min(m.mx,x),
+        My:Math.max(m.My,y),
+        my:Math.min(m.my,y)
+      }),{Mx:-Infinity,mx:Infinity,My:-Infinity,my:Infinity});
+
+      return [Mx-mx,My-my];
     }
 
     /**
@@ -9507,27 +9873,43 @@ var PathMath = (() => {
      * @return {PathTransformInfo}
      */
     function getTransformInfo(path) {
-        var scaleX = path.get('scaleX');
-        var scaleY = path.get('scaleY');
-        var angle = path.get('rotation')/180*Math.PI;
+      let angle = path.get('rotation')/180*Math.PI;
 
-        // The transformed center of the path.
-        var cx = path.get('left');
-        var cy = path.get('top');
 
-        // The untransformed width and height.
-        var width = path.get('width');
-        var height = path.get('height');
+      if('path' === path.get('type')){
+          let scaleX = path.get('scaleX');
+          let scaleY = path.get('scaleY');
+
+          // The untransformed width and height.
+          let width = path.get('width');
+          let height = path.get('height');
+          // The transformed center of the path.
+          let cx = path.get('left');
+          let cy = path.get('top');
+
+          return {
+              angle: angle,
+              cx: cx,
+              cy: cy,
+              height: height,
+              scaleX: scaleX,
+              scaleY: scaleY,
+              width: width
+          };
+      } else {
+        // pathv2
+        let [width,height] = _pathV2Bounds(path);
 
         return {
-            angle: angle,
-            cx: cx,
-            cy: cy,
-            height: height,
-            scaleX: scaleX,
-            scaleY: scaleY,
-            width: width
+          angle: angle,
+          cx: path.get('x'),
+          cy: path.get('y'),
+          scaleX: 1,
+          scaleY: 1,
+          height: height, 
+          width: width
         };
+      }
     }
 
     /**
@@ -9535,7 +9917,7 @@ var PathMath = (() => {
      * @param {(Roll20Path|Segment[])}
      * @return {boolean}
      */
-    function isClosed(path) {
+    function isClosed(path) { // eslint-disable-line no-unused-vars
       // Convert to segments.
       if(!_.isArray(path))
         path = toSegments(path);
@@ -9549,22 +9931,22 @@ var PathMath = (() => {
      * @return {String}
      */
     function mergePathStr(paths) {
-        var merged = [];
-        var bbox = getBoundingBox(paths);
+        let merged = [];
+        let bbox = getBoundingBox(paths);
 
         _.each(paths, function(p) {
-            var pbox = getBoundingBox(p);
+            let pbox = getBoundingBox(p);
 
             // Convert the path to a normalized polygonal path.
             p = normalizePath(p);
-            var parsed = JSON.parse(p._path);
-            _.each(parsed, function(pathTuple, index) {
-                var dx = pbox.left - bbox.left;
-                var dy = pbox.top - bbox.top;
+            let parsed = JSON.parse(p._path);
+            _.each(parsed, function(pathTuple) {
+                let dx = pbox.left - bbox.left;
+                let dy = pbox.top - bbox.top;
 
                 // Move and Line tuples
-                var x = pathTuple[1] + dx;
-                var y = pathTuple[2] + dy;
+                let x = pathTuple[1] + dx;
+                let y = pathTuple[2] + dy;
                 merged.push([pathTuple[0], x, y]);
             });
         });
@@ -9582,18 +9964,15 @@ var PathMath = (() => {
      * @return {PathData}
      */
     function normalizePath(path) {
-        var segments = toSegments(path);
+        let segments = toSegments(path);
         return segmentsToPath(segments);
     }
 
     /**
      * Produces a UDL window from a Path.
      * This UDL window path will be created on the walls layer
-     * and its _path consists entirely of 'M' components.
-     * This may have unexpected behavior for paths that have breaks in them
-     * ('M' components between other components).
-     * Special thanks to Scott C. and Aaron for discovering this hidden UDL
-     * functionality.
+     * and will have a type of transparent.
+     * 
      * @param {Roll20Path} path
      * @return {Roll20Path} The Path object for the new UDL window.
      */
@@ -9603,12 +9982,12 @@ var PathMath = (() => {
       let curPage = path.get('_pageid');
       _.extend(pathData, {
         stroke: '#ff0000',
+        barrierType: "transparent",
         _pageid: curPage,
         layer: 'walls'
       });
-      pathData._path = pathData._path.replace(/L|C|Q/g, 'M');
 
-      return createObj('path', pathData);
+      return createObj(isJumpgate() ? 'pathv2' : 'path', pathData);
     }
 
     /**
@@ -9662,9 +10041,9 @@ var PathMath = (() => {
      *      or undefined if the segments are parallel.
      */
     function raycast(seg1, seg2) {
-      var u = VecMath.sub(seg1[1], seg1[0]);
-      var v = VecMath.sub(seg2[1], seg2[0]);
-      var w = VecMath.sub(seg2[0], seg1[0]);
+      let u = VecMath.sub(seg1[1], seg1[0]);
+      let v = VecMath.sub(seg2[1], seg2[0]);
+      let w = VecMath.sub(seg2[0], seg1[0]);
 
       // Can't use 0-length vectors.
       if(VecMath.length(u) === 0 || VecMath.length(v) === 0)
@@ -9672,24 +10051,24 @@ var PathMath = (() => {
 
       // If the two segments are parallel, then either they never intersect
       // or they overlap. Either way, return undefined in this case.
-      var uHat = VecMath.normalize(u);
-      var vHat = VecMath.normalize(v);
-      var uvDot = VecMath.dot(uHat,vHat);
+      let uHat = VecMath.normalize(u);
+      let vHat = VecMath.normalize(v);
+      let uvDot = VecMath.dot(uHat,vHat);
       if(Math.abs(uvDot) > 0.9999)
           return undefined;
 
       // Build the inverse matrix for getting the intersection point's
       // parametric coefficients along the projected segments.
-      var m = [[u[0], u[1], 0], [-v[0], -v[1], 0], [0, 0, 1]];
-      var mInv = MatrixMath.inverse(m);
+      let m = [[u[0], u[1], 0], [-v[0], -v[1], 0], [0, 0, 1]];
+      let mInv = MatrixMath.inverse(m);
 
       // Get the parametric coefficients for getting the point of intersection
       // on the projected semgents.
-      var coeffs = MatrixMath.multiply(mInv, w);
-      var s = coeffs[0];
-      var t = coeffs[1];
+      let coeffs = MatrixMath.multiply(mInv, w);
+      let s = coeffs[0];
+      let t = coeffs[1];
 
-      var uPrime = VecMath.scale(u, s);
+      let uPrime = VecMath.scale(u, s);
       return [VecMath.add(seg1[0], uPrime), s, t];
     }
 
@@ -9727,22 +10106,22 @@ var PathMath = (() => {
      * @return {PathData}
      */
     function segmentsToPath(segments) {
-        var left = segments[0][0][0];
-        var right = segments[0][0][0];
-        var top = segments[0][0][1];
-        var bottom = segments[0][0][1];
+        let left = segments[0][0][0];
+        let right = segments[0][0][0];
+        let top = segments[0][0][1];
+        let bottom = segments[0][0][1];
 
         // Get the bounds of the segment.
-        var pts = [];
-        var isFirst = true;
+        let pts = [];
+        let isFirst = true;
         _.each(segments, function(segment) {
-            var p1 = segment[0];
+            let p1 = [segment[0][0],segment[0][1]];
             if(isFirst) {
                 isFirst = false;
                 pts.push(p1);
             }
 
-            var p2 = segment[1];
+            let p2 = [segment[1][0],segment[1][1]];
 
             left = Math.min(left, p1[0], p2[0]);
             right = Math.max(right, p1[0], p2[0]);
@@ -9753,16 +10132,24 @@ var PathMath = (() => {
         });
 
         // Get the path's left and top coordinates.
-        var width = right-left;
-        var height = bottom-top;
-        var cx = left + width/2;
-        var cy = top + height/2;
+        let width = right-left;
+        let height = bottom-top;
+        let cx = left + width/2;
+        let cy = top + height/2;
 
+      if(isJumpgate()){
+        return {
+          shape: 'pol',
+          x: cx,
+          y: cy,
+          points: JSON.stringify(pts)
+        };
+      } else {
         // Convert the points to a _path.
-        var _path = [];
-        var firstPt = true;
+        let _path = [];
+        let firstPt = true;
         _.each(pts, function(pt) {
-            var type = 'L';
+            let type = 'L';
             if(firstPt) {
                 type = 'M';
                 firstPt = false;
@@ -9777,6 +10164,97 @@ var PathMath = (() => {
             width: width,
             height: height
         };
+      }
+    }
+
+    function _circlePointsFromCorners(p1,p2) {
+      const SPACING=20;
+
+      // reorder points to get top left to bottom right.
+      if(p1[0]>p2[0]){
+        let x = p1[0];
+        p1[0]=p2[0];
+        p2[0]=x;
+      }
+      if(p1[1]>p2[1]){
+        let y = p1[1];
+        p1[1]=p2[1];
+        p2[1]=y;
+      }
+
+      const cx = (p1[0]+p2[0])/2;
+      const cy = (p1[1]+p2[1])/2;
+      const rx = (p2[0]-p1[0])/2;
+      const ry = (p2[1]-p1[1])/2;
+
+      const cir = Math.PI * ( 3* (rx+ry) - Math.sqrt((3*rx+ry)*(3*ry+rx)))/4;
+      // number of half subdivisions = circumference / (Spacing *2) or 1
+      // 
+//      const pn = (Math.max(Math.ceil(cir/SPACING),1)*4)-1; // guarentee odd
+
+      let pn = Math.max(Math.ceil(cir/SPACING),1);
+      pn = (1===pn%2 ? pn : pn+1); // guarentee odd
+
+      const th = Math.PI/4/pn;
+
+      let octs = [[],[],[],[],[],[],[],[]];
+
+      for( let i = 1; i <= pn; ++i){
+        const a = i * th;
+        const ct = Math.cos(a);
+        const st = Math.sin(a);
+
+        const x1 = parseFloat((rx*ct).toFixed(1));
+        const y1 = parseFloat((ry*st).toFixed(1));
+        const x2 = parseFloat((rx*st).toFixed(1));
+        const y2 = parseFloat((ry*ct).toFixed(1));
+
+
+        // postive quad
+        octs[0].push([cx+x1,cy+y1]);
+        if(x1!==x2) {
+          octs[1].unshift([cx+x2,cy+y2]);
+        }
+
+        octs[2].push([cx-x2,cy+y2]);
+        if(x1!==x2) {
+          octs[3].unshift([cx-x1,cy+y1]);
+        }
+
+        octs[4].push([cx-x1,cy-y1]);
+        if(x1!==x2) {
+          octs[5].unshift([cx-x2,cy-y2]);
+        }
+
+        octs[6].push([cx+x2,cy-y2]);
+        if(x1!==x2) {
+          octs[7].unshift([cx+x1,cy-y1]);
+        }
+      }
+      let points = [
+        [cx+rx,cy],
+        ...octs[0],
+        ...octs[1],
+        [cx,cy+ry],
+        ...octs[2],
+        ...octs[3],
+        [cx-rx,cy],
+        ...octs[4],
+        ...octs[5],
+        [cx,cy-ry],
+        ...octs[6],
+        ...octs[7]
+      ];
+
+      return points;
+    }
+
+    function _normalizePathV2Points(points) {
+      let {mX,mY} = points.reduce((m,pt)=>({
+        mX: Math.min(pt[0],m.mX),
+        mY: Math.min(pt[1],m.mY)
+      }),{mX:Infinity,mY:Infinity});
+      return points.map(pt=>[ pt[0]-mX, pt[1]-mY]);
     }
 
     /**
@@ -9789,16 +10267,21 @@ var PathMath = (() => {
         if(_.isArray(path))
             return _toSegmentsMany(path);
 
-        var _path;
+        let _path;
         try {
           let page = getObj('page', path.get('_pageid'));
           let pageWidth = page.get('width') * UNIT_SIZE_PX;
           let pageHeight = page.get('height') * UNIT_SIZE_PX;
 
-          let rawPath = path.get('_path')
-            .replace(/mapWidth/g, pageWidth)
-            .replace(/mapHeight/g, pageHeight);
-          _path = JSON.parse(rawPath);
+          if("path" === path.get('type')){
+            let rawPath = path.get('_path')
+              .replace(/mapWidth/g, pageWidth)
+              .replace(/mapHeight/g, pageHeight);
+            _path = JSON.parse(rawPath);
+          } else {
+            // pathv2
+            _path = JSON.parse(path.get('points'));
+          }
         }
         catch (err) {
           log(`Error parsing Roll20 path JSON: ${path.get('_path')}`);
@@ -9806,52 +10289,113 @@ var PathMath = (() => {
           return [];
         }
 
-        var transformInfo = getTransformInfo(path);
+        let transformInfo = getTransformInfo(path);
 
-        var segments = [];
-        var prevPt;
-        let prevType;
+        let segments = [];
 
-        _.each(_path, tuple => {
-            let type = tuple[0];
+        if("path" === path.get('type')){
 
-            // Convert the previous point and tuple into segments.
-            let newSegs = [];
+          let prevPt;
+          let prevType;
 
-            // Cubic Bezier
-            if(type === 'C') {
-              newSegs = _toSegmentsC(prevPt, tuple, transformInfo);
-              if(newSegs.length > 0)
-                prevPt = newSegs[newSegs.length - 1][1];
-            }
+          _.each(_path, tuple => {
+              let type = tuple[0];
 
-            // Line or two successive Moves. A curious quirk of the latter
-            // case is that UDL treats them as segments for windows.
-            // Thanks to Scott C and Aaron for letting me know about this,
-            // whether it's an intended feature or not.
-            if(type === 'L' || (type === 'M' && prevType === 'M')) {
-              newSegs = _toSegmentsL(prevPt, tuple, transformInfo);
-              if(newSegs.length > 0)
-                prevPt = newSegs[0][1];
-            }
+              // Convert the previous point and tuple into segments.
+              let newSegs = [];
 
-            // Move, not preceded by another move (not a UDL window)
-            if(type === 'M' && prevType !== 'M') {
-              prevPt = tupleToPoint(tuple, transformInfo);
-            }
+              // Cubic Bezier
+              if(type === 'C') {
+                newSegs = _toSegmentsC(prevPt, tuple, transformInfo);
+                if(newSegs.length > 0)
+                  prevPt = newSegs[newSegs.length - 1][1];
+              }
 
-            // Freehand (tiny Quadratic Bezier)
-            if(type === 'Q') {
-              newSegs = _toSegmentsQ(prevPt, tuple, transformInfo);
-              if(newSegs.length > 0)
-                prevPt = newSegs[0][1];
-            }
+              // Line or two successive Moves. A curious quirk of the latter
+              // case is that UDL treats them as segments for windows.
+              // Thanks to Scott C and Aaron for letting me know about this,
+              // whether it's an intended feature or not.
+              if(type === 'L' || (type === 'M' && prevType === 'M')) {
+                newSegs = _toSegmentsL(prevPt, tuple, transformInfo);
+                if(newSegs.length > 0)
+                  prevPt = newSegs[0][1];
+              }
 
-            _.each(newSegs, s => {
-              segments.push(s);
-            });
-            prevType = type;
-        });
+              // Move, not preceded by another move (not a UDL window)
+              if(type === 'M' && prevType !== 'M') {
+                prevPt = tupleToPoint(tuple, transformInfo);
+              }
+
+              // Freehand (tiny Quadratic Bezier)
+              if(type === 'Q') {
+                newSegs = _toSegmentsQ(prevPt, tuple, transformInfo);
+                if(newSegs.length > 0)
+                  prevPt = newSegs[0][1];
+              }
+
+              _.each(newSegs, s => {
+                segments.push(s);
+              });
+              prevType = type;
+          });
+        } else {
+          _path = _normalizePathV2Points(_path);
+          // pathv2
+          switch(path.get('shape')){
+            case 'rec': {
+                let p1 = tupleToPoint(['L',_path[0][0],_path[0][1]],transformInfo);
+                let p2 = tupleToPoint(['L',_path[1][0],_path[1][1]],transformInfo);
+                let x1 = Math.min(p1[0],p2[0]);
+                let x2 = Math.max(p1[0],p2[0]);
+                let y1 = Math.min(p1[1],p2[1]);
+                let y2 = Math.max(p1[1],p2[1]);
+                // for rec, there are only two points and you construct the other two.
+                segments = [
+                  [[x1,y1,1],[x1,y2,1]],
+                  [[x1,y2,1],[x2,y2,1]],
+                  [[x2,y2,1],[x2,y1,1]],
+                  [[x2,y1,1],[x1,y1,1]]
+                ];
+              }
+              break;
+            case 'eli': {
+                // approximate the segments of a circle
+                let p1 = tupleToPoint(['L',_path[0][0],_path[0][1]],transformInfo);
+                let p2 = tupleToPoint(['L',_path[1][0],_path[1][1]],transformInfo);
+                let x1 = Math.min(p1[0],p2[0]);
+                let x2 = Math.max(p1[0],p2[0]);
+                let y1 = Math.min(p1[1],p2[1]);
+                let y2 = Math.max(p1[1],p2[1]);
+
+                let points = _circlePointsFromCorners([x1,y1],[x2,y2]);
+
+                segments = points.reduce((m,p,i,a)=>
+                  i
+                  ? [...m,[ [...a[i-1],1],[...p,1]]]
+                  : [...m,[ [...a[a.length-1],1],[...p,1]]]
+                ,[]);
+              }
+              break;
+            case 'pol': 
+              segments = _path.reduce((m,p,i,a)=>
+                i
+                ? [...m,[ tupleToPoint(['L',...a[i-1]],transformInfo),tupleToPoint(['L',...p],transformInfo)]]
+                : m
+              ,[]);
+
+              break;
+            case 'free': 
+              // fake it as a poly line for now...
+              segments = _path.reduce((m,p,i,a)=>
+                i
+                ? [...m,[ tupleToPoint(['L',...a[i-1]],transformInfo),tupleToPoint(['L',...p],transformInfo)]]
+                : m
+              ,[]);
+
+              break;
+          }
+
+        }
 
         return _.compact(segments);
     }
@@ -9959,24 +10503,24 @@ var PathMath = (() => {
      * @return {Vector}
      */
     function tupleToPoint(tuple, transformInfo) {
-      var width = transformInfo.width;
-      var height = transformInfo.height;
-      var scaleX = transformInfo.scaleX;
-      var scaleY = transformInfo.scaleY;
-      var angle = transformInfo.angle;
-      var cx = transformInfo.cx;
-      var cy = transformInfo.cy;
+      let width = transformInfo.width;
+      let height = transformInfo.height;
+      let scaleX = transformInfo.scaleX;
+      let scaleY = transformInfo.scaleY;
+      let angle = transformInfo.angle;
+      let cx = transformInfo.cx;
+      let cy = transformInfo.cy;
 
       // The point in path coordinates, relative to the path center.
-      var x = tuple[1] - width/2;
-      var y = tuple[2] - height/2;
-      var pt = [x,y,1];
+      let x = tuple[1] - width/2;
+      let y = tuple[2] - height/2;
+      let pt = [x,y,1];
 
       // The transform of the point from path coordinates to map
       // coordinates.
-      var scale = MatrixMath.scale([scaleX, scaleY]);
-      var rotate = MatrixMath.rotate(angle);
-      var transform = MatrixMath.translate([cx, cy]);
+      let scale = MatrixMath.scale([scaleX, scaleY]);
+      let rotate = MatrixMath.rotate(angle);
+      let transform = MatrixMath.translate([cx, cy]);
       transform = MatrixMath.multiply(transform, rotate);
       transform = MatrixMath.multiply(transform, scale);
 
@@ -9988,29 +10532,29 @@ var PathMath = (() => {
         log('!pathInfo');
 
         try {
-          var path = findObjs({
+          let path = findObjs({
             _type: 'path',
             _id: msg.selected[0]._id
           })[0];
           log(path);
           log(path.get('_path'));
 
-          var segments = toSegments(path);
+          let segments = toSegments(path);
           log('Segments: ');
           log(segments);
 
-          var pathData = segmentsToPath(segments);
+          let pathData = segmentsToPath(segments);
           log('New path data: ');
           log(pathData);
 
-          var curPage = path.get('_pageid');
+          let curPage = path.get('_pageid');
           _.extend(pathData, {
             stroke: '#ff0000',
             _pageid: curPage,
             layer: path.get('layer')
           });
 
-          var newPath = createObj('path', pathData);
+          let newPath = createObj('path', pathData);
           log(newPath);
         }
         catch(err) {
@@ -10020,7 +10564,7 @@ var PathMath = (() => {
       }
       if (msg.type === 'api' && msg.content.startsWith('!pathToUDLWindow')) {
         try {
-          var path = findObjs({
+          let path = findObjs({
             _type: 'path',
             _id: msg.selected[0]._id
           })[0];
@@ -10056,6 +10600,11 @@ var PathMath = (() => {
         tupleToPoint
     };
 })();
+
+{try{throw new Error('');}catch(e){API_Meta.PathMath.lineCount=(parseInt(e.stack.split(/\n/)[1].replace(/^.*:(\d+):.*$/,'$1'),10)-API_Meta.PathMath.offset);}}
+
+
+
 
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
 //       VECTORMATH
@@ -10599,3 +11148,4 @@ var VecMath = (function() {
         "VecMath.vec([1,1], [3,4]) equals [2,3]"
     );
 })();
+
