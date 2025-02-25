@@ -2,11 +2,13 @@
 //       PRODWIZ 0.9.11
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
 // Changelog
-//0.9.10
-//Minor change in wording to "Accessing Demiplane Content" Handout from Ceru
-//Added button and menu to reduce page to 50% size to facilitate working with 140px/cell maps
-//Added Scale button to size by pixel or unit
-//Added another preset grid setting: Medium transparency black
+// 0.9.11
+// Debugged new behavior of handout reversion and overwriting. Requires server fix. Warnings added until then.
+// 0.9.10
+// Minor change in wording to "Accessing Demiplane Content" Handout from Ceru
+// Added button and menu to reduce page to 50% size to facilitate working with 140px/cell maps
+// Added Scale button to size by pixel or unit
+// Added another preset grid setting: Medium transparency black
 
 const Roll20Pro = (() => {
     let category = [],
@@ -245,7 +247,8 @@ const Roll20Pro = (() => {
             ,
 
             
-            finder: () => makeH4("NPC Handout Finder") +
+            finder: () => "<p style='" + styles.note + "'><b>TEMPORARY BUG:<BR>RESTART API SANDBOX<BR>IMMEDIATELY AFTER<BR>CREATING ANY HANDOUTS<BR>OR THEY WILL AUTO-REVERT!</b></p>" +
+            makeH4("NPC Handout Finder") +
             makeButton("Find for All Characters", "!prod finder art", styles.button) + 
             makeButton("Find for Selected Only", "!prod finder artSelected", styles.button) + 
             makeH4("NPC Mention Finder") +
@@ -255,7 +258,8 @@ const Roll20Pro = (() => {
             makeButton("Create Empty Art Handouts","!prod finder emptyHandouts", styles.button) + 
             makeBackButton()
             ,
-            stockHandouts: () => `<p>Current Product Name: ${state.Roll20Pro.productName}</p>` +
+            stockHandouts: () => "<p style='" + styles.note + "'><b>TEMPORARY BUG:<BR>RESTART API SANDBOX<BR>IMMEDIATELY AFTER<BR>CREATING ANY HANDOUTS<BR>OR THEY WILL AUTO-REVERT!</b></p>" +
+            `<p>Current Product Name: ${state.Roll20Pro.productName}</p>` +
             makeButton("Change Product Name", "!prod stock changeName ?{Product Name}", styles.button) +
             makeH4("Roll20 Handouts") + 
             makeButton("Map Scale", "!prod stock create battleMap", styles.button) +
