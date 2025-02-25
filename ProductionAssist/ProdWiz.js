@@ -1,12 +1,14 @@
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
-//       PRODWIZ 0.9.10
+//       PRODWIZ 0.9.11
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
 // Changelog
-//0.9.10
-//Minor change in wording to "Accessing Demiplane Content" Handout from Ceru
-//Added button and menu to reduce page to 50% size to facilitate working with 140px/cell maps
-//Added Scale button to size by pixel or unit
-//Added another preset grid setting: Medium transparency black
+// 0.9.11
+// Debugged new behavior of handout reversion and overwriting. Requires server fix. Warnings added until then.
+// 0.9.10
+// Minor change in wording to "Accessing Demiplane Content" Handout from Ceru
+// Added button and menu to reduce page to 50% size to facilitate working with 140px/cell maps
+// Added Scale button to size by pixel or unit
+// Added another preset grid setting: Medium transparency black
 
 const Roll20Pro = (() => {
     let category = [],
@@ -25,7 +27,7 @@ const Roll20Pro = (() => {
     }
     
     const scriptName = "Roll20 Production Wizard",
-        version = "0.9.10",
+        version = "0.9.11",
         
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -172,14 +174,14 @@ const Roll20Pro = (() => {
             makeH4("Resize Map and Page") + "<p>Select map graphic and enter width/height of image when prompted.</p>" +
             makeButton("Resize by pixel dimensions", "!prod map resize ?{Pixel width of image} ?{Pixel height of image}", styles.button) + "<br/>" +
             makeButton("Resize by units", "!prod map resizeUnit ?{Unit width of image} ?{Unit height of image}", styles.button) + 
-		    makeButton("Resize by scale", "!token-mod --set scale|*?{Input decimal value for scaling. Example 50% = 0.5|0.5}", styles.button) +"<br/>" +
+		        makeButton("Resize by scale", "!token-mod --set scale|*?{Input decimal value for scaling. Example 50% = 0.5|0.5}", styles.button) +"<br/>" +
             makeButton("Fit Image to page", "!prod map fittopage", styles.button) + 
             makeButton("Fit Page to image", "!prod map fittoimage", styles.button) + 
             makeButton("Reduce Page to 50%", "!prod map halfpage", styles.button) + 
             makeH4("Token Lock Selected") + 
-		    makeButton("Lock", "!token-mod --on lockMovement", styles.button) +
-		    makeButton("Unlock", "!token-mod --off lockMovement", styles.button) +
-		    makeButton("Make Drawing", "!token-mod --set isdrawing|true", styles.button) +
+		        makeButton("Lock", "!token-mod --on lockMovement", styles.button) +
+		        makeButton("Unlock", "!token-mod --off lockMovement", styles.button) +
+		        makeButton("Make Drawing", "!token-mod --set isdrawing|true", styles.button) +
             makeH4("Change Grid Width") +
             makeButton("Width 1", "!prod map edit snapping_increment 1", styles.button) +
             makeButton("Width 0.5", "!prod map edit snapping_increment 0.5", styles.button) +
@@ -245,7 +247,8 @@ const Roll20Pro = (() => {
             ,
 
             
-            finder: () => makeH4("NPC Handout Finder") +
+            finder: () => "<p style='" + styles.note + "'><b>TEMPORARY BUG:<BR>RESTART API SANDBOX<BR>IMMEDIATELY AFTER<BR>CREATING ANY HANDOUTS<BR>OR THEY WILL AUTO-REVERT!</b></p>" +
+            makeH4("NPC Handout Finder") +
             makeButton("Find for All Characters", "!prod finder art", styles.button) + 
             makeButton("Find for Selected Only", "!prod finder artSelected", styles.button) + 
             makeH4("NPC Mention Finder") +
@@ -255,7 +258,8 @@ const Roll20Pro = (() => {
             makeButton("Create Empty Art Handouts","!prod finder emptyHandouts", styles.button) + 
             makeBackButton()
             ,
-            stockHandouts: () => `<p>Current Product Name: ${state.Roll20Pro.productName}</p>` +
+            stockHandouts: () => "<p style='" + styles.note + "'><b>TEMPORARY BUG:<BR>RESTART API SANDBOX<BR>IMMEDIATELY AFTER<BR>CREATING ANY HANDOUTS<BR>OR THEY WILL AUTO-REVERT!</b></p>" +
+            `<p>Current Product Name: ${state.Roll20Pro.productName}</p>` +
             makeButton("Change Product Name", "!prod stock changeName ?{Product Name}", styles.button) +
             makeH4("Roll20 Handouts") + 
             makeButton("Map Scale", "!prod stock create battleMap", styles.button) +
@@ -947,7 +951,7 @@ const Roll20Pro = (() => {
             }
         },
         
-        halfPage = function(msg) {
+      halfPage = function(msg) {
             let lastPageID = getObj('player', msg.playerid).get('_lastpage');
             let pageID = Campaign().get("playerpageid")
             let page = getObj("page", pageID);
@@ -11169,4 +11173,3 @@ var VecMath = (function() {
         "VecMath.vec([1,1], [3,4]) equals [2,3]"
     );
 })();
-
