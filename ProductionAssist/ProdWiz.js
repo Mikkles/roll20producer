@@ -1,5 +1,5 @@
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
-//       PRODWIZ 0.9.10
+//       PRODWIZ 0.9.11
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
 // Changelog
 //0.9.10
@@ -25,7 +25,7 @@ const Roll20Pro = (() => {
     }
     
     const scriptName = "Roll20 Production Wizard",
-        version = "0.9.10",
+        version = "0.9.11",
         
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -172,14 +172,14 @@ const Roll20Pro = (() => {
             makeH4("Resize Map and Page") + "<p>Select map graphic and enter width/height of image when prompted.</p>" +
             makeButton("Resize by pixel dimensions", "!prod map resize ?{Pixel width of image} ?{Pixel height of image}", styles.button) + "<br/>" +
             makeButton("Resize by units", "!prod map resizeUnit ?{Unit width of image} ?{Unit height of image}", styles.button) + 
-		    makeButton("Resize by scale", "!token-mod --set scale|*?{Input decimal value for scaling. Example 50% = 0.5|0.5}", styles.button) +"<br/>" +
+		        makeButton("Resize by scale", "!token-mod --set scale|*?{Input decimal value for scaling. Example 50% = 0.5|0.5}", styles.button) +"<br/>" +
             makeButton("Fit Image to page", "!prod map fittopage", styles.button) + 
             makeButton("Fit Page to image", "!prod map fittoimage", styles.button) + 
             makeButton("Reduce Page to 50%", "!prod map halfpage", styles.button) + 
             makeH4("Token Lock Selected") + 
-		    makeButton("Lock", "!token-mod --on lockMovement", styles.button) +
-		    makeButton("Unlock", "!token-mod --off lockMovement", styles.button) +
-		    makeButton("Make Drawing", "!token-mod --set isdrawing|true", styles.button) +
+		        makeButton("Lock", "!token-mod --on lockMovement", styles.button) +
+		        makeButton("Unlock", "!token-mod --off lockMovement", styles.button) +
+		        makeButton("Make Drawing", "!token-mod --set isdrawing|true", styles.button) +
             makeH4("Change Grid Width") +
             makeButton("Width 1", "!prod map edit snapping_increment 1", styles.button) +
             makeButton("Width 0.5", "!prod map edit snapping_increment 0.5", styles.button) +
@@ -947,7 +947,7 @@ const Roll20Pro = (() => {
             }
         },
         
-        halfPage = function(msg) {
+      halfPage = function(msg) {
             let lastPageID = getObj('player', msg.playerid).get('_lastpage');
             let pageID = Campaign().get("playerpageid")
             let page = getObj("page", pageID);
@@ -11169,4 +11169,3 @@ var VecMath = (function() {
         "VecMath.vec([1,1], [3,4]) equals [2,3]"
     );
 })();
-
