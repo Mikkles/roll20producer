@@ -216,9 +216,9 @@ const Roll20Pro = (() => {
             ,
             map: () => "<p style='" + styles.note + "'>Player bookmark must be<BR>on your active page.</p>" +
             makeH4("Resize Map and Page","These buttons quickly resizes both the map image and the page size! Upload the map image to the map layer, then select that image.") + "<p>Select map graphic and enter width/height of image when prompted.</p>" +
-            makeButton("Resize by pixel dimensions", "!prod map resize ?{Pixel width of image} ?{Pixel height of image}", styles.button, "Click to enter the width, then the height of the map image, using pixels. Automatically resizes pge to fit.") + "<br/>" +
-            makeButton("Resize by units", "!prod map resizeUnit ?{Unit width of image} ?{Unit height of image}", styles.button, "Click to enter the width, then the height of the image, using grid units. Automatically resizes pge to fit.") + 
-		        makeButton("Resize by scale", "!token-mod --set scale|*?{Input decimal value for scaling. Example 50% = 0.5|0.5}", styles.button, "Click to enter a scale percentage, expressed as a decimal. Useful for make a map half or double size. Automatically resizes pge to fit.") +"<br/>" +
+            makeButton("Resize by pixel dimensions", "!prod map resize ?{Pixel width of image} ?{Pixel height of image}", styles.button, "Click to enter the width, then the height of the map image, using pixels. Automatically resizes page to fit.") + "<br/>" +
+            makeButton("Resize by units", "!prod map resizeUnit ?{Unit width of image} ?{Unit height of image}", styles.button, "Click to enter the width, then the height of the image, using grid units. Automatically resizes page to fit.") + 
+		        makeButton("Resize by scale", "!token-mod --set scale|*?{Input decimal value for scaling. Example 50% = 0.5|0.5}", styles.button, "Click to enter a scale percentage, expressed as a decimal. Useful for make a map half or double size. Automatically resizes page to fit.") +"<br/>" +
             makeButton("Fit Image to page", "!prod map fittopage", styles.button, "Resizes selected image to fit the current page dimensions.") + 
             makeButton("Fit Page to image", "!prod map fittoimage", styles.button, "Resizes the current page dimensions to fit the selected map dimensions.") + 
             makeButton("Reduce Page to 50%", "!prod map halfpage", styles.button, "Quickly resize a map to half its current size. Useful for maps that are intended to display at 140 pixels per unit.") + 
