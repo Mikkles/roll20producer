@@ -1,7 +1,10 @@
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
-//       PRODWIZ 0.9.12
+//       PRODWIZ 0.9.13
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
 // Changelog
+// 0.9.13
+// Added full help system
+// Added light sensor to Dynamic Lighting Buddy
 // 0.9.12
 // Minor Correction on Accessing Demiplane Content handout
 // 0.9.11
@@ -36,6 +39,7 @@ const Roll20Pro = (() => {
             menu: 'background-color: #999; color:#111 !important; border: 1px solid #000;border-radius: 10px; padding: 5px; font-family: &quot;Good Pro Condensed&quot;, &quot;Roboto&quot;, &quot;Verdana&quot;,sans-serif;, ',
             bigButton: 'font-size: 1.2em; background-color: pink; border: 1px solid black; border-radius: 3px; padding: 4px; margin: 2px; color: #000; text-align: center; ',
             button: 'background-color: pink; border: 1px solid black; border-radius: 3px; padding: 0px, 2px; margin: 2px; color: #000; text-align: center; ',
+            smallButton: 'font-size: 0.8em; background-color: pink; border: 1px solid black; border-radius: 3px; padding: 1px, 2px; margin: 2px; color: #000; text-align: center; ',
             textButton: 'background-color: transparent; border: none; padding: 0; color: #000; text-decoration: underline',
             list: 'list-style: none;',
             float: {
@@ -52,26 +56,49 @@ const Roll20Pro = (() => {
             }
         },
         
-        makeTitle = function (title) {
-            return '<h2 style="' + styles.title + '">' + title + '</h2>';
+        infoButton = function (linkText) {
+            if (undefined !== linkText){
+                if (linkText.includes("http") || linkText.includes("!prod ") ){
+                    return '<a style = "text-decoration: none" href = "' + linkText + '"><span style = "font-family:pictos; color:#666; text-transform: lowercase; float:right;">j</span> </a>';
+                } else
+                    return '<a style = "text-decoration: none" title = "' + linkText + '"><span style = "font-family:pictos; color:#444; margin-left:5px;">?</span></a>';
+            } else {
+            return '';
+            }
+        },
+        
+        toolButton =  function(linkText){
+             return '<a style = "font-size: 1.0em; line-height:0.8em; text-decoration: none; background-color:transparent; margin:0px 0px 0px 2px; padding:0px; border:none;font-family:pictos; color:#666; text-transform: lowercase;" href = "' + linkText + '">y</a>';
+        }
+        
+        
+
+        makeTitle = function (title, linkText) {
+            //link = ((undefined !== linkText) ? '<a href = "' + linkText + '">' + linkButton + '</a>' : '' );
+            return '<h2 style="' + styles.title + '">' + title + infoButton(linkText) + '</h2>';
         },
 
-        makeButton = function (title, href, style) {
-            return '<a style="' + style + '" href="' + href + '">' + title + '</a>';
+        makeButton = function (title, href, style, linkText) {
+            return '<a style="' + style + '" href="' + href + '" title = "' + linkText + '">' + title + '</a>';
+
         },
         
         makeBackButton = function () {
             return '<br /><a style="' + styles.button + '" href="' + '!prod' + '">' + 'Back' + '</a>';
         },
         
-        makeH4 = function(text){
-            return '<h4 style = "color:#111 !important">' + text + '</h4>';  
+        makeH4 = function(text,linkText){
+            return '<h4 style = "color:#111 !important">' + text +
+            infoButton(linkText) +
+            //((undefined !== link) ? '<a style = "text-decoration:none" href = "' + link + '">' + linkButton + '</a>': '') +
+            '</h4>'
+            ;  
         },
 
-        makeAndSendMenu = function (contents, title, whisper, callback) {
-            title = (title && title != '') ? makeTitle(title) : '';
+        makeAndSendMenu = function (contents, title, whisper, callback,linkText) {
+            title = (title && title != '') ? makeTitle(title,linkText) : '';
             whisper = (whisper && whisper !== '') ? '/w ' + whisper + ' ' : '';
-            sendChat(scriptName, whisper + '<div style="' + styles.menu + styles.overflow + '">' + title + contents + '</div>', null, {
+            sendChat(scriptName, whisper + '<div style="' + styles.menu + styles.overflow + '">' + title + contents +'</div>', null, {
                 noarchive: true
             });
         },
@@ -88,7 +115,21 @@ const Roll20Pro = (() => {
             }
         },
         
+        updateBuddyLight = function(token) {
+            if (token.get("name") === "Dynamic Lighting Buddy" && typeof checkLightLevel !== "undefined") {
+                if (!token.get("emits_bright_light")) {
+                    let lightData = (checkLightLevel.isLitBy(token.get("id")).total * 100).toFixed();
+                    token.set("isdrawing",true);
+                    token.set("bar1_value", lightData);
+                    token.set("bar1_max", "100");
+                } else {
+                    token.set("isdrawing",true);
+                    token.set("bar1_value", "");
+                    token.set("bar1_max", "");
 
+                }
+            }
+        },
 
         
         menuText = {
@@ -100,13 +141,14 @@ const Roll20Pro = (() => {
 
             "<p>See <b><u><a href='https://roll20.atlassian.net/wiki/spaces/CP/pages/1408761861/Production+Wizard+Script' style='color:#c5006c'>How-To</a></u></b> for instructions.</p>" +
 
-            makeButton("Autolinker Examples", "!prod autolinker", styles.bigButton)+
-            makeButton("Token Helper", "!prod token", styles.bigButton) + 
-            makeButton("Map/DL Helper", "!prod map", styles.bigButton) + 
-            makeButton("Picture/Mention Finder", "!prod finder", styles.bigButton) + 
-            makeButton("Stock Handouts", "!prod stock", styles.bigButton) + 
-            makeButton("Tables and Macros", "!prod tablesAndMacros", styles.bigButton) + 
-            makeButton("Admin Tools", "!prod admin", styles.bigButton)
+            makeButton("Autolinker Examples", "!prod autolinker", styles.bigButton, "Some examples of the autolinker functionality. Load menu for more information.")+
+            makeButton("Token Helper", "!prod token", styles.bigButton, "The Token Tools page can help you set up tokens and update to UDL! Each button will do something to all selected tokens, allowing you to change options of a selection or even all of the tokens on the page! Load menu for more information.") + 
+            makeButton("Map/DL Helper", "!prod map", styles.bigButton, "These tools will help you set up maps and dynamic lighting. For safety, you must place the Player Bookmark on the page you’re working on! Load menu for more information.") + 
+            makeButton("Picture/Mention Finder", "!prod finder", styles.bigButton, "These tools will automatically add links to certain characters, based on other handouts! Load menu for more information.") + 
+            makeButton("Stock Handouts", "!prod stock", styles.bigButton, "These tools will create stock handouts, using the copies in the Contractor module as a guide. Load menu for more information.") + 
+            makeButton("Tables and Macros", "!prod tablesAndMacros", styles.bigButton, "This contains links and instructions for automating the creation of macros and tables. Load menu for more information.") + 
+            makeButton("Confluence How-to articles", "!prod confluence", styles.bigButton, "These links will take you to the confluence dosumentation for common Jira tasks. Load menu for more information.") +
+            makeButton("Admin Tools", "!prod admin", styles.bigButton, "Under consttruction. Load menu for more information.")
             ,
             autolinker: () => "<p>Some examples of the autolinker functionality. These can be used on the notes/gmnotes of any handout or character.</p>" +
             "<p>Please note that this script works after you save changes to a handout, "+
@@ -125,46 +167,46 @@ const Roll20Pro = (() => {
 	    	makeButton("Export Table script Instructions", "!import-table", styles.button) +
             makeBackButton()
             ,
-            token: () => "<p style='" + styles.note + "'>Tokens must have Represented filled out manually.</p>" +
-	        makeH4("Token Lock Selected") + 
-		    makeButton("Lock", "!token-mod --on lockMovement", styles.button) +
-		    makeButton("Unlock", "!token-mod --off lockMovement", styles.button) +
+            token: () => "<p style='" + styles.note + "'>Tokens must have their 'Represented'</BR>property filled out manually.</p>" +
+	        makeH4("Token Lock Selected", "These buttons will Show, Hide, or Toggle the nameplates of all selected tokens.") + 
+		    makeButton("Lock", "!token-mod --on lockMovement", styles.button,"Locks all selected objects") +
+		    makeButton("Unlock", "!token-mod --off lockMovement", styles.button,"Unlocks all selected objects") +
             makeH4("Show Nameplates") +
-            makeButton("Show Names", "!token-mod --on showname", styles.button) +
-            makeButton("Hide Names", "!token-mod --off showname", styles.button) +
-            makeButton("Toggle Names", "!token-mod --flip showname", styles.button) +
-            makeH4("Resize Tokens") + 
+            makeButton("Show Names", "!token-mod --on showname", styles.button, "All players will be able to see the nameplates of all selected tokens") +
+            makeButton("Hide Names", "!token-mod --off showname", styles.button, "No players, (not even the GM) will be able to see the nameplates of all selected tokens") +
+            makeButton("Toggle Names", "!token-mod --flip showname", styles.button, "Flips the visibility of selected token nameplates. All those visible will become invisible and vice versa") +
+            makeH4("Resize Tokens", "These will change all selected tokensa to their indicated size. Typically, this means medium, large, huge, and gargantuan, but check the specifications on the system’s how-to!") + 
             makeButton("1x1", "!token-mod --set width|70 height|70", styles.button) +
             makeButton("2x2", "!token-mod --set width|140 height|140", styles.button) +
             makeButton("3x3", "!token-mod --set width|210 height|210", styles.button) +
             makeButton("4x4", "!token-mod --set width|280 height|280", styles.button) +
-            makeH4("Setup Token by System") + 
-            makeButton("D&D 5e", "!token-mod --set bar1_link|hp bar2_link|npc_ac bar3| bar3_link| &#13;!token-mod --set bar1_reset| &#13;!token-mod --set bar1_link|", styles.button) +
-            makeButton("Pathfinder 2e", "!token-mod --set bar1_link|hit_points bar2_link|armor_class bar3| bar3_link| &#13;!token-mod --set bar1_link|", styles.button) +
-            makeButton("Starfinder", "!token-mod --set bar1_link|hp bar2_link|eac bar3_link|kac &#13;!token-mod &#13;!token-mod --set bar1_link|", styles.button) +
-            makeButton("Pathfinder 1e", "!token-mod --set bar1_link|hp bar2_link|ac bar3| bar3_link| &#13;!token-mod &#13;!token-mod --set bar1_link|", styles.button) +
-            makeH4("UDL Vision") + 
-            makeButton("Vision Off", "!token-mod --set bright_vision|false", styles.button) +
-            makeButton("Vision On", "!token-mod --set bright_vision|true", styles.button) +
-            makeButton("Campaign-wide Vis/NV Off", "!prod token ?{This affects every placed token! Type 'off' to confirm.}", styles.button) +
-            makeH4("UDL Darkvision") + 
+            makeH4("Setup Token by System","https://roll20.atlassian.net/wiki/spaces/CP/pages/838860818/M4b+Set+Up+Tokens#Token-Settings") + 
+            makeButton("D&D 5e", "!token-mod --set bar1_link|hp bar2_link|npc_ac bar3| bar3_link| &#13;!token-mod --set bar1_reset| &#13;!token-mod --set bar1_link|", styles.button, "bar 1: hp (enter and then set to none) NOTE: Pregens should remain linked -- bar 2: npc_ac") +
+            makeButton("Pathfinder 2e", "!token-mod --set bar1_link|hit_points bar2_link|armor_class bar3| bar3_link| &#13;!token-mod --set bar1_link|", styles.button, "bar 1: hit_points (enter and then set to none) NOTE: Pregens should remain linked -- bar 2: armor_class -- Note: There is a known bug where creatures dragged in from the compendium have their token’s bars filled erroneously. Check that each attribute and their numbers are correct.") +
+            makeButton("Starfinder", "!token-mod --set bar1_link|hp bar2_link|eac bar3_link|kac &#13;!token-mod &#13;!token-mod --set bar1_link|", styles.button, "bar 1: hit_points (enter and then set to none) NOTE: Pregens should remain linked -- bar 2: armor_class") +
+            makeButton("Pathfinder 1e", "!token-mod --set bar1_link|hp bar2_link|ac bar3| bar3_link| &#13;!token-mod &#13;!token-mod --set bar1_link|", styles.button, "bar 1: hp (enter and then set to none) NOTE: Pregens should remain linked -- bar 2: ac") +
+            makeH4("Vision","https://roll20.atlassian.net/wiki/spaces/CP/pages/838860818/M4b+Set+Up+Tokens#Updated-Dynamic-Lighting") + 
+            makeButton("Vision Off", "!token-mod --set bright_vision|false", styles.button, "This should be the default for all but PC Pregens") +
+            makeButton("Vision On", "!token-mod --set bright_vision|true", styles.button, "This should be left off for all but PC Pregens") +
+            makeButton("Campaign-wide Vis/NV Off", "!prod token ?{This affects every placed token! Type 'off' to confirm.}", styles.button,"This affects every placed token! Use with caution") +
+            makeH4("Night Vision (darkvision)") + 
             makeButton("None", "!token-mod --set has_night_vision|false night_vision_distance|0", styles.button) +
-            makeButton("60 ft", "!token-mod --set has_night_vision|true night_vision_distance|60", styles.button) +
-            makeButton("120 ft", "!token-mod --set has_night_vision|true night_vision_distance|120", styles.button) + 
-            makeButton("PF2: Get from senses", "!prod token UDLdv", styles.button) + 
-            makeH4("Token Actions") + 
-            makeButton("For 5e", "!ta", styles.button) + 
-            makeButton("5e PreGen", "!ta pc", styles.button) + 
-            makeButton("For PF2", "!ta pf2", styles.button) + 
-            makeButton("Delete All", "!deleteta", styles.button) + 
-            makeH4("Defaults") + 
-            makeButton("Assign as Default Token", "!token-mod --set defaulttoken", styles.button) +
-            makeButton("Avatar from Token (if in library)", "!prod token avatar", styles.button) +
-            makeH4("<hr>Token Page Tools") +
-            makeButton("Assign Category", "!prod token addToCat ?{Category Number}", styles.button) +
-            makeButton("See Categories", "!prod token seeCats", styles.button) + "<br/><br/>" +
-            makeButton("Run Page Sorter", "!prod token runSorter", styles.button) +
-            makeButton("Reset Categories (if sure!)", "!prod token resetCats", styles.button) +
+            makeButton("60 ft", "!token-mod --set has_night_vision|true night_vision_distance|60", styles.button, "60 feet of night vision, no modes") +
+            makeButton("120 ft", "!token-mod --set has_night_vision|true night_vision_distance|120", styles.button, "1200 feet of night vision, no modes") + 
+            makeButton("PF2: Get from senses", "!prod token UDLdv", styles.button, "For Pathfinder 2e only, you can use Get From Senses. This will look at the Senses attribute on their character sheet to see if it includes the word “Darkvision”. Keep in mind, many creatures have crazy special kinds of vision, and sometimes their senses will not exactly list Darkvision, so you’ll want to double check these.") + 
+            makeH4("Token Actions", "https://roll20.atlassian.net/wiki/spaces/CP/pages/1408761861/Production+Wizard+Script#Token-Actions") + 
+            makeButton("For 5e", "!ta", styles.button, "(D&D 2014 by Roll20, only) This ommand will create a full suite of token action buttons for all selected character tokens. Actions for NPCs and Attacks for PCs. Token Action Maker will put a response in chat for each character processed in this way") + 
+            makeButton("5e PreGen", "!ta pc", styles.button, "This will create token actions that are appropriate for characters built as PCs, do not use on creatures that use NPC statblocks.") + 
+            makeButton("For PF2", "!ta pf2", styles.button," This command will create a full suite of token action buttons for all selected character tokens using the Pathfinder 2 by Roll20 Sheet. Token Action Maker will put a response in chat for each character processed in this way.") + 
+            makeButton("Delete All", "!deleteta", styles.button, "Deletes ALL token actions for selected characters, whether they were created by this script or not. Use this if you are going to re-generate token actions. Since Token Action Maker abbreviates the names of some actions (“1-H” for “One Handed” for example), deleting existing token actions before generating new ones will help prevent generating duplicate buttons. !deleteta will work on any sheet.") + 
+            makeH4("Defaults", "Use these commands ONLY on a page that is for grids with no Subdivisions. Otherwise tokens will drop at the wrong size on other pages. Like normal, if you change a token’s settings, you’ll need to reassign the default token to reflect those changes!") + 
+            makeButton("Assign as Default Token", "!token-mod --set defaulttoken", styles.button, "Assigns all selected tokens to their characters as their respective default tokens (just like clicking Use Selected Token on a character’s edit page).") +
+            makeButton("Avatar from Token (if in library)", "!prod token avatar", styles.button, "Sets the Avatar of the character as the token image as standard") +
+            makeH4("<hr>Token Page Tools", "https://roll20.atlassian.net/wiki/spaces/CP/pages/1408761861/Production+Wizard+Script#Token-Page-Creator") +
+            makeButton("Assign Category", "!prod token addToCat ?{Category Number}", styles.button, "See Confluence link next to 'Token Page Tools'. Assigns a caegtory number to selected tokens. Good practices is to assign by 10s.") +
+            makeButton("See Categories", "!prod token seeCats", styles.button, "See Confluence link next to 'Token Page Tools'. Sends a list to chat of which tokens are in which category.") + "<br/><br/>" +
+            makeButton("Run Page Sorter", "!prod token runSorter", styles.button, "Click this button to move categorized tokens into place, and asterisks will be created next to rollable tokens. Make sure to double-check for things like accidental miscategorization, double entries, tokens that should be rollable, etc. If it looks good, finish it up by using the drawing text tool to label the categories as normal!") +
+            makeButton("Reset Categories (if sure!)", "!prod token resetCats", styles.button,"Use this button to start over. This will clear all categories." ) +
             //DEPRECATED
             //makeH4("<del><i>LDL Darkvision") + 
             //makeButton("None", "!token-mod --set light_radius| light_dimradius|0", styles.button) +
@@ -173,97 +215,78 @@ const Roll20Pro = (() => {
             makeBackButton()
             ,
             map: () => "<p style='" + styles.note + "'>Player bookmark must be<BR>on your active page.</p>" +
-            makeH4("Resize Map and Page") + "<p>Select map graphic and enter width/height of image when prompted.</p>" +
-            makeButton("Resize by pixel dimensions", "!prod map resize ?{Pixel width of image} ?{Pixel height of image}", styles.button) + "<br/>" +
-            makeButton("Resize by units", "!prod map resizeUnit ?{Unit width of image} ?{Unit height of image}", styles.button) + 
-		        makeButton("Resize by scale", "!token-mod --set scale|*?{Input decimal value for scaling. Example 50% = 0.5|0.5}", styles.button) +"<br/>" +
-            makeButton("Fit Image to page", "!prod map fittopage", styles.button) + 
-            makeButton("Fit Page to image", "!prod map fittoimage", styles.button) + 
-            makeButton("Reduce Page to 50%", "!prod map halfpage", styles.button) + 
-            makeH4("Token Lock Selected") + 
-		        makeButton("Lock", "!token-mod --on lockMovement", styles.button) +
-		        makeButton("Unlock", "!token-mod --off lockMovement", styles.button) +
-		        makeButton("Make Drawing", "!token-mod --set isdrawing|true", styles.button) +
-            makeH4("Change Grid Width") +
+            makeH4("Resize Map and Page","These buttons quickly resizes both the map image and the page size! Upload the map image to the map layer, then select that image.") + "<p>Select map graphic and enter width/height of image when prompted.</p>" +
+            makeButton("Resize by pixel dimensions", "!prod map resize ?{Pixel width of image} ?{Pixel height of image}", styles.button, "Click to enter the width, then the height of the map image, using pixels. Automatically resizes pge to fit.") + "<br/>" +
+            makeButton("Resize by units", "!prod map resizeUnit ?{Unit width of image} ?{Unit height of image}", styles.button, "Click to enter the width, then the height of the image, using grid units. Automatically resizes pge to fit.") + 
+		        makeButton("Resize by scale", "!token-mod --set scale|*?{Input decimal value for scaling. Example 50% = 0.5|0.5}", styles.button, "Click to enter a scale percentage, expressed as a decimal. Useful for make a map half or double size. Automatically resizes pge to fit.") +"<br/>" +
+            makeButton("Fit Image to page", "!prod map fittopage", styles.button, "Resizes selected image to fit the current page dimensions.") + 
+            makeButton("Fit Page to image", "!prod map fittoimage", styles.button, "Resizes the current page dimensions to fit the selected map dimensions.") + 
+            makeButton("Reduce Page to 50%", "!prod map halfpage", styles.button, "Quickly resize a map to half its current size. Useful for maps that are intended to display at 140 pixels per unit.") + 
+            makeH4("Token Lock Selected", "Locks or unlocks multiple selected tokens. This will be deprecated in Jumpgate, which can do this natively.") + 
+		        makeButton("Lock", "!token-mod --on lockMovement", styles.button, "Locks all selected tokens. Locked tokens cannot be moved, resized or rotated.") +
+		        makeButton("Unlock", "!token-mod --off lockMovement", styles.button, "Unlock all selected tokens. To unlock all tokens on page, select all and then push this button.") +
+		        makeButton("Make Drawing", "!token-mod --set isdrawing|true", styles.button, "Use this button to make all selected images ignore grid snap and to not display token bars.") +
+            makeH4("Change Grid Width","These buttons allow you to quickly change elements of the grid. This is primarily to help you quickly switch map settings when doing Dynamic Lighting tasks! These features are also available through the Dynamic Lighting Tool.") +
             makeButton("Width 1", "!prod map edit snapping_increment 1", styles.button) +
             makeButton("Width 0.5", "!prod map edit snapping_increment 0.5", styles.button) +
             makeButton("Width 0.25", "!prod map edit snapping_increment 0.25", styles.button) +
-            makeButton("Width 0.125", "!prod map edit snapping_increment 0.125", styles.button) +
+            makeButton("Width 0.125", "!prod map edit snapping_increment 0.125", styles.button, "Useful setting for dynamic lighting task.") +
             makeH4("Change Grid Opacity") +
-            makeButton("Prompt", "!prod map edit grid_opacity ?{1 to 100|100}", styles.button) +
-            makeH4("Change Grid Colour") +
-            makeButton("Default Grey", "!prod map edit gridcolor #C0C0C0", styles.button) +
-            makeButton("High Vis Pink", "!prod map edit gridcolor #ff00ff", styles.button) +
-            makeButton("High Vis Green", "!prod map edit gridcolor #00ff00", styles.button) +
-            makeButton("Med Vis Green", "!prod map edit gridcolor #93c47d", styles.button) +
-            makeH4("Toggle Dynamic Lighting Buddy") + //"<p>Creates a buddy on the current page. If there are already any buddies created, " + 
-            //"this will delete it. You may copypaste buddies as long as you remove them before project completion.</p>" +
-            makeButton("Toggle Buddy", "!prod map buddy", styles.button) +
-            makeButton("Buddy Menu", "!prod buddy", styles.button) +
-
-            //########################################################################################
-            //THESE ACTIONS WERE APPARENTLY MADE FOR PATH SPLITTER. THEY ARE LEFT IN SHOULD WE DECIDE TO SWITCH BACK TO IT.
-            //makeH4("Path Editor") + 
-            //makeButton("Edit Selected Path", "!path_Edit", styles.button) +
-            //makeButton("Toggle Grid Snap", "!path_Snap", styles.button) +
-            //makeButton("Split Path at Selected Point", "!path_Split", styles.button) +
-            //makeButton("Add Point Between 2 Selected", "!path_AddPt", styles.button) + 
-            //makeButton("Delete Selected Point", "!path_DeletePt", styles.button) + "<br />" +
-            //makeButton("<b>Done Editing Path</b>", "!path_Done", styles.button) + "<br /><br />" +
-            //makeButton("OpenPolygon", "!path_Open", styles.button) +
-            //makeButton("ClosePolygon", "!path_Close", styles.button) + 
-            /*
-            "<br />Point Editor<br />" +
-            makeButton("Toggle Color", "!path_TogglePt", styles.button) +
-            makeButton("Size of Pts", "!path_ResizePt ?{Enter size in pixels|20}", styles.button) +
-            makeButton("Shrink Pts", "!path_ResizePt decrease", styles.button) +
-            makeButton("Grow Pts", "!path_ResizePt increase", styles.button) +
-            */
-            //########################################################################################
-
-            makeH4("Path Splitter-Use Black for Splitter") +
-            makeButton("Split Path", "!pathSplit", styles.button) +
-            makeButton("Join Path", "!pathJoin", styles.button) +
-            makeButton("Close Path", "!pathClose", styles.button) +
-            makeH4("Import Generic Battle Map") +
-            makeButton("Parchment", "!prod battlemap parchment", styles.button) + 
-            makeButton("Modern/SF", "!prod battlemap modern", styles.button) + 
-            makeH4("Dynamic Lighting Tool") +
-            makeButton("Full Report", "!dltool", styles.button) +
-            makeButton("Page Tools", "!dltool --report|extra", styles.button) +
+            makeButton("Prompt", "!prod map edit grid_opacity ?{1 to 100|100}", styles.button, "Sets grid opacity from 0 (transparent) to 100 (opaque).") +
+            makeH4("Change Grid Colour", "These are some default settings, but in any case, try to duplicate the look and fel of the print product, if possible.") +
+            makeButton("Default Grey", "!prod map edit gridcolor #C0C0C0", styles.button, "If this looks odd or is hard to see, try black at reduced opacity.") +
+            makeButton("High Vis Pink", "!prod map edit gridcolor #ff00ff", styles.button, "Useful for dynamic lighting tasks, as it stands out against most map images.") +
+            makeButton("High Vis Green", "!prod map edit gridcolor #00ff00", styles.button, "Useful for dynamic lighting tasks, as it stands out against most map images.") +
+            makeButton("Med Vis Green", "!prod map edit gridcolor #93c47d", styles.button, "Useful for dynamic lighting tasks, as it stands out against most map images.") +
+            makeH4("Toggle Dynamic Lighting Buddy", "This will create or delete a token for testing Dynamic Lighting. The token has a light radius of 100'. The script will remember if any buddies are active, and will output 'Buddy still in game' on the main menu if any are still on, so we can check that we've deleted all of them! ") + 
+            makeButton("Toggle Buddy", "!prod map buddy", styles.button, "Creates a Dyanmic Lighting Buddy, or deletes all if any are already existing.") +
+            makeButton("Buddy Menu", "!prod buddy", styles.button, "Calls up a menu for controlling properties of Dynamic Lighting Buddy.") +
+            makeButton("Check Light Level", "!checkLightLevel", styles.button, "Reports the amount of light that hits the selected token.") +
+            makeH4("Path Splitter-Use Black for Splitter", "https://roll20.atlassian.net/wiki/spaces/CP/pages/1580269644/M2+Apply+Dynamic+Lighting?force_transition=49083de2-88a6-4450-af97-e11a959e2b20#Path-Splitter") +
+            makeButton("Split Path", "!pathSplit", styles.button, "Splits a path based upon it's intersections with an overlapping black path.") +
+            makeButton("Join Path", "!pathJoin", styles.button, "Joins the closest end points of two separate paths.") +
+            makeButton("Close Path", "!pathClose", styles.button, "Closes a single selected path that has two open end points. Useful for constructing complex shapes.") +
+            makeH4("Import Generic Battle Map", "These buttons import the generic battle map we include with most conversion products. The Jira task or the Progress Sheet will tell you which one to use. You must be on a blank page, and the player flag must be on this page.") +
+            makeButton("Parchment", "!prod battlemap parchment", styles.button, "You must be on a blank page, and the player flag must be on this page.") + 
+            makeButton("Modern/SF", "!prod battlemap modern", styles.button, "You must be on a blank page, and the player flag must be on this page.") + 
+            makeH4("Dynamic Lighting Tool","This calls up a tool that will change virtually every setting regarding dynamic lighting in real time. There are preset buttons for common grid settings and Daylight Levels, and controls for  most everythign else. There are also a couple of Dynamic Lighting related tasks (Buddy and Split Path) repeated here for convenience. The DL Tool has full help links built in.") +
+            makeButton("Full Report", "!dltool", styles.button, "This is the full menu for Dynamic Lighting Tool.") +
+            makeButton("Page Tools", "!dltool --report|extra", styles.button,"This contains most of the commands you might need while dynamically lighting a page.") +
             makeBackButton()
             ,
 
             buddy: () => 
-            makeButton("Toggle Buddy", "!prod map buddy", styles.button) + 
-            makeH4("Nightvision") +
-            makeButton("On", "!prod buddy nightvision_on", styles.button) + 
-            makeButton("Off", "!prod buddy nightvision_off", styles.button) + 
-            makeH4("Light") +
-            makeButton("On", "!prod buddy brightlight_on", styles.button) + 
+            makeButton("Toggle Buddy", "!prod map buddy", styles.button, "This will create a Dynamic Lighting buddy if none exists, and remove all Buddies if one does exist.") + 
+            makeH4("Nightvision", "Dynamic Lighting Buddy Night vision controls. Use to check if light sources are behaving as expected.") +
+            makeButton("On", "!prod buddy nightvision_on", styles.button, "This will show what a character withNight vision would see.") + 
+            makeButton("Off", "!prod buddy nightvision_off", styles.button, "This will show what a character without night vision would see. Useful for checking illumination levels provided by palced light sources.") + 
+            makeH4("Light", "This will toggle light being emitted by the Buddy. Default is 100 feet of bright light.") +
+            makeButton("On", "!prod buddy brightlight_on", styles.button, "Useful for quickly checking for light leaks.") + 
             makeButton("Off", "!prod buddy brightlight_off", styles.button) +
-            makeH4("Layer") +
-            makeButton("Dynamic Lighting", "!prod buddy dl_layer", styles.button) + 
-            makeButton("Token", "!prod buddy token_layer", styles.button) + 
+            makeH4("Layer", "These buttons move the Dynamic Lighting Buddy between layers") +
+            makeButton("Dynamic Lighting", "!prod buddy dl_layer", styles.button, "Moves buddy to Dynamic Lighting layer. This is the default.") + 
+            makeButton("Token", "!prod buddy token_layer", styles.button, "Moves buddy to Token layer. Useful if dynamic lighting lines are distracting.") + 
+            "<p>If the Vision token is on the token layer and not shining any light, a bar will appear above the buddy, showing the amount of light shining on it." + 
             makeBackButton()
             ,
 
             
-            finder: () => "<p style='" + styles.note + "'><b>TEMPORARY BUG:<BR>RESTART API SANDBOX<BR>IMMEDIATELY AFTER<BR>CREATING ANY HANDOUTS<BR>OR THEY WILL AUTO-REVERT!</b></p>" +
-            makeH4("NPC Handout Finder") +
-            makeButton("Find for All Characters", "!prod finder art", styles.button) + 
-            makeButton("Find for Selected Only", "!prod finder artSelected", styles.button) + 
-            makeH4("NPC Mention Finder") +
-            makeButton("Find for All Characters", "!prod finder mention", styles.button) + 
-            makeButton("Find for Selected Only", "!prod finder mentionSelected", styles.button) +
-            makeH4("NPC Handout Processor") +
-            makeButton("Create Empty Art Handouts","!prod finder emptyHandouts", styles.button) + 
+            finder: () => 
+            makeH4("NPC Handout Finder", "https://roll20.atlassian.net/wiki/spaces/CP/pages/1408761861/Production+Wizard+Script#Art-Handout-Linker") +
+            makeButton("Find for All Characters", "!prod finder art", styles.button, "As below, but for all characters in the game.") + 
+            makeButton("Find for Selected Only", "!prod finder artSelected", styles.button, "This button will search for a handout titled exactly like the character that the selected token represents. If one is found, it will check to make sure the Bio doesn’t already contain the word 'Picture:' in it. If that word isn’t found in the Bio, it will add 'Picture: Handout (Name)' to the top of the Bio.") + 
+            makeH4("NPC Mention Finder","This tool will go through all characters, or characters of selected tokens, and attempt to add '(s) may be found in the following location(s):' to selected characters' gmnotes. --NOTE: Since this script doesn't understand context, it may gather irrelevant mentions, or pick up completely incorrect ones (the word 'shaggy' will count as a mention for 'hag'). In addition, it won't add things like room numbers or areas. This tool is meant largely as a starting point for us to carefully edit.") +
+            makeButton("Find for All Characters", "!prod finder mention", styles.button, "As below, but for all characters in the game.") + 
+            makeButton("Find for Selected Only", "!prod finder mentionSelected", styles.button, "search all handouts for any mention of the character's name, or any links to that character. If any are found, it will check to make sure that the GM Notes section doesn’t already contain the words “may be found”. If that phrase isn’t found in the GM Notes, it will add all links to all mentions of that character in a bullet list.") +
+            makeH4("Make Blank Handouts", "Useful for creating a large number of handouts at once.") +
+            makeButton("Blank Player Art Handouts", "!prod stock create artHandout ?{How many blank Player Art Handouts do you wish to create?|1}", styles.button, "This button creates empty art handouts, titled 'Player Art Handout: '. This may save you some time if you are making al ot of them manually.") +
+            makeButton("Blank Handouts", "!prod stock create blankHandout ?{How many blank Handouts do you wish to create?|1}", styles.button, "This button creates empty blank handouts, titled 'Handout: . This may save you some time if you are making al ot of them manually.") +
             makeBackButton()
             ,
-            stockHandouts: () => "<p style='" + styles.note + "'><b>TEMPORARY BUG:<BR>RESTART API SANDBOX<BR>IMMEDIATELY AFTER<BR>CREATING ANY HANDOUTS<BR>OR THEY WILL AUTO-REVERT!</b></p>" +
+            stockHandouts: () =>
             `<p>Current Product Name: ${state.Roll20Pro.productName}</p>` +
             makeButton("Change Product Name", "!prod stock changeName ?{Product Name}", styles.button) +
-            makeH4("Roll20 Handouts") + 
+            makeH4("Roll20 Handouts", "All of these handouts are based on Templates found in the Production game. The names should be self-explanatory.") + 
             makeButton("Map Scale", "!prod stock create battleMap", styles.button) +
             makeButton("Macros and Tables", "!prod stock create macroHandout", styles.button) +
             makeButton("Blank Player Art Handouts", "!prod stock create artHandout ?{How many blank Player Art Handouts do you wish to create?|1}", styles.button) +
@@ -291,11 +314,46 @@ const Roll20Pro = (() => {
             makeButton("DMsGuild", "!prod stock create thankyouDMsGuildHandout", styles.button) +
             makeButton("Pathfinder Infinite", "!prod stock create thankyouPFIHandout", styles.button) +
             makeButton("Miskatonic", "!prod stock create thankyouMiskatonicHandout", styles.button) +
-            makeH4("Generic Battlemats") + 
-            makeButton("Parchment", "!prod page create parchment", styles.button) +
-            makeButton("Modern", "!prod page create modern", styles.button) +
+            makeH4("Import Generic Battle Map", "These buttons import the generic battle map we include with most conversion products. The Jira task or the Progress Sheet will tell you which one to use. You must be on a blank page, and the player flag must be on this page.") +
+            makeButton("Parchment", "!prod battlemap parchment", styles.button, "You must be on a blank page, and the player flag must be on this page.") + 
+            makeButton("Modern/SF", "!prod battlemap modern", styles.button, "You must be on a blank page, and the player flag must be on this page.") + 
+            makeH4("Contractor Module","This game contains all the originals of these handouts and is considered the official source. When making changes to the originals, plase inform Keith or Mik, so that they can ensure that all handouts created match our templates.") + 
+            makeButton("Go to Contractor Module", "https://app.roll20.net/campaigns/details/16657049/contractor-module", styles.button) +
             //makeButton("!linking", "!prod stock linking", styles.button) + //UNDER CONSTRUCTION
             makeBackButton()
+,
+            confluence: () =>
+    makeH4("Phase 1 Tasks") +
+    makeButton("A1 Create Tokens", "https://roll20.atlassian.net/wiki/spaces/CP/pages/266311/A1+Create+Tokens", styles.smallButton) + "<br>" +
+    makeButton("A1 Create Art Portraits", "https://roll20.atlassian.net/wiki/spaces/CP/pages/3257466911/A1+Create+Art+Portraits", styles.smallButton) + "<br>" +
+    makeButton("C1 Structured Data", "https://roll20.atlassian.net/wiki/spaces/CP/pages/826933843/C1+Structured+Data", styles.smallButton) + "<br>" +
+    makeButton("C1 Format Compendium Text", "https://roll20.atlassian.net/wiki/spaces/CP/pages/847250081/C1+Format+Compendium+Text", styles.smallButton) + "<br>" +
+    makeButton("M1 Edit Upload & Set Up Maps", "https://roll20.atlassian.net/wiki/spaces/CP/pages/847283041/M1+Edit+Upload+and+Set+Up+Maps", styles.smallButton) + toolButton("!prod map") + "<br>" +
+    makeH4("Phase 2 Tasks") +
+    makeButton("A2 Organize Art Pack", "https://roll20.atlassian.net/wiki/spaces/CP/pages/837681451/A2+Organize+Art+Pack", styles.smallButton) + "<br>" +
+    makeButton("C2 Upload Tokens to Compendium", "https://roll20.atlassian.net/wiki/spaces/CP/pages/3257434272/C2+Upload+Tokens+to+Compendium", styles.smallButton) + "<br>" +
+    makeButton("C2 Upload Compendium Images", "https://roll20.atlassian.net/wiki/spaces/CP/pages/2970124323/C2+Upload+Compendium+Images", styles.smallButton) + "<br>" +
+    makeButton("M2 Format Module Text", "https://roll20.atlassian.net/wiki/spaces/CP/pages/842039944/M2+Format+Module+Text", styles.smallButton) + "<br>" +
+    makeButton("M2 Upload Advent. Images to Handouts", "https://roll20.atlassian.net/wiki/spaces/CP/pages/2325184938/M2+Upload+Adventure+Images+to+Handouts", styles.smallButton) + toolButton("!prod finder") + "<br>" +
+    makeButton("M2 Drag & Adjust Item Text Handouts", "https://roll20.atlassian.net/wiki/spaces/CP/pages/2317289449/M2+Drag+and+Adjust+Item+Text+Handouts", styles.smallButton) + "<br>" +
+    makeButton("M2 Apply Dynamic Lighting", "https://roll20.atlassian.net/wiki/spaces/CP/pages/1580269644/M2+Apply+Dynamic+Lighting", styles.smallButton) + toolButton("!prod map") + "<br>" +
+    makeButton("C2 Create Table of Contents & Page Order", "https://roll20.atlassian.net/wiki/spaces/CP/pages/842236319/C2+Create+Table+of+Contents+and+Page+Order", styles.smallButton) + "<br>" +
+    makeH4("Phase 3 Tasks") +
+    makeButton("M3 Create Rollable Tables & Macros", "https://roll20.atlassian.net/wiki/spaces/CP/pages/47186055/M3+Create+Rollable+Tables+and+Macros", styles.smallButton) + toolButton("!prod tablesAndMacros") + "<br>" +
+    makeButton("M3 Drag & Adjust Supplemental Handouts", "https://roll20.atlassian.net/wiki/spaces/CP/pages/2970550420/M3+Drag+and+Adjust+Supplemental+Handouts", styles.smallButton) + "<br>" +
+    makeButton("M3 Upload Item Portraits", "https://roll20.atlassian.net/wiki/spaces/CP/pages/3256975522/M3+Upload+Item+Portraits", styles.smallButton) + toolButton("!prod finder") + "<br>" +
+    makeButton("C3b Link Other Options & Features Blobs", "https://roll20.atlassian.net/wiki/spaces/CP/pages/2976776287/C3b+Link+Other+Options+and+Features+Blobs", styles.smallButton) + "<br>" +
+    makeButton("M3b Drag & Adjust Stat Blocks", "https://roll20.atlassian.net/wiki/spaces/CP/pages/2359263347/M3b+Drag+and+Adjust+Stat+Blocks", styles.smallButton) + "<br>" +
+    makeH4("Phase 4 Tasks") +
+    makeButton("M4a Upload & Link NPC Art Portraits", "https://roll20.atlassian.net/wiki/spaces/CP/pages/838795266/M4a+Upload+and+Link+NPC+Art+Portraits", styles.smallButton) + toolButton("!prod finder") + "<br>" +
+    makeButton("M4a Upload Tokens to Module", "https://roll20.atlassian.net/wiki/spaces/CP/pages/3257598083/M4a+Upload+Tokens+to+Module", styles.smallButton) + "<br>" +
+    makeButton("M4a Link Text", "https://roll20.atlassian.net/wiki/spaces/CP/pages/2969927681/M4a+Link+Text", styles.smallButton) + toolButton("!prod autolinker") + "<br>" +
+    makeButton("M4b Set Up Tokens", "https://roll20.atlassian.net/wiki/spaces/CP/pages/838860818/M4b+Set+Up+Tokens", styles.smallButton) + toolButton("!prod finder") + toolButton("!prod token") + "<br>" +
+    makeButton("M4b Add Location Info", "https://roll20.atlassian.net/wiki/spaces/CP/pages/2317289721/M4b+Add+Location+Info", styles.smallButton) + toolButton("!prod finder") + "<br>" +
+    makeButton("M4c Place Tokens on Maps", "https://roll20.atlassian.net/wiki/spaces/CP/pages/2124808454/M4c+Place+Tokens+on+Maps", styles.smallButton) + "<br>" +
+    makeButton("M4c Create Roll20 Handouts", "https://roll20.atlassian.net/wiki/spaces/CP/pages/627220/M4c+Create+Roll20+Handouts", styles.smallButton) + toolButton("!prod stock") + "<br>" +
+    makeButton("M4c Create Roll20 Tips Page", "https://roll20.atlassian.net/wiki/spaces/CP/pages/2982707217/M4c+Create+Roll20+Tips+Page", styles.smallButton) + "<br>" +
+    makeBackButton()
             ,
             admin: () => "Admin scripts are currently under construction.<br/>" + 
             makeH4("Handout HTML Logger") + "<p>This will prompt the name of a handout, then log the HTML of it in the API Output Console.</p>" +
@@ -328,11 +386,11 @@ const Roll20Pro = (() => {
                 switch (command) {
                     default:
                     case "menu": makeAndSendMenu(menuText.main(), "Main Menu", caller); break;
-                    case "autolinker": makeAndSendMenu(menuText.autolinker(), "Autolinker Examples", caller); break;
+                    case "autolinker": makeAndSendMenu(menuText.autolinker(), "Autolinker Examples", caller, undefined, "https://roll20.atlassian.net/wiki/spaces/CP/pages/1408761861/Production+Wizard+Script#Autolinker"); break;
                     case "token": 
                         switch (args[2]) {
                             default: 
-                            case "menu": makeAndSendMenu(menuText.token(), "Token Helper", caller); break;
+                            case "menu": makeAndSendMenu(menuText.token(), "Token Helper", caller,undefined,"https://roll20.atlassian.net/wiki/spaces/CP/pages/1408761861/Production+Wizard+Script#Token-Helper"); break;
                             case "avatar": tokenChangeAvatar(selected); break;
                             case "addToCat": if (onPlayerPage(msg)) {addToCat(args[3], selected);}
                                 break;
@@ -347,7 +405,7 @@ const Roll20Pro = (() => {
                     case "buddy": 
                         switch (args[2]) {
                             default: 
-                            case "menu": makeAndSendMenu(menuText.buddy(), "DL Buddy", caller); break;
+                            case "menu": makeAndSendMenu(menuText.buddy(), "DL Buddy", caller, undefined, "https://roll20.atlassian.net/wiki/spaces/CP/pages/1408761861/Production+Wizard+Script#Dynamic-Lighting-Buddy"); break;
                             case "nightvision_on": buddyActions("nightvision_on"); break;
                             case "nightvision_off": buddyActions("nightvision_off"); break;
                             case "brightlight_on": buddyActions("brightlight_on"); break;
@@ -360,11 +418,12 @@ const Roll20Pro = (() => {
                     case "finder":
                         switch (args[2]) {
                             default: 
-                            case "menu": makeAndSendMenu(menuText.finder(), "Mention Finder", caller); break;
+                            case "menu": makeAndSendMenu(menuText.finder(), "Mention Finder", caller, undefined, "https://roll20.atlassian.net/wiki/spaces/CP/pages/1408761861/Production+Wizard+Script#Mention-Finders"); break;
                             case "art": artFinder("all"); break;
                             case "artSelected": artFinder(selected); break;
                             case "mention": mentionFinder("all"); break;
                             case "mentionSelected": mentionFinder(selected); break;
+                            case "emptyHandouts": createEmptyHandouts(); break;
                             case "process": processImageToHandout(selected); break;
                         } 
                         break;
@@ -378,7 +437,7 @@ const Roll20Pro = (() => {
                     case "map": 
                         switch (args[2]) {
                             default: 
-                            case "menu": makeAndSendMenu(menuText.map(), "Map Helper", caller); break;
+                            case "menu": makeAndSendMenu(menuText.map(), "Map Helper", caller, "https://roll20.atlassian.net/wiki/spaces/CP/pages/1408761861/Production+Wizard+Script#Map-/-Dynamic-Lighting-Tools"); break;
                             case "resize": if (onPlayerPage(msg)) {resizeMap(args[3], args[4], msg)} break;
                             case "resizeUnit": if (onPlayerPage(msg)) {resizeMapUnit(args[3], args[4], msg)} break;
                             case "fittopage": if (onPlayerPage(msg)) {fitToPage(msg)} break;
@@ -430,6 +489,13 @@ const Roll20Pro = (() => {
                             case "insertFulltext": insertFulltext(msg.content);
                             //case "linking": createLinkingHandout(); break;
                             //TO DO: admin reset
+                        }
+                        break;                        
+
+                    case "confluence":
+                        switch (args[2]) {
+                            default: 
+                            case "menu": makeAndSendMenu(menuText.confluence(), "Confluence Articles", caller); break;
                         }
                         break;
                 }
@@ -1074,7 +1140,9 @@ const Roll20Pro = (() => {
                     log("Buddy Deleted");
                 })
             } else {
-                makeAndSendMenu(menuText.buddy(), "DL Buddy", "");
+                let who = (getObj('player',msg.playerid)||{get:()=>'API'}).get('_displayname');
+                let caller = '"' + who + '"'
+                makeAndSendMenu(menuText.buddy(), "DL Buddy",caller,undefined,"https://roll20.atlassian.net/wiki/spaces/CP/pages/1408761861/Production+Wizard+Script#Dynamic-Lighting-Buddy");
                 let pageID = getObj('player', msg.playerid).get('_lastpage');
                 newBuddy = createObj("graphic", {
                     name: "Dynamic Lighting Buddy",
@@ -1085,6 +1153,7 @@ const Roll20Pro = (() => {
                     has_bright_light_vision: true,
                     emits_bright_light: true,
                     bright_light_distance: "100",
+                    isdrawing: true,
                     top: 70,
                     left: 70,
                     width: 70,
@@ -1609,6 +1678,9 @@ handoutHTML = {
     
         registerEventHandlers = function () {
             on('chat:message', handleInput);
+            
+            on("change:graphic", updateBuddyLight);
+
             on('change:handout:notes', function (obj, prev) {
                 runAutolink(obj, "notes")
             });
@@ -6501,6 +6573,386 @@ on('ready', function () {
     tokenAction.CheckInstall();
     tokenAction.RegisterEventHandlers();
 });
+
+
+
+
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+//      CHECKLIGHTLEVEL
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+// Contact:  https://app.roll20.net/users/104025/the-aaron/* globals on findObjs getObj playerIsGM log sendChat PathMath Plugger */
+var API_Meta = API_Meta || {};
+API_Meta.checkLightLevel = { offset: Number.MAX_SAFE_INTEGER, lineCount: -1 };
+{ try { throw new Error(''); } catch (e) { API_Meta.checkLightLevel.offset = (parseInt(e.stack.split(/\n/)[1].replace(/^.*:(\d+):.*$/, '$1'), 10) - (13)); } }
+
+const checkLightLevel = (() => { //eslint-disable-line no-unused-vars
+
+  const scriptName = 'checkLightLevel',
+    scriptVersion = '0.5.0',
+    debugLogging = false,
+    consolePassthrough = true;  // set to false if you want debug logs sent to the Roll20 API console (yuck)
+
+  const debug = (() => {
+    const send = (logLevel, ...msgs) => {
+      if (!debugLogging) return;
+      if (consolePassthrough) {
+        console[logLevel](...msgs);
+      }
+      else {
+        msgs.forEach(msg => log(msg));
+      }
+    }
+    return {
+      log: (...msgs) => send('log', ...msgs),
+      info: (...msgs) => send('info', ...msgs),
+      warn: (...msgs) => send('warn', ...msgs),
+      error: (...msgs) => send('error', ...msgs)
+    }
+  })();
+
+  /**
+   * @param {object[]} selected array of simple token objects
+   * @returns {object[] | null} array of actual token objects
+   */
+  const getSelectedTokens = (selected) => {
+    const selectedIds = selected && selected.length ? selected.map(sel => sel._id) : null
+    return selectedIds ? selectedIds.map(id => getObj('graphic', id)) : null;
+  }
+
+  /**
+   * @param {object} token token object
+   * @returns {object|null} page object
+   */
+  const getPageOfToken = (token) => token && token.id ? getObj('page', token.get('_pageid')) : null;
+
+  /**
+   * @param {object} point1 { x: number, y: number }
+   * @param {object} point2 { x: number, y: number }
+   * @returns 
+   */
+  const getSeparation = (point1, point2) => {
+    const delta = { x: point1.x - point2.x, y: point1.y - point2.y },
+    distance = Math.sqrt(delta.x**2 + delta.y**2);
+    return distance;
+  }
+
+  /**
+   * @param {object} token1 token object
+   * @param {object} token2 token object
+   * @returns {number} separation in pixels
+   */
+  const getTokenSeparation = (token1, token2) => {
+    if (!token1 || !token2) return;
+    const pos1 = { x: parseInt(token1.get('left')), y: parseInt(token1.get('top')) },
+      pos2 = { x: parseInt(token2.get('left')), y: parseInt(token2.get('top')) };
+    if (![pos1.x, pos1.y, pos2.x, pos2.y].reduce((valid, val) => (valid === true && Number.isSafeInteger(val)) ? true : false, true)) return null;
+    return getSeparation(pos1, pos2);
+  }
+
+  /**
+   * @param {number} feetValue distance in feet
+   * @param {object} page map page object
+   * @returns {number|null} pixel distance
+   */
+  const feetToPixels = (feetValue, page) => {
+    if (!page) return null;
+    const gridPixelMultiplier = page.get('snapping_increment'),
+      gridUnitScale = page.get('scale_number');
+    const pixelValue = feetValue/gridUnitScale*(gridPixelMultiplier*70);
+    debug.info(`Pixel distance: ${pixelValue}`);
+    return pixelValue;
+  }
+
+  /**
+   * @param {object} page map page object
+   * @returns {boolean}
+   */
+  const checkGlobalIllumination = (page) => {
+    if (!page || !page.id) return false;
+    return page.get('daylight_mode_enabled') ? parseFloat(page.get('daylightModeOpacity')) : false;
+  }
+
+  /**
+   * Check if a one way wall is allowing light through in the correct direction
+   * @param {object} segment path segment
+   * @param {number} lightFlowAngle 
+   * @param {boolean} oneWayReversed 
+   * @returns {boolean}
+   */
+  const isOneWayAndTransparent = (segment, lightFlowAngle, oneWayReversed) => {
+    if (!segment || segment.length < 2) return;
+    const delta = { x: segment[1][0] - segment[0][0], y: segment[0][1] - segment[1][1] }
+    const segmentAngle = getAngleFromX(delta.x, delta.y);
+    debug.info(`Segment angle is ${segmentAngle}`);
+    const transparencyAngle = oneWayReversed
+      ? segmentAngle - 90
+      : segmentAngle + 90;
+    const angleDifference = Math.abs(transparencyAngle - lightFlowAngle);
+    debug.warn(`Transparency diff ${angleDifference}`);
+    return angleDifference < 90 ? true : false;
+  }
+
+  /**
+   * @param {number} rads radians
+   * @returns {number} degrees
+   */
+  const toDegrees = (rads) => rads*180/Math.PI;
+
+  /**
+   * Get the angle from the x axis to the line drawn to (x,y) from origin
+   * @param {number} x 
+   * @param {number} y 
+   * @returns {number} radians
+   */
+  const getAngleFromX = (x, y) => toDegrees(Math.atan2(y, x));
+
+  /**
+   * Check for LOS blocking walls between token and light source
+   * @param {object} token1 token object
+   * @param {object} token2 token object
+   * @param {number} range pixel range
+   * @param {object} page map page object
+   * @returns {null|object} returns null if no LOS block, or first path object which blocks the light source
+   */
+  const checkLineOfSight = (token1, token2, range, page) => {
+    const pos1 = { x: parseInt(token1.get('left')), y: parseInt(token1.get('top')) },
+      pos2 = { x: parseInt(token2.get('left')), y: parseInt(token2.get('top')) },
+      blockingPaths = findObjs({ type: 'path', pageid: page.id, layer: 'walls' }).filter(path => path.get('barrierType') !== 'transparent');
+    const losPath = new PathMath.Path([[pos1.x, pos1.y, 0], [pos2.x, pos2.y, 0]]);
+    let losBlocked = null;
+    for (let i=0; i<blockingPaths.length; i++) {
+      let pathData;
+      const isOneWayWall = blockingPaths[i].get('barrierType') === 'oneWay',
+        oneWayReversed = isOneWayWall ? blockingPaths[i].get('oneWayReversed') : null,
+        lightFlowAngle = isOneWayWall ? getAngleFromX(pos1.x - pos2.x, pos2.y - pos1.y) : null;
+      try { pathData = JSON.parse(blockingPaths[i].get('path')); } catch(e) { debug.error(e) }
+      if (!pathData) continue;
+      const pathTop = blockingPaths[i].get('top') - (blockingPaths[i].get('height')/2),
+        pathLeft = blockingPaths[i].get('left') - (blockingPaths[i].get('width')/2);
+      const pathVertices = pathData.map(vertex => [ vertex[1] + pathLeft, vertex[2] + pathTop, 0 ]);
+      const wallPath = new PathMath.Path(pathVertices);
+      const wallSegments = wallPath.toSegments(),
+        losSegments = losPath.toSegments();
+      for (let w=0; w<wallSegments.length; w++) {
+        if (losBlocked) break;
+        const skipOneWaySegment = isOneWayWall ? isOneWayAndTransparent(wallSegments[w], lightFlowAngle, oneWayReversed) : false;
+        if (skipOneWaySegment) {
+          debug.info('Skipping segment due to one-way transparency');
+          continue;
+        }
+        for (let l=0; l<losSegments.length; l++) {
+          const intersect = PathMath.segmentIntersection(wallSegments[w], losSegments[l]);//wallPath.intersects(losPath);
+          if (intersect) {
+            debug.info(`Found intersect, skipping light source`, blockingPaths[i]);
+            losBlocked = blockingPaths[i];
+            break;
+          }
+        }
+      }
+      if (losBlocked) break;
+    }
+    return losBlocked;
+  }
+
+  /**
+   * Use cubic fade out to approximate the light level in dim light at different ranges
+   * @param {number} tokenSeparation - pixel distance, center to center
+   * @param {number} dimLightRadius - pixel radius of dim light from the emitter
+   * @param {number} brightLightRadius - pixel radius of bright light from the emitter
+   * @returns {number} - light level multiplier, 0 - 1
+   */
+  const getDimLightFalloff = (tokenSeparation, dimLightRadius, brightLightRadius, gridPixelSize) => {
+    const dimLightOnlyRadius = (dimLightRadius - brightLightRadius) + gridPixelSize/2,
+      tokenDimLightDistance = tokenSeparation - brightLightRadius;
+    const lightLevelWithFalloff = (1-(tokenDimLightDistance/dimLightOnlyRadius)**3) * 0.5;
+    return lightLevelWithFalloff;
+  }
+
+  /**
+   * @param {object} token token object
+   * @returns {number} average radius in pixels
+   */
+  const getTokenAverageRadius = (token) => {
+    return (parseInt(token.get('height'))||0 + parseInt(token.get('width'))||0)*0.66;
+  }
+
+  /**
+   * @param {object} token token object
+   * @returns {LitBy}
+   */
+  const checkLightLevelOfToken = (token) => {
+    if (typeof(PathMath) !== 'object') return { err: `Aborted - This script requires PathMath.` };
+    const tokenPage = getPageOfToken(token),
+      litBy = { bright: false, dim: [], daylight: false, total: 0, partial: true };
+    const gridPixelSize = tokenPage.get('snapping_increment') * 70;
+    const tokenAverageRadius = getTokenAverageRadius(token);
+    if (!tokenPage || !tokenPage.id) return { err: `Couldn't find token or token page.` };
+    litBy.daylight = checkGlobalIllumination(tokenPage);
+    if (litBy.daylight) litBy.total += litBy.daylight;
+    const allTokens = findObjs({ type: 'graphic', _pageid: tokenPage.id }),
+      allLightTokens = allTokens.filter(token => (token.get('emits_bright_light') || token.get('emits_low_light')) && token.get('layer') !== 'gmlayer');
+    for (let i=0; i<allLightTokens.length; i++) {
+      if (litBy.bright || litBy.total >= 1) break;
+      const tokenSeparation = getTokenSeparation(token, allLightTokens[i]),
+        losBlocked = checkLineOfSight(token, allLightTokens[i], tokenSeparation, tokenPage);
+      if (losBlocked) {
+        continue;
+      }
+      const brightRangeFeet = allLightTokens[i].get('emits_bright_light')
+        ? allLightTokens[i].get('bright_light_distance')
+        : 0;
+      const dimRangeFeet = allLightTokens[i].get('emits_low_light')
+          ? allLightTokens[i].get('low_light_distance')
+          : 0;
+      const brightRange = feetToPixels(brightRangeFeet, tokenPage),
+        dimRange = feetToPixels(dimRangeFeet, tokenPage),
+        brightRangePartial = brightRange + tokenAverageRadius,
+        dimRangePartial = dimRange + tokenAverageRadius;
+      if (brightRange == null && dimRange == null) continue;
+      if (brightRange && tokenSeparation <= brightRangePartial) {
+        litBy.bright = true;
+        litBy.total = 1;
+        if (tokenSeparation <= brightRange) litBy.partial = false;
+        break;
+      }
+      else if (dimRange && tokenSeparation <= dimRangePartial) {
+        litBy.dim.push(allLightTokens[i]);
+        litBy.total += getDimLightFalloff(tokenSeparation, dimRangePartial, brightRangePartial, gridPixelSize);
+        if (tokenSeparation <= dimRange) litBy.partial = false;
+      }
+    }
+    litBy.total = Math.min(litBy.total, 1);
+    return { litBy };
+  }
+    
+  const handleInput = (msg) => {
+    if (msg.type === 'api' && /!checklight/i.test(msg.content) && playerIsGM(msg.playerid)) {
+      const tokens = getSelectedTokens(msg.selected || []);
+      if (!tokens || !tokens.length) return postChat(`Nothing selected.`);
+      if (!tokenPageHasDynamicLighting) return postChat(`Token's page does not have dynamic lighting.`);
+      tokens.forEach(token => {
+        const { litBy, err } = checkLightLevelOfToken(token),
+          tokenName = token.get('name') || 'Nameless Token';
+        if (err) {
+          postChat(err);
+          return;
+        }
+        let messages = [];
+        const partialString = litBy.daylight || !litBy.partial
+          ? ''
+          : 'partially ';
+        if (litBy.daylight) messages.push(`${tokenName} is in ${(litBy.daylight*100).toFixed(0)}% global light.`);
+        if (litBy.bright) messages.push(`${tokenName} is ${partialString}in direct bright light.`);
+        else if (litBy.dim.length) messages.push(`${tokenName} is ${partialString}in ${litBy.total >= 1 ? `at least ` : ''}${litBy.dim.length} sources of dim light.`);
+        else if (!litBy.daylight) messages.push(`${tokenName} is in darkness.`);
+        if (!litBy.bright && litBy.total > 0) messages.push(`${tokenName} is ${partialString}in ${parseInt(litBy.total*100)}% total light level.`)
+        if (messages.length) {
+          let opacity = litBy.bright ? 1
+            : litBy.total > 0.2 ? litBy.total
+            : 0.2;
+          if (typeof(litBy.daylight) === 'number') opacity = Math.max(litBy.daylight.toFixed(2), opacity);
+          const chatMessage = createChatTemplate(token, messages, opacity);
+          postChat(chatMessage);
+        }
+      });
+    }
+  }
+
+  /**
+   * @param {object[]} tokens array of token objects
+   * @returns {boolean}
+   */
+  const tokenPageHasDynamicLighting = (tokens) => {
+    const page = getPageOfToken(tokens[0]);
+    return page.get('dynamic_lighting_enabled');
+  }
+
+  const createChatTemplate = (token, messages, opacity) => {
+    return `
+      <div class="light-outer" style="background: black; border-radius: 1rem; border: 2px solid #4c4c4c; white-space: nowrap; padding: 0.5rem 0.2rem">
+        <div class="light-avatar" style="	display: inline-block!important; width: 20%; padding: 0.5rem;">
+          <img src="${token.get('imgsrc')}" style="opacity: ${opacity};"/>
+        </div>
+        <div class="light-text" style="display: inline-block; color: whitesmoke; vertical-align: middle; width: 75%; white-space: normal;">
+          ${messages.reduce((out, msg) => out += `<p>${msg}</p>`, '')}
+        </div>
+      </div>
+      `.replace(/\n/g, '');
+  }
+
+  const postChat = (chatText, whisper = 'gm') => {
+    const whisperText = whisper ? `/w "${whisper}" ` : '';
+    sendChat(scriptName, `${whisperText}${chatText}`, null, { noarchive: true });
+  }
+
+  /**
+   * @typedef {object} LitBy
+   * @property {?boolean} bright - token is lit by bright light, null on error
+   * @property {?array} dim - dim light emitters found to be illuminating selected token, null on error
+   * @property {?float} daylight - token is in <float between 0 and 1> daylight, false on no daylight, null on error
+   * @property {?float} total - total light multiplier from adding all sources, max 1, null on error
+   * @property {boolean} partial - token's grid square is not fully lit by any light source
+   * @property {?string} err - error message, only on error
+   * 
+   * @param {string | object} tokenOrTokenId - Roll20 Token object, or token UID string
+   * @returns {LitBy}
+   */
+  const isLitBy = (tokenOrTokenId) => {
+    const output = { bright: null, dim: null, daylight: null, total: null }
+    const token = tokenOrTokenId && typeof(tokenOrTokenId) === 'object' && tokenOrTokenId.id ? tokenOrTokenId
+      : typeof(tokenOrTokenId) === 'string' ? getObj('graphic', tokenOrTokenId)
+      : null;
+    const { litBy, err } = token && token.id
+      ? checkLightLevelOfToken(token)
+      : { err: `Could not find token from supplied ID.` };
+    Object.assign(output,
+      litBy || err
+    );
+    return output;
+  }
+
+  // Meta toolbox plugin
+  const checklight = (msg) => {
+    const errors = [];
+    const tokens = getSelectedTokens(msg.selected),
+      token = tokens ? tokens[0] : null;
+    if (!token || !token.id) errors.push(`Checklight plugin: No selected token`);
+    else {
+      const { litBy, err } = checkLightLevelOfToken(token);
+      if (litBy) {
+        return typeof(litBy.total) === 'number'
+          ? parseFloat(litBy.total).toFixed(4)
+          : 0;
+      }
+      else errors.push(err);
+    }
+    if (errors.length) errors.forEach(e => log(e));
+    return '';
+  }
+  const registerWithMetaToolbox = () => {
+    try {
+      Plugger.RegisterRule(checklight);
+      debug.info(`Registered with Plugger`);
+    }
+    catch (e) { log(`ERROR Registering ${scriptName} with PlugEval: ${e.message}`); }
+  }
+
+  on('ready', () => {
+    if (typeof(Plugger) === 'object') registerWithMetaToolbox();
+    on('chat:message', handleInput);
+    log(`${scriptName} v${scriptVersion}`);
+  });
+
+  return { isLitBy }
+
+})();
+{ try { throw new Error(''); } catch (e) { API_Meta.checkLightLevel.lineCount = (parseInt(e.stack.split(/\n/)[1].replace(/^.*:(\d+):.*$/, '$1'), 10) - API_Meta.checkLightLevel.offset); } }
+/* */
+
+
+
+
+
 
 
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
