@@ -148,7 +148,8 @@ const Roll20Pro = (() => {
             makeButton("Stock Handouts", "!prod stock", styles.bigButton, "These tools will create stock handouts, using the copies in the Contractor module as a guide. Load menu for more information.") + 
             makeButton("Tables and Macros", "!prod tablesAndMacros", styles.bigButton, "This contains links and instructions for automating the creation of macros and tables. Load menu for more information.") + 
             makeButton("Confluence How-to articles", "!prod confluence", styles.bigButton, "These links will take you to the confluence dosumentation for common Jira tasks. Load menu for more information.") +
-            makeButton("Admin Tools", "!prod admin", styles.bigButton, "Under consttruction. Load menu for more information.")
+            makeButton("Admin Tools", "!prod admin", styles.bigButton, "Under consttruction. Load menu for more information.") +
+	        makeH4("Mod Server: " + (typeof $20!=="undefined"?"EXPERIMENTAL":"DEFAULT"), "Experimental Server is now preferred. This can be set on the Mods page.")
             ,
             autolinker: () => "<p>Some examples of the autolinker functionality. These can be used on the notes/gmnotes of any handout or character.</p>" +
             "<p>Please note that this script works after you save changes to a handout, "+
@@ -195,12 +196,13 @@ const Roll20Pro = (() => {
             makeButton("120 ft", "!token-mod --set has_night_vision|true night_vision_distance|120", styles.button, "1200 feet of night vision, no modes") + 
             makeButton("PF2: Get from senses", "!prod token UDLdv", styles.button, "For Pathfinder 2e only, you can use Get From Senses. This will look at the Senses attribute on their character sheet to see if it includes the word “Darkvision”. Keep in mind, many creatures have crazy special kinds of vision, and sometimes their senses will not exactly list Darkvision, so you’ll want to double check these.") + 
             makeH4("Token Actions", "https://roll20.atlassian.net/wiki/spaces/CP/pages/1408761861/Production+Wizard+Script#Token-Actions") + 
-            makeButton("For 5e", "!ta", styles.button, "(D&D 2014 by Roll20, only) This ommand will create a full suite of token action buttons for all selected character tokens. Actions for NPCs and Attacks for PCs. Token Action Maker will put a response in chat for each character processed in this way") + 
+            makeButton("5e", "!ta", styles.button, "(D&D 2014 by Roll20, only) This command will create a full suite of token action buttons for all selected character tokens. Actions for NPCs and Attacks for PCs. Token Action Maker will put a response in chat for each character processed in this way") + 
+            makeButton("5e 2024", "!ta2024", styles.button, "(D&D 2024 by Roll20, only) This command will create a token actions for Checks, saves and initiative only. We are waiting for progress from SD to be able to generate a full suite. REQUIRES EXPERIMENTAL SERVER") + 
             makeButton("5e PreGen", "!ta pc", styles.button, "This will create token actions that are appropriate for characters built as PCs, do not use on creatures that use NPC statblocks.") + 
             makeButton("For PF2", "!ta pf2", styles.button," This command will create a full suite of token action buttons for all selected character tokens using the Pathfinder 2 by Roll20 Sheet. Token Action Maker will put a response in chat for each character processed in this way.") + 
             makeButton("Delete All", "!deleteta", styles.button, "Deletes ALL token actions for selected characters, whether they were created by this script or not. Use this if you are going to re-generate token actions. Since Token Action Maker abbreviates the names of some actions (“1-H” for “One Handed” for example), deleting existing token actions before generating new ones will help prevent generating duplicate buttons. !deleteta will work on any sheet.") + 
             makeH4("Defaults", "Use these commands ONLY on a page that is for grids with no Subdivisions. Otherwise tokens will drop at the wrong size on other pages. Like normal, if you change a token’s settings, you’ll need to reassign the default token to reflect those changes!") + 
-            makeButton("Assign as Default Token", "!token-mod --set defaulttoken", styles.button, "Assigns all selected tokens to their characters as their respective default tokens (just like clicking Use Selected Token on a character’s edit page).") +
+            makeButton("Assign as Default Token", "!token-mod --set defaulttoken", styles.button, "REQUIRES DEFAULT MOD SERVER. Assigns all selected tokens to their characters as their respective default tokens (just like clicking Use Selected Token on a character’s edit page).") +
             makeButton("Avatar from Token (if in library)", "!prod token avatar", styles.button, "Sets the Avatar of the character as the token image as standard") +
             makeH4("<hr>Token Page Tools", "https://roll20.atlassian.net/wiki/spaces/CP/pages/1408761861/Production+Wizard+Script#Token-Page-Creator") +
             makeButton("Assign Category", "!prod token addToCat ?{Category Number}", styles.button, "See Confluence link next to 'Token Page Tools'. Assigns a caegtory number to selected tokens. Good practices is to assign by 10s.") +
@@ -232,7 +234,7 @@ const Roll20Pro = (() => {
             makeButton("Width 0.25", "!prod map edit snapping_increment 0.25", styles.button) +
             makeButton("Width 0.125", "!prod map edit snapping_increment 0.125", styles.button, "Useful setting for dynamic lighting task.") +
             makeH4("Change Grid Opacity") +
-            makeButton("Prompt", "!prod map edit grid_opacity ?{1 to 100|100}", styles.button, "Sets grid opacity from 0 (transparent) to 100 (opaque).") +
+            makeButton("Prompt", "!prod map edit grid_opacity ?{0 to 1|1}", styles.button, "Sets grid opacity from 0 (transparent) to 1 (opaque).") +
             makeH4("Change Grid Colour", "These are some default settings, but in any case, try to duplicate the look and fel of the print product, if possible.") +
             makeButton("Default Grey", "!prod map edit gridcolor #C0C0C0", styles.button, "If this looks odd or is hard to see, try black at reduced opacity.") +
             makeButton("High Vis Pink", "!prod map edit gridcolor #ff00ff", styles.button, "Useful for dynamic lighting tasks, as it stands out against most map images.") +
@@ -1154,10 +1156,11 @@ const Roll20Pro = (() => {
                     emits_bright_light: true,
                     bright_light_distance: "100",
                     isdrawing: true,
+                    controlledby: "all",
                     top: 70,
                     left: 70,
                     width: 70,
-                    height: 70,
+                    height: 70
                 });
                 //sendChat ("ProdWiz", "!prod buddy");
 
@@ -1313,7 +1316,7 @@ handoutHTML = {
     macroHandout: () => `With&nbsp;<i>${state.Roll20Pro.productName}</i>, Roll20 has provided Macros and Rollable Tables for quick GM use in certain situations, such as rollable tables or traps/situations with multiple rolls. These appear in the “Collections” tab for the game creator. In addition, this handout lists all of the Macros for GMs who aren’t the game creator. Each Rollable Table has an associated macro. For faster access to macros, check “Show macro quick bar” in the options tab, and check “In Bar” next to each macro to display them in a box at the bottom of your screen. Learn more about macros on the&nbsp;<a href=\"https://roll20.zendesk.com/hc/en-us/articles/360037256794-Macros\">Roll20 Help Center page</a>.</p><h3>How To Use</h3><p>There are two ways that Rollable Tables and Macros can be used.</p><ul><li>Rolling from the Rollable Tables in “Collections” will always display this roll to players.</li><li>Rolling from a Macro will display their rolls only to a GM.</li></ul><hr><h2>Chapter #: (Chapter Title)</h2><h3>Name of Adventure Handout Where Macro is Located (Linked)</h3><h4 style=\"margin-left: 25px\">Name of Macro</h4><pre style=\"line-height: 1.42857\">/w GM macro code here</pre><h4 style=\"margin-left: 25px\">Name of Macro</h4><pre style=\"line-height: 1.42857\">/w GM macro code here</pre><hr><h2>Chapter #: (Chapter Title)</h2><h3>Name of Adventure Handout Where Macro is Located (Linked)</h3><h4 style=\"margin-left: 25px\">Name of Macro</h4><pre style=\"line-height: 1.42857\">/w GM macro code here</pre><h4 style=\"margin-left: 25px\">Name of Macro</h4><pre style=\"line-height: 1.42857\">/w GM macro code here</pre>`,
     artHandout: () => ``,
     blankHandout: () => ``,
-    gameSettings: () => `<h2>Game Settings</h2><p>This module has been set up with the following Game Settings. For more information on how to change these settings, please check out the <a href=\"https://roll20.zendesk.com/hc/en-us/articles/360039715753-Game-Management\">Game Management page on the Help Center</a>.<br></p><h3 style=\"font-family: &#34;helvetica neue&#34; , &#34;helvetica&#34; , &#34;arial&#34; , sans-serif\">Map Settings</h3><p><strong>Dynamic Lighting:</strong>&nbsp;Enabled<br><strong>Enforce Line of Sight:</strong>&nbsp;On</p><p><strong>Only Update on Drop:</strong>&nbsp;Off<br><strong>Restrict Movement:</strong>&nbsp;Off<br></p><h3 style=\"font-family: &#34;helvetica neue&#34; , &#34;helvetica&#34; , &#34;arial&#34; , sans-serif\">Token Settings</h3><p><strong>Bar 1:</strong>&nbsp;hit_points<br><strong>Bar 2:</strong>&nbsp;ac<br><strong>Bar 3:</strong>&nbsp;Intentionally left blank for GM use<br><strong>Show Nameplate Toggle:</strong>&nbsp;On<br><br><strong>Light Radius:</strong>&nbsp;Used for darkvision or if an NPC exudes light<br><b><i>Note:</i></b>&nbsp;On large, performance heavy maps, groups of NPC's with darkvision may be adjusted so only one will have this radius turned on. This assists with game performance.&nbsp;<br><strong>All Players See Light:</strong>&nbsp;On if NPC exudes light<br><strong>Has Sight Toggle:</strong>&nbsp;Off, for performance.</p>`,
+    gameSettings: () => `Game Settings: <p>${state.Roll20Pro.productName} has been set up with the following Game Settings. For more information on how to change these settings, please check out the&nbsp;<a href=\"https://roll20.zendesk.com/hc/en-us/articles/360039715753-Game-Management\">Game Management page on the Help Center</a>.</p><h3>Map Settings</h3><p><i>For pages which benefit from Dynamic Lighting</i></p><p><b>Dynamic Lighting:&nbsp;</b>On<br><b>Explorer Mode:</b>&nbsp;Off, for performance<br><b>Restrict Movement:&nbsp;</b>Off</p><h3>Token Settings</h3><p><b>Bar 1:</b> hp (link set to None to aid placement of multiple monsters using the same stat block) (5e, Starfinder, PF1, BurnBryte, Fallout RPG - NPC), pc_hp (Fallout RPG - PC), hit_points (PF2) Vitality (Haunted West), damage_threshold (Zweihänder), health (Marvel), Hit points (vida) (Tormenta), might (cypher systems - PC), health (link set to None) (cypher systems - NPC, Cosmere), hitpoints (Cyberpunk Red, CoC)<br><span style=\"background-color: rgba( 0 , 0 , 0 , 0 )\"><b>Bar 2:</b> npc_ac (5e), armor_class (pf2), eac (starfinder), ac (PF1 or starfinder ships), movement (BurnBryte), Lucidity (Haunted West), movement (Zweihänder), agility_defense (Marvel), Defense (defesatotal) (Tormenta), speed (cypher systems - PC), armor (cypher systems - NPC), luck-points (Fallout RPG), focus (link set to None) (Cosmere), Intentionally left blank for GM use (Cyberpunk RED, CoC)<br></span><b style=\"background-color: rgba( 0 , 0 , 0 , 0 )\">Bar 3:</b><span style=\"background-color: rgba( 0 , 0 , 0 , 0 )\"> Intentionally left blank for GM use (5e, pf2, Zweihänder, cypher systems - NPC, Cyberpunk Red, CoC, Fallout RPG), kac (starfinder), tl (starfinder ships), shield (BurnBryte- set to none. if no shields, delete 0/0 to remove bar), Stamina (Haunted West), might_defense (Marvel), Mana (mana) (Tormenta), intellect (cypher systems - PC), investiture (link set to None) (Cosmere)<br></span><b style=\"background-color: rgba( 0 , 0 , 0 , 0 )\">Show Nameplate Toggle:</b><span style=\"background-color: rgba( 0 , 0 , 0 , 0 )\">&nbsp;</span><span style=\"background-color: rgba( 0 , 0 , 0 , 0 )\">On, not visible to players</span></p><p><b>Bright/Low Light Distance:&nbsp;</b>Used if an NPC exudes light.<br><b>Vision Toggle:</b>&nbsp;Off, for performance<br><b>Night Vision Toggle:</b> Off. Night vision distance is set if NPC can see in dark or has special senses, such that they are already built into the module if a GM toggles Night Vision back on.</p><p style=\"margin-left: 25px\"><b>Roll20 Note:&nbsp;</b>&nbsp;This module uses Updated Dynamic Lighting.&nbsp; For your convenience, we have entered the night vision radius in the token settings for all tokens that can see in the dark, but we have toggled off Vision and Night Vision for ease of user experience.&nbsp; To display the limits of a token’s night vision, simply turn on Vision and Night Vision in the token’s Updated Dynamic Lighting settings tab. For more information on Updated Dynamic Lighting, see the&nbsp;<a href=\"https://help.roll20.net/hc/en-us/articles/360053106074-Default-Settings-for-Lighting-and-Vision\">Help Center</a>.</p><h3>Sheet Settings</h3><p><b>Roll Queries:&nbsp;</b>Always Roll Advantage<br><b>Whisper Rolls to GM:</b>&nbsp;Always Whisper Rolls<br><b>Auto Roll Damage:</b>&nbsp;Auto Roll Damage and Crit</p>`,
     thankyouRoll20Handout: () => `Thank You For Purchasing ${state.Roll20Pro.productName}!: <p>Thank you for your purchase! To see more of our ***Publisher*** modules and content, please visit our ***Text: Marketplace; Link Url: Link to Publisher's Page on our Marketplace***.</p><p>For any issues with <i>${state.Roll20Pro.productName}</i>, please visit our <a href=\"https://roll20.zendesk.com/hc/en-us\">Help Center</a>.</p><p>Happy Gaming!</p><p>-Roll20 Production Team</p>`,
     thankyouDMsGuildHandout: () => `<p>Thank you for your purchase! Find other great DMs Guild products converted digitally for Roll20 <a href=\"https://www.dmsguild.com/browse.php?filters=0_0_0_0_0_0_1000063_0\">on the DMs Guild Marketplace</a>!</p><p>For any issues with <i>${state.Roll20Pro.productName}</i>, please visit our <a href=\"https://roll20.zendesk.com/hc/en-us\">Help Center</a>.</p><p>Happy Gaming!</p><p>-Roll20 Production Team</p>`,
     thankyouPFIHandout: () => `<p>Thank you for your purchase! Find other great Pathfinder Infinite products converted digitally for Roll20 on <a href=\"https://www.pathfinderinfinite.com/browse.php?filters=0_0_0_0_0_1000073_0&amp;src=fid1000073\">the Pathfinder Infinite Marketplace</a>!</p><p>For any issues with <i>${state.Roll20Pro.productName}</i>, please visit our <a href=\"https://roll20.zendesk.com/hc/en-us\">Help Center</a>.</p><p>Happy Gaming!</p><p>-Roll20 Production Team</p>`,
@@ -1706,6 +1709,81 @@ handoutHTML = {
     });
 })();
 
+
+
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+//       TEMPORARY TOKEN ACTION MAKER FOR 2024
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+on("chat:message", function(msg) {
+    if (msg.type !== "api" || msg.content !== "!ta2024") return;
+
+    if (!msg.selected || msg.selected.length === 0) {
+        sendChat("TA2024", "/w gm ⚠️ No tokens selected.");
+        return;
+    }
+
+    const affectedCharacters = [];
+
+    msg.selected.forEach(sel => {
+        let token = getObj("graphic", sel._id);
+        if (!token) return;
+
+        let charId = token.get("represents");
+        if (!charId) return;
+
+        let character = getObj("character", charId);
+        if (!character) return;
+
+        const charName = character.get("name");
+        affectedCharacters.push(charName);
+
+        const actions = [
+            {
+                name: "Init",
+                action: "%{selected|initiative}"
+            },
+            {
+                name: "Save",
+                action: "?{Saving Throw?\n| Strength, %{selected&#124;npc_strength_save&#125;\n| Dexterity, %{selected&#124;npc_dexterity_save&#125;\n| Constitution, %{selected&#124;npc_constitution_save&#125;\n| Intelligence, %{selected&#124;npc_intelligence_save&#125;\n| Wisdom, %{selected&#124;npc_wisdom_save&#125;\n| Charisma, %{selected&#124;npc_charisma_save&#125;\n}"
+            },
+            {
+                name: "Check",
+                action: "?{Check?\n| Strength,%{selected&#124;strength&#125;\n| Dexterity,%{selected&#124;dexterity&#125;\n| Constitution,%{selected&#124;constitution&#125;\n| Intelligence,%{selected&#124;intelligence&#125;\n| Wisdom,%{selected&#124;wisdom&#125;\n| Charisma,%{selected&#124;charisma&#125;\n| Acrobatics,%{selected&#124;acrobatics&#125;\n| Animal Handling,%{selected&#124;animal_handling&#125;\n| Arcana,%{selected&#124;arcana&#125;\n| Athletics,%{selected&#124;athletics&#125;\n| Deception,%{selected&#124;deception&#125;\n| History,%{selected&#124;history&#125;\n| Insight,%{selected&#124;insight&#125;\n| Intimidation,%{selected&#124;intimidation&#125;\n| Investigation,%{selected&#124;investigation&#125;\n| Medicine,%{selected&#124;medicine&#125;\n| Nature,%{selected&#124;nature&#125;\n| Perception,%{selected&#124;perception&#125;\n| Performance,%{selected&#124;performance&#125;\n| Persuasion,%{selected&#124;persuasion&#125;\n| Religion,%{selected&#124;religion&#125;\n| Sleight of Hand,%{selected&#124;sleight_of_hand&#125;\n| Stealth,%{selected&#124;stealth&#125;\n| Survival,%{selected&#124;survival&#125;\n}"
+            }
+        ];
+
+        actions.forEach(({ name, action }) => {
+            // Remove existing ability with same name
+            const existing = findObjs({
+                _type: "ability",
+                _characterid: charId,
+                name: name
+            });
+            existing.forEach(a => a.remove());
+
+            // Create new token action
+            createObj("ability", {
+                name,
+                action,
+                istokenaction: true,
+                characterid: charId
+            });
+        });
+    });
+
+    // Send roll template report if any characters were affected
+    if (affectedCharacters.length > 0) {
+        const characterList = affectedCharacters.join("<br>");
+        const rollTemplateMsg = `&{template:default} {{name=Token Actions Created for:}} {{=${characterList}}}`;
+        sendChat("TA2024", rollTemplateMsg);
+    }
+});
+
+
+
+
+
+
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
 //       TOKEN-MOD
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -1720,9 +1798,9 @@ API_Meta.TokenMod={offset:Number.MAX_SAFE_INTEGER,lineCount:-1};
 const TokenMod = (() => { // eslint-disable-line no-unused-vars
 
     const scriptName = "TokenMod";
-    const version = '0.8.74';
+    const version = '0.8.84';
     API_Meta.TokenMod.version = version;
-    const lastUpdate = 1646271161;
+    const lastUpdate = 1745072349;
     const schemaVersion = 0.4;
 
     const fields = {
@@ -1744,11 +1822,18 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
             light_otherplayers: {type: 'boolean'},
             light_hassight: {type: 'boolean'},
             isdrawing: {type: 'boolean'},
+            disableSnapping: {type: 'boolean'},
+            disableTokenMenu: {type: 'boolean'},
             flipv: {type: 'boolean'},
             fliph: {type: 'boolean'},
             aura1_square: {type: 'boolean'},
             aura2_square: {type: 'boolean'},
             lockMovement: {type: 'boolean'},
+            fadeOnOverlap: {type: 'boolean'},
+            renderAsScenery: {type: 'boolean'},
+            fadeOpacity: {type: 'percentage'},
+            baseOpacity: {type: 'percentage'},
+
 
             // UDL settings
             has_bright_light_vision: {type: 'boolean'},
@@ -1758,7 +1843,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
             has_limit_field_of_vision: {type: 'boolean'},
             has_limit_field_of_night_vision: {type: 'boolean'},
             has_directional_bright_light: {type: 'boolean'},
-            has_directional_low_light: {type: 'boolean'},
+            has_directional_dim_light: {type: 'boolean'},
             light_sensitivity_multiplier: {type: 'number'},
             night_vision_effect: {type: 'option'},
             
@@ -1778,12 +1863,12 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
             limit_field_of_vision_center: {type: 'degrees'},
             limit_field_of_night_vision_center: {type: 'degrees'},
             directional_bright_light_center: {type: 'degrees'},
-            directional_low_light_center: {type: 'degrees'},
+            directional_dim_light_center: {type: 'degrees'},
 
             limit_field_of_vision_total: {type: 'circleSegment'},
             limit_field_of_night_vision_total: {type: 'circleSegment'},
             directional_bright_light_total: {type: 'circleSegment'},
-            directional_low_light_total: {type: 'circleSegment'},
+            directional_dim_light_total: {type: 'circleSegment'},
 
 
 
@@ -1836,6 +1921,9 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
             bar1_link: {type: 'attribute'},
             bar2_link: {type: 'attribute'},
             bar3_link: {type: 'attribute'},
+            bar1_num_permission: {type: 'option'},
+            bar2_num_permission: {type: 'option'},
+            bar3_num_permission: {type: 'option'},
             currentSide: {type: 'sideNumber'},
             imgsrc: {type: 'image'},
             sides: {type: 'image' },
@@ -1847,23 +1935,34 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
         };
 
     const fieldAliases = {
-            bar1_current: "bar1_value",
-            bar2_current: "bar2_value",
-            bar3_current: "bar3_value",
-            bright_vision: "has_bright_light_vision",
-            night_vision: "has_night_vision",
-            emits_bright: "emits_bright_light",
-            emits_low: "emits_low_light",
-            night_distance: "night_vision_distance",   
-            bright_distance: "bright_light_distance",    
-            low_distance: "low_light_distance",
-            low_light_opacity: "dim_light_opacity",
-            currentside: "currentSide",   // fix for case issue
-            lightcolor: "lightColor", // fix for case issue
-            light_color: "lightColor", // fix for case issue
-            lockmovement: "lockMovement", // fix for case issue
-            lock_movement: "lockMovement" // fix for case issue
-        };
+      bar1_current: "bar1_value",
+      bar2_current: "bar2_value",
+      bar3_current: "bar3_value",
+      bright_vision: "has_bright_light_vision",
+      night_vision: "has_night_vision",
+      emits_bright: "emits_bright_light",
+      emits_low: "emits_low_light",
+      night_distance: "night_vision_distance",   
+      bright_distance: "bright_light_distance",    
+      low_distance: "low_light_distance",
+      low_light_opacity: "dim_light_opacity",
+      has_directional_low_light: "has_directional_dim_light",
+      directional_low_light_total: "directional_dim_light_total",
+      directional_low_light_center: "directional_dim_light_center",
+      currentside: "currentSide",   // fix for case issue
+      lightcolor: "lightColor", // fix for case issue
+      light_color: "lightColor", // fix for case issue
+      lockmovement: "lockMovement", // fix for case issue
+      lock_movement: "lockMovement", // fix for case issue
+      disablesnapping: "disableSnapping", 
+      disabletokenmenu: "disableTokenMenu",
+      disable_snapping: "disableSnapping", 
+      disable_token_menu: "disableTokenMenu",
+      fadeonoverlap: "fadeOnOverlap",
+      renderasscenery: "renderAsScenery",
+      fadeopacity: "fadeOpacity",
+      baseopacity: "baseOpacity"
+    };
 
     const reportTypes = [
             'gm', 'player', 'all', 'control', 'token', 'character'
@@ -1886,11 +1985,11 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
         };
 
     const getCleanImgsrc = (imgsrc) => {
-      let parts = imgsrc.match(/(.*\/images\/.*)(thumb|med|original|max)([^?]*)(\?[^?]+)?$/);
+      let parts = (imgsrc||'').match(/(.*\/images\/.*)(thumb|med|original|max)([^?]*)(\?[^?]+)?$/);
       if(parts) {
-        return parts[1]+'thumb'+parts[3]+(parts[4]?parts[4]:`?${Math.round(Math.random()*9999999)}`);
-      }
-      return;
+        let leader = parts[1].replace(/^https:\/\/s3.amazonaws.com\/files.d20.io\//,'https://files.d20.io/');
+          return `${leader}thumb${parts[3]}${parts[4] ? parts[4] : `?${Math.round(Math.random()*9999999)}`}`;
+        }
     };
 
     const forceLightUpdateOnPage = (()=>{
@@ -1915,7 +2014,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
         off: ()=>()=>'None',
         ['none']: ()=>()=>'None',
         ['dimming']: (amount='5ft')=>(token,mods)=>{
-          const regexp = /^([=+\-/*])?(-?\d+\.?|\d*\.\d+)(u|g|s|ft|m|km|mi|in|cm|un|hex|sq|%)?$/i;
+          const regexp = /^([=+\-/*])?(-?\d+\.?|\d*\.\d+)(u|g|s|ft|m|km|mi|in|cm|un|hex|sq|%)?$/i; // */
           let match = `${amount}`.match(regexp);
           let factor;
           let pnv;
@@ -1988,22 +2087,33 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
         ['nocturnal']: ()=>()=>'Nocturnal'
       },
       bar_location: {
-        __default__: ()=>null,
-        off: ()=>null,
-        none: ()=>null,
-        ['above']: ()=>null,
-        ['overlap_top']: ()=>'overlap_top',
-        ['overlap_bottom']: ()=>'overlap_bottom',
-        ['below']: ()=>'below'
+        __default__        : ()=>null,
+        off                : ()=>null,
+        none               : ()=>null,
+        ['above']          : ()=>null,
+        ['overlap_top']    : ()=>'overlap_top',
+        ['overlap_bottom'] : ()=>'overlap_bottom',
+        ['below']          : ()=>'below'
       },
       compact_bar: {
-        __default__: ()=>null,
-        off: ()=>null,
-        none: ()=>null,
-        ['compact']: ()=>'compact',
-        ['on']: ()=>'compact'
+        __default__ : ()=>null,
+        off         : ()=>null,
+        none        : ()=>null,
+        ['compact'] : ()=>'compact',
+        ['on']      : ()=>'compact'
+      },
+      bar1_num_permission: {
+        __default__  : ()=>'',
+        ['editor']   : ()=>'',
+        ['']         : ()=>'',
+        ['none']     : ()=>'hidden',
+        ['hidden']   : ()=>'hidden',
+        ['everyone'] : ()=>'everyone',
+        ['all']      : ()=>'everyone'
       }
     };
+    option_fields.bar2_num_permission = option_fields.bar1_num_permission;
+    option_fields.bar3_num_permission = option_fields.bar1_num_permission;
 
     const regex = {
       moveAngle: /^(=)?([+-]?(?:0|[1-9][0-9]*))(!)?$/,
@@ -2011,8 +2121,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
       numberString: /^[-+*/=]?[-+]?(0|[1-9][0-9]*)([.]+[0-9]*)?([eE][-+]?[0-9]+)?(!)?$/,
       stripSingleQuotes: /'([^']+(?='))'/g,
       stripDoubleQuotes: /"([^"]+(?="))"/g,
-      layers: /^(?:gmlayer|objects|map|walls)$/,
-
+      layers: /^(?:gmlayer|objects|map|walls|foreground)$/,
       imgsrc: /(.*\/images\/.*)(thumb|med|original|max)(.*)$/,
       imageOp: /^(?:(-(?:\d*(?:\s*,\s*\d+)*|\*)$)|(\/(?:\d+@\d+(?:\s*,\s*\d+@\d+)*|\*)$)|([+^]))?(=?)(?:(https?:\/\/.*$)|([-\d\w]*))(?::(.*))?$/,
       sideNumber: /^(\?)?([-+=*])?(\d*)$/,
@@ -2037,7 +2146,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
 
         class numberOp {
             static parse(field, str, permitBlank=true) {
-                const regexp = /^([=+\-/*!])?(-?\d+\.?|\d*\.\d+)(u|g|s|ft|m|km|mi|in|cm|un|hex|sq)?(!)?$/i;
+                const regexp = /^([=+\-/*!])?(-?\d+\.?|-?\d*\.\d+)(u|g|s|ft|m|km|mi|in|cm|un|hex|sq)?(!)?$/i; // */
 
                 if(!str.length && permitBlank){
                     return new numberOp(field, '','','' );
@@ -3027,6 +3136,9 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                             operation: op || '+'
                         });
                 }
+                if('=' === op && stat.length===0){
+                  return {getMods:(/*c*/)=>({statusmarkers:''})};
+                }
 
                 return {getMods:(c)=>({statusmarkers:c})};
             }
@@ -3209,7 +3321,59 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
         }
 
         ////////////////////////////////////////////////////////////
+        // IsComputedAttr //////////////////////////////////////////
+        ////////////////////////////////////////////////////////////
+        const getComputedProxy = ("undefined" !== typeof getComputed)
+            ? async (...a) => await getComputed(...a)
+            : async ()=>{}
+          ;
 
+        class IsComputedAttr {
+          static #computedMap = new Map();
+          static #sheetMap = new Map();
+
+          static async DoReady() {
+            let c = Campaign();
+            Object.keys(c?.computedSummary||{}).forEach(k=>{
+              IsComputedAttr.#computedMap.set(k,c.computedSummary[k]);
+            });
+
+            let cMap = findObjs({type:"character"}).reduce((m,c)=>({...m,[c.get('charactersheetname')]:c.id}),{});
+            let promises = Object.keys(cMap).map(async c => {
+              let k = IsComputedAttr.#computedMap.keys().next().value;
+              if(k) {
+                let v = await getComputedProxy({characterId:cMap[c],property:k});
+                IsComputedAttr.#sheetMap.set(c, undefined !== v);
+              }
+            });
+            await Promise.all(promises);
+          }
+
+          static Check(attrName) {
+            return IsComputedAttr.#computedMap.has(attrName);
+          }
+
+          static Assignable(attrName) {
+            return IsComputedAttr.#computedMap.get(attrName)?.tokenBarValue ?? false;
+          }
+
+          static Readonly(attrName) {
+            return IsComputedAttr.#computedMap.get(attrName)?.readonly ?? true;
+          }
+
+          static IsComputed(sheet,attrName) {
+            let sheetName = sheet.get('charactersheetname');
+
+            if(IsComputedAttr.Check(attrName) && IsComputedAttr.#sheetMap.has(sheetName)){
+              return IsComputedAttr.#sheetMap.get(sheetName);
+            }
+            return false;
+          }
+
+        }
+        on('ready',IsComputedAttr.DoReady);
+
+        ////////////////////////////////////////////////////////////
 
 
 
@@ -3305,27 +3469,27 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
         }
     };
 
-    const assureHelpHandout = (create = false) => {
-        if(state.TheAaron && state.TheAaron.config && (false === state.TheAaron.config.makeHelpHandouts) ){
-          return;
-        }
-        const helpIcon = "https://s3.amazonaws.com/files.d20.io/images/127392204/tAiDP73rpSKQobEYm5QZUw/thumb.png?15878425385";
+  const assureHelpHandout = (create = false) => {
+    if(state.TheAaron && state.TheAaron.config && (false === state.TheAaron.config.makeHelpHandouts) ){
+      return;
+    }
+    const helpIcon = "https://s3.amazonaws.com/files.d20.io/images/295769190/Abc99DVcre9JA2tKrVDCvA/thumb.png?1658515304";
 
-        // find handout
-        let props = {type:'handout', name:`Help: ${scriptName}`};
-        let hh = findObjs(props)[0];
-        if(!hh) {
-            hh = createObj('handout',Object.assign(props, {inplayerjournals: "all", avatar: helpIcon}));
-            create = true;
-        }
-        if(create || version !== state[scriptName].lastHelpVersion){
-            hh.set({
-                notes: helpParts.helpDoc({who:'handout',playerid:'handout'})
-            });
-            state[scriptName].lastHelpVersion = version;
-            log('  > Updating Help Handout to v'+version+' <');
-        }
-    };
+    // find handout
+    let props = {type:'handout', name:`Help: ${scriptName}`};
+    let hh = findObjs(props)[0];
+    if(!hh) {
+      hh = createObj('handout',Object.assign(props, {inplayerjournals: "all", avatar: helpIcon}));
+      create = true;
+    }
+    if(create || version !== state[scriptName].lastHelpVersion){
+      hh.set({
+        notes: helpParts.helpDoc({who:'handout',playerid:'handout'})
+      });
+      state[scriptName].lastHelpVersion = version;
+      log('  > Updating Help Handout to v'+version+' <');
+    }
+  };
 
     const checkInstall = function() {
         log('-=> TokenMod v'+version+' <=-  ['+(new Date(lastUpdate*1000))+']');
@@ -3494,6 +3658,11 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
             let text = `${o.getName()}${o.getName()!==o.getTag()?` [${_h.code(o.getTag())}]`:''}`;
             return `<div style="width: auto; padding: .2em; margin: .1em .25em; border: 1px solid #ccc; border-radius: .25em; background-color: #eee; line-height:1.5em; height: auto;float:left;">${o.getHTML()}${text}</div>`;
         },
+        helpHandoutLink: ()=>{
+          let props = {type:'handout', name:`Help: ${scriptName}`};
+          let hh = findObjs(props)[0];
+          return `<a style="color: #07c; text-decoration: underline;" href="http://journal.roll20.net/handout/${hh.id}">Help: ${scriptName}</a>`;
+        },
         inset: (...o) => `<div style="padding-left: 10px;padding-right:20px">${o.join(' ')}</div>`,
         join: (...o) => o.join(' '),
         pre: (...o) =>`<div style="border:1px solid #e1e1e8;border-radius:4px;padding:8.5px;margin-bottom:9px;font-size:12px;white-space:normal;word-break:normal;word-wrap:normal;background-color:#f7f7f9;font-family:monospace;overflow:auto;">${o.join(' ')}</div>`,
@@ -3521,6 +3690,8 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                             `!token-mod `,
                             _h.required(
                                 `--help`,
+                                `--rebuild-help`,
+                                `--help-statusmarkers`,
                                 `--ignore-selected`,
                                 `--current-page`,
                                 `--active-pages`,
@@ -3565,6 +3736,8 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                         ),
                         _h.ul(
                             `${_h.bold('--help')} -- Displays this help`,
+                            `${_h.bold('--rebuild-help')} -- Recreated the help handout in the journal.  Useful for showing updated custom status markers.`,
+                            `${_h.bold('--help-statusmarkers')} -- Output just the list of known status markers into the chat.`,
                             `${_h.bold('--ignore-selected')} -- Prevents modifications to the selected tokens (only modifies tokens passed with --ids).`,
                             `${_h.bold('--current-page')} -- Only modifies tokens on the calling player${ch("'")}s current page.  This is particularly useful when passing character_ids to ${_h.italic('--ids')}.`,
                             `${_h.bold('--active-pages')} -- Only modifies tokens on pages where there is a player or the GM.  This is particularly useful when passing character_ids to ${_h.italic('--ids')}.`,
@@ -3653,6 +3826,8 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                             _h.cell('light_otherplayers'),
                             _h.cell('light_hassight'),
                             _h.cell('isdrawing'),
+                            _h.cell('disableSnapping'),
+                            _h.cell('disableTokenMenu'),
                             _h.cell('flipv'),
                             _h.cell('fliph'),
                             _h.cell('aura1_square'),
@@ -3662,7 +3837,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                             _h.cell("has_limit_field_of_vision"),
                             _h.cell("has_limit_field_of_night_vision"),
                             _h.cell("has_directional_bright_light"),
-                            _h.cell("has_directional_low_light"),
+                            _h.cell("has_directional_dim_light"),
                             _h.cell("bright_vision"),
                             _h.cell("has_night_vision"),
                             _h.cell("night_vision"),
@@ -3677,12 +3852,38 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                     _h.inset(
                         _h.pre('!token-mod --set showname|yes isdrawing|no')
                     ),
+
                     _h.paragraph(`The following are considered true values: ${_h.code('1')}, ${_h.code('on')}, ${_h.code('yes')}, ${_h.code('true')}, ${_h.code('sure')}, ${_h.code('yup')}`),
 
                     _h.subhead("Probabilistic Booleans"),
                     _h.paragraph(`TokenMod accepts the following probabilistic values which are true some of the time and false otherwise: ${_h.code('couldbe')} (true 1 in 8 times) , ${_h.code('sometimes')} (true 1 in 4 times) , ${_h.code('maybe')} (true 1 in 2 times), ${_h.code('probably')} (true 3 in 4 times), ${_h.code('likely')} (true 7 in 8 times)`),
 
                     _h.paragraph(`Anything else is considered false.`),
+
+                    _h.subhead(`${_h.code('isdrawing')} split properties: ${_h.code('disableSnapping')} and ${_h.code('disableTokenMenu')} (Jumpgate)`),
+                    _h.paragraph( `On Jumpgate, these two properties control the individual facets of what was handled by ${_h.code('isdrawing')}.  You can set ${_h.code('disableSnapping')} to true to prevent a graphic from snapping to the page's grid lines while still retaining the bubbles and token menu:`),
+                    _h.inset(
+                        _h.pre('!token-mod --set disableSnapping|yes')
+                    ),
+                    _h.paragraph( `Setting ${_h.code('disableTokenmenu')} to true will hide the token menu while still snapping the graphic to the grid:`),
+                    _h.inset(
+                        _h.pre('!token-mod --set disableTokenMenu|yes')
+                    ),
+                    _h.paragraph( `Setting ${_h.code('isdrawing')} on Jumpgate will set both ${_h.code('disableSnapping')} and ${_h.code('disableTokenMenu')}.  These two commands have the same effect:`),
+                    _h.inset(
+                        _h.pre('!token-mod --set isdrawing|yes'),
+                        _h.pre('!token-mod --set disableSnapping|yes disableTokenMenu|yes')
+                    ),
+                    _h.paragraph( `If not on Jumpgate, setting either ${_h.code('disableSnapping')} or ${_h.code('disableTokenMenu')} will be the same as setting ${_h.code('isdrawing')}. These will all be the same if not on Jumpgate:`),
+                    _h.inset(
+                        _h.pre('!token-mod --set isdrawing|yes'),
+                        _h.pre('!token-mod --set disableTokenMenu|yes'),
+                        _h.pre('!token-mod --set disableSnapping|yes')
+                    ),
+                    _h.paragraph( `If setting both, be sure to set the one that is more important to you second as it will set ${_h.code('isdrawing')}. In this example, if not on Jumpgate, you'll end up with snapping and token menus:`),
+                    _h.inset(
+                        _h.pre('!token-mod --set disableSnapping|no disableTokenMenu|yes')
+                    ),
 
                     _h.subhead("Updated Dynamic Lighting"),
                     _h.paragraph(`${_h.code("has_bright_light_vision")} is the UDL version of ${_h.bold("light_hassight")}. It controls if a token can see at all, and must be turned on for a token to use UDL.  You can also use the alias ${_h.code("bright_vision")}.`),
@@ -3786,6 +3987,41 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                         ),
                         _h.inset(
                             _h.pre( '!token-mod --set compact_bar|' )
+                        )
+                      )
+                    ),
+        setBarPermission: (/* context*/) => _h.join(
+                    _h.subhead('Bar Permission'),
+                    _h.inset(
+                        _h.paragraph(`Bar Permission specifies who sees numbers overlaid on the bar.  To not show any numbers, you can set it to ${_h.code('hidden')} or ${_h.code('none')}.  To only show it to editors (the default), you can set it to ${_h.code('editor')} or leave the field blank.  To make the numbers visible to everyone, you can set it to ${_h.code('everyone')} or ${_h.code('all')}.  Any other value is ignored.`),
+                        _h.minorhead('Available Bar Permission Properties:'),
+                        _h.inset(
+                            _h.grid(
+                                _h.cell('bar1_num_permission'),
+                                _h.cell('bar2_num_permission'),
+                                _h.cell('bar3_num_permission')
+                            )
+                        ),
+                        _h.paragraph(`Hide the numbers from everyone:`),
+                        _h.inset(
+                            _h.pre( '!token-mod --set bar1_num_permission|hidden' )
+                        ),
+                        _h.inset(
+                            _h.pre( '!token-mod --set bar2_num_permission|none' )
+                        ),
+                        _h.paragraph(`Showing only the editors the numbers:`),
+                        _h.inset(
+                            _h.pre( '!token-mod --set bar3_num_permission|editor' )
+                        ),
+                        _h.inset(
+                            _h.pre( '!token-mod --set bar2_num_permission|' )
+                        ),
+                        _h.paragraph(`Making the numbers visible to everyone:`),
+                        _h.inset(
+                            _h.pre( '!token-mod --set bar1_num_permission|everyone' )
+                        ),
+                        _h.inset(
+                            _h.pre( '!token-mod --set bar3_num_permission|all' )
                         )
                       )
                     ),
@@ -3937,7 +4173,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                             _h.cell("limit_field_of_vision_center"),
                             _h.cell("limit_field_of_night_vision_center"),
                             _h.cell("directional_bright_light_center"),
-                            _h.cell("directional_low_light_center")
+                            _h.cell("directional_dim_light_center")
                         )
                     ),
                     _h.paragraph('Rotating a token by 180 degrees.'),
@@ -3959,7 +4195,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                             _h.cell("limit_field_of_vision_total"),
                             _h.cell("limit_field_of_night_vision_total"),
                             _h.cell("directional_bright_light_total"),
-                            _h.cell("directional_low_light_total")
+                            _h.cell("directional_dim_light_total")
                         )
                     ),
                     _h.paragraph('Setting line of sight angle to 90 degrees.'),
@@ -4095,7 +4331,8 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                             _h.cell('gmlayer'),
                             _h.cell('objects'),
                             _h.cell('map'),
-                            _h.cell('walls')
+                            _h.cell('walls'),
+                            _h.cell('foreground')
                         )
                     ),
                     _h.paragraph('Moving something to the gmlayer.'),
@@ -4104,7 +4341,15 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                     )
                 )
             ),
-        setStatus: ( /* context */) => _h.join(
+        availableStatusMarkers: (/* context */) => _h.join(
+                    _h.minorhead('Available Status Markers:'),
+                    _h.inset(
+                        _h.grid(
+                            ...StatusMarkers.getOrderedList().map(tm=>_h.statusCell(tm))
+                        )
+                    )
+            ),
+        setStatus: ( context ) => _h.join(
                 _h.subhead('Status'),
                 _h.inset(
                     _h.paragraph(`There is only one Status property.  Status has a somewhat complicated syntax to support the greatest possible flexibility.`),
@@ -4171,7 +4416,12 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                         _h.pre('!token-mod --set statusmarkers|=dead')
                     ),
 
-                    _h.paragraph(`If you want to remove all status markers, just specify the same marker twice with an ${_h.code('=')} and then a ${_h.code('-')}.  This will clear all the status markers:`),
+                    _h.paragraph(`If you want to remove all status markers, just set an empty status marker with ${_h.code('=')}. This will clear all the status markers:`),
+                    _h.inset(
+                        _h.pre('!token-mod --set statusmarkers|=')
+                    ),
+
+                    _h.paragraph(`You can also do this by setting a single status marker, then removing it:`),
                     _h.inset(
                         _h.pre('!token-mod --set statusmarkers|=blue|-blue')
                     ),
@@ -4196,13 +4446,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                     _h.inset(
                         _h.pre('!token-mod --set statusmarkers|blue:3|-dead|red:3')
                     ),
-
-                    _h.minorhead('Available Status Markers:'),
-                    _h.inset(
-                        _h.grid(
-                            ...StatusMarkers.getOrderedList().map(tm=>_h.statusCell(tm))
-                        )
-                    ),
+                    helpParts.availableStatusMarkers(context),
                     _h.paragraph(`Status Markers with a space in the name must be specified using the tag name, which appears in ${_h.code('[')}${_h.code(']')} above.`),
                     _h.inset(
                         _h.pre('!token-mod --set statusmarkers|Mountain_Pass::1234568')
@@ -4588,6 +4832,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                         helpParts.setNightVisionEffect(context),
                         helpParts.setBarLocation(context),
                         helpParts.setCompactBar(context),
+                        helpParts.setBarPermission(context),
                         helpParts.setLayer(context),
                         helpParts.setStatus(context),
                         helpParts.setImage(context),
@@ -4716,6 +4961,18 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
         helpChat: (context) => _h.outer(
                 _h.title('TokenMod',version),
                 helpParts.helpBody(context)
+            ),
+
+        helpStatusMarkers: (context) => _h.outer(
+                _h.title('TokenMod',version),
+                helpParts.availableStatusMarkers(context)
+            ),
+
+        rebuiltHelp: (/*context*/) => _h.outer(
+                _h.title('TokenMod',version),
+                _h.header(
+                    _h.paragraph( `${_h.helpHandoutLink()} regenerated.`)
+                )
             )
     };
 
@@ -4744,7 +5001,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                 }
             }
 
-            if(update.match(/^[+\-/*]/)){
+            if(update.match(/^[+\-/*]/)){ // */
                 op=update[0];
                 update=_.rest(update).join('');
             }
@@ -4805,12 +5062,10 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                       let o = option_fields[cmd];
                       let ks = Object.keys(o);
                       let arg = args.shift().toLowerCase();
-                      if(0 === arg.length){
+                      if(0 === arg.length || !ks.includes(arg)) {
                         arg='__default__';
                       }
-                      if(ks.includes(arg)){
-                        retr[cmd].push(o[arg](args.shift()));
-                      }
+                      retr[cmd].push(o[arg](args.shift()));
                     }
                     break;
 
@@ -5042,6 +5297,29 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
             },base)
             ;
 
+    const doSetWithWorkerOnLinkedBars = (token, mods) => {
+      [1,2,3].forEach(n=>{
+        if(mods.hasOwnProperty(`bar${n}_value`) || mods.hasOwnProperty(`bar${n}_max`)){
+          let a = getObj('attribute',token.get(`bar${n}_link`));
+          if(a) {
+            let ops = {};
+            if(mods.hasOwnProperty(`bar${n}_value`)){
+              ops[`current`]=mods[`bar${n}_value`];
+              delete mods[`bar${n}_value`];
+            }
+            if(mods.hasOwnProperty(`bar${n}_max`)){
+              ops[`max`]=mods[`bar${n}_max`];
+              delete mods[`bar${n}_max`];
+            }
+            if(Object.keys(ops).length){
+              a.setWithWorker(ops);
+            }
+          }
+        }
+      });
+
+      return mods;
+    };
 
     const applyModListToToken = function(modlist, token) {
         let ctx={
@@ -5134,13 +5412,24 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                                 mods[k.split(/_/)[0]+'_value']=delta.get('current');
                                 mods[k.split(/_/)[0]+'_max']=delta.get('max');
                             } else {
-                                mods[k]=`sheetattr_${f[0]}`;
+                              let c = getObj('character',cid);
+                              if(c) {
+                                if(IsComputedAttr.IsComputed(c,f[0])){
+                                  if(IsComputedAttr.Assignable(f[0])){
+                                    mods[k]=f[0];
+                                  }
+                                } else {
+                                  mods[k]=`sheetattr_${f[0]}`;
+                                }
+                              }
                             }
                         }
                     }
                     break;
 
 
+                case 'baseOpacity':
+                case 'fadeOpacity':
                 case 'dim_light_opacity':
                     mods = Object.assign( mods, f[0].getMods(token,mods));
                     break;
@@ -5156,7 +5445,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                 case 'limit_field_of_vision_center':
                 case 'limit_field_of_night_vision_center':
                 case 'directional_bright_light_center':
-                case 'directional_low_light_center':
+                case 'directional_dim_light_center':
                     delta=getRelativeChange(token.get(k),f[0]);
                     if(_.isNumber(delta)) {
                         mods[k]=(((delta%360)+360)%360);
@@ -5168,7 +5457,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                 case 'limit_field_of_vision_total':
                 case 'limit_field_of_night_vision_total':
                 case 'directional_bright_light_total':
-                case 'directional_low_light_total':
+                case 'directional_dim_light_total':
                     delta=getRelativeChange(token.get(k),f[0]);
                     if(_.isNumber(delta)) {
                         mods[k] = Math.min(360,Math.max(0,delta));
@@ -5213,7 +5502,15 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                           if(/!$/.test(f[0])) {
                             delta = Math.max(0,Math.min(delta,token.get(k.replace(/_value$/,'_max'))));
                           }
-                          mods[k]=delta;
+                          let link = token.get(k.replace(/_value$/,'_link'));
+                          if(IsComputedAttr.Check(link)) {
+                            if(!IsComputedAttr.Readonly(link)){
+                              setComputed({characterId:token.get('represents'),property:link,args:[delta]});
+                              mods[k]=delta;
+                            }
+                          } else {
+                            mods[k]=delta;
+                          }
                         }
                       } else {
                           mods[k]=f[0];
@@ -5223,6 +5520,23 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                 case 'bar1_max':
                 case 'bar2_max':
                 case 'bar3_max':
+                    if(regex.numberString.test(f[0])){
+                        delta=getRelativeChange(token.get(k),f[0]);
+                        if(_.isNumber(delta) || _.isString(delta)) {
+                          let link = `${token.get(k.replace(/_max$/,'_link'))}_max`;
+                          if(IsComputedAttr.Check(link)) {
+                            if(!IsComputedAttr.Readonly(link)){
+                              setComputed({characterId:token.get('represents'),property:link,args:[delta]});
+                              mods[k]=delta;
+                            }
+                          } else {
+                            mods[k]=delta;
+                          }
+                        }
+                      } else {
+                          mods[k]=f[0];
+                      }
+                    break;
                 case 'name':
                     if(regex.numberString.test(f[0])){
                         delta=getRelativeChange(token.get(k),f[0]);
@@ -5280,6 +5594,8 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
         _.each(modlist.move,function(f){
           mods = Object.assign(mods, f.getMods(token,mods));
         });
+
+        mods = doSetWithWorkerOnLinkedBars(token,mods);
 
         token.set(mods);
         notifyObservers('tokenChange',token,ctx.prev);
@@ -5465,7 +5781,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
 
     
 
-    const OutputDebugInfo = (msg,ids,modlist,badCmds) => {
+const OutputDebugInfo = (msg,ids /*, modlist, badCmds */) => {
       let selMap = (msg.selected||[]).map(o=>o._id);
       let who=(getObj('player',msg.playerid)||{get:()=>'API'}).get('_displayname');
       let fMsg = HE(msg.content.replace(/<br\/>/g,'')).replace(/ /g,'&nbsp;').replace(/\$/g,'&#36;');
@@ -5496,7 +5812,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
           },[]).join(', ');
           return [...m,{k:`$[[${k}]]`, v:(ti.length && ti) || v.results.total || 0}];
         },[])
-        .reduce((m,o) => m.replace(o.k,o.v), msg.content);
+        .reduce((m,o) => m.replaceAll(o.k,o.v), msg.content);
     } else {
       return msg.content;
     }
@@ -5527,7 +5843,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
                 };
             let reports=[];
 
-			msg.content = processInlinerolls(msg)
+			msg.content = processInlinerolls(msg);
 
             args = msg.content
                 .replace(/<br\/>\n/g, ' ')
@@ -5542,6 +5858,27 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
 				cmds=args.shift().match(/([^\s]+[|#]'[^']+'|[^\s]+[|#]"[^"]+"|[^\s]+)/g);
 				let cmd = cmds.shift();
 				switch(cmd) {
+					case 'help-statusmarkers': {
+              let context = {
+                who,
+                playerid:msg.playerid
+              };
+              sendChat('', '/w "'+who+'" '+ helpParts.helpStatusMarkers(context));
+            }
+            return;
+
+					case 'rebuild-help': {
+              assureHelpHandout(true);
+              let context = {
+                who,
+                playerid:msg.playerid
+              };
+
+              sendChat('', `/w "${who}" ${helpParts.rebuiltHelp(context)}`);
+
+            }
+            return;
+
 					case 'help':
 
 // !tokenmod --help [all]
@@ -5577,8 +5914,8 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
 
 					case 'debug': {
 						IsDebugRequest = true;
-					  }
-					  break;
+          }
+          break;
 
 					case 'config':
 						if(playerIsGM(playerid)) {
@@ -5632,8 +5969,8 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
 						break;
 
 					default:
-					  Debug_UnrecognizedCommands.push({cmd,args:cmds});
-					  break;
+            Debug_UnrecognizedCommands.push({cmd,args:cmds});
+            break;
 				}
 			}
 			modlist.off=_.difference(modlist.off,modlist.on);
@@ -5660,7 +5997,7 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
 				});
 
 			if(IsDebugRequest){
-			  OutputDebugInfo(msg_orig,ids,modlist,Debug_UnrecognizedCommands);
+        OutputDebugInfo(msg_orig,ids,modlist,Debug_UnrecognizedCommands);
 			}
 
 			if(ids.length){
@@ -5672,12 +6009,12 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
 					}
 					return m;
 				},[]))]
-				  .filter(o=>undefined !== o)
-				  .filter(pageFilter)
-				  .forEach((t) => {
-					  let ctx = applyModListToToken(modlist,t);
-					  doReports(ctx,reports,who);
-				  });
+          .filter(o=>undefined !== o)
+          .filter(pageFilter)
+          .forEach((t) => {
+            let ctx = applyModListToToken(modlist,t);
+            doReports(ctx,reports,who);
+          });
 			}
         } catch (e) {
             let who=(getObj('player',msg_orig.playerid)||{get:()=>'API'}).get('_displayname');
@@ -5711,8 +6048,6 @@ const TokenMod = (() => { // eslint-disable-line no-unused-vars
 })();
 
 {try{throw new Error('');}catch(e){API_Meta.TokenMod.lineCount=(parseInt(e.stack.split(/\n/)[1].replace(/^.*:(\d+):.*$/,'$1'),10)-API_Meta.TokenMod.offset);}}
-
-
 
 
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
