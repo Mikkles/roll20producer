@@ -1,7 +1,15 @@
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
-//       PRODWIZ 0.9.13
+//       PRODWIZ 0.9.14
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
 // Changelog
+// 0.0.14
+//Added limited 2024 Token Action support. This is in a short internal helper script until SD opens up sheet actions to API. Then it will be folded into Token Action Maker and hence ProdWiz
+//Updated DL Buddy to respect Foreground Layer
+//Verified button to set up DnD 2024 tokens.
+//Added warning about which API server is running (default will work for most things, but Experimental is required to do 2024 token actions). This announcement appears at the bottom of the main menu.
+//Identified set Default Token bug that will need a fix from the Aaron (TokenMod). Defaulttoken will work on default Mod Server but fails on Experimental.
+//Edited wording for Game Settings handout template to include the settings for Cosmere.
+//Updated help text in all above cases where needed.
 // 0.9.13
 // Added full help system
 // Added light sensor to Dynamic Lighting Buddy
