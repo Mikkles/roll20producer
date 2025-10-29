@@ -1,8 +1,10 @@
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
-//       PRODWIZ 0.9.14
+//       PRODWIZ 0.9.15
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
 // Changelog
-// 0.0.14
+// 0.9.15
+// Added staggering controls for token pages
+// 0.9.14
 //Added limited 2024 Token Action support. This is in a short internal helper script until SD opens up sheet actions to API. Then it will be folded into Token Action Maker and hence ProdWiz
 //Updated DL Buddy to respect Foreground Layer
 //Verified button to set up DnD 2024 tokens.
@@ -214,9 +216,11 @@ const Roll20Pro = (() => {
             makeButton("Avatar from Token (if in library)", "!prod token avatar", styles.button, "Sets the Avatar of the character as the token image as standard") +
             makeH4("<hr>Token Page Tools", "https://roll20.atlassian.net/wiki/spaces/CP/pages/1408761861/Production+Wizard+Script#Token-Page-Creator") +
             makeButton("Assign Category", "!prod token addToCat ?{Category Number}", styles.button, "See Confluence link next to 'Token Page Tools'. Assigns a caegtory number to selected tokens. Good practices is to assign by 10s.") +
-            makeButton("See Categories", "!prod token seeCats", styles.button, "See Confluence link next to 'Token Page Tools'. Sends a list to chat of which tokens are in which category.") + "<br/><br/>" +
-            makeButton("Run Page Sorter", "!prod token runSorter", styles.button, "Click this button to move categorized tokens into place, and asterisks will be created next to rollable tokens. Make sure to double-check for things like accidental miscategorization, double entries, tokens that should be rollable, etc. If it looks good, finish it up by using the drawing text tool to label the categories as normal!") +
-            makeButton("Reset Categories (if sure!)", "!prod token resetCats", styles.button,"Use this button to start over. This will clear all categories." ) +
+            makeButton("See Categories", "!prod token seeCats", styles.button, "See Confluence link next to 'Token Page Tools'. Sends a list to chat of which tokens are in which category.") + "<br/>" +
+            makeButton("Run Page Sorter", "!prod token runSorter", styles.button, "Click this button to move categorized tokens into place, and asterisks will be created next to rollable tokens. Make sure to double-check for things like accidental miscategorization, double entries, tokens that should be rollable, etc. If it looks good, finish it up by using the drawing text tool to label the categories as normal!") + "<br/>" +
+            makeButton("Reset Categories (if sure!)", "!prod token resetCats", styles.button,"Use this button to start over. This will clear all categories." ) + "<br>" +
+            makeButton("Stagger Up", "!prod token staggerUp", styles.button,"Move selected tokens and text objects up 1/4 square." ) +
+            makeButton("Stagger Down", "!prod token staggerDown", styles.button,"Move selected tokens and text objects down 1/4 square." ) +
             //DEPRECATED
             //makeH4("<del><i>LDL Darkvision") + 
             //makeButton("None", "!token-mod --set light_radius| light_dimradius|0", styles.button) +
@@ -408,6 +412,8 @@ const Roll20Pro = (() => {
                             case "runSorter": if (onPlayerPage(msg)) {runGenerateTokenPage();} 
                                 break;
                             case "resetCats": resetCats(); break;
+                            case "staggerUp": staggerUp(selected); break;
+                            case "staggerDown": staggerDown(selected); break;
                             case "UDLdv": tokenPF2DarkvisionChecker(selected); break;
                             case "off": turnOffAllTokenVision(); break;
                         } 
@@ -697,6 +703,37 @@ const Roll20Pro = (() => {
             });
             return newObj.id;
         },
+        
+        
+        staggerUp = function(selected) {
+            if (!selected || selected.length === 0) return;
+            selected.forEach(sel => {
+                const obj = getObj(sel._type, sel._id);
+                if (!obj) return;
+
+                // Only apply to graphics or text objects
+                if (obj.get('type') === 'graphic' || obj.get('type') === 'text') {
+                    const currentTop = obj.get('top');
+                    obj.set('top', currentTop - 17.5);
+                }
+            });
+        };
+        
+        staggerDown = function(selected) {
+            if (!selected || selected.length === 0) return;
+            selected.forEach(sel => {
+                const obj = getObj(sel._type, sel._id);
+                if (!obj) return;
+
+                // Only apply to graphics or text objects
+                if (obj.get('type') === 'graphic' || obj.get('type') === 'text') {
+                    const currentTop = obj.get('top');
+                    obj.set('top', currentTop + 17.5);
+                }
+            });
+        };
+    
+    
         
         resetCats = function() {
             state.Roll20Pro.sortCats = {};
