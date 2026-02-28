@@ -1,7 +1,9 @@
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
-//       PRODWIZ 0.9.17
+//       PRODWIZ 0.9.18
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
 // Changelog
+// 0.9.18
+// Autolinker updated to include Header links in handouts.
 // 0.9.17
 // PinTool added, controls for mass generation and editing of map pins.
 // 0.9.16
@@ -172,7 +174,14 @@ const Roll20Pro = (() => {
             "<p><code>[goblin|Jimmy]</code> will make a link with the text 'Jimmy' to the 'goblin' handout.</p>"+
             "<p><code>[5e:fireball]</code> will link to the 5e compendium page for fireball.</p>"+
             "<p><code>[5e:wall of fire|the wall]</code> will make a link with the text 'the wall' to the 5e compendium page for wall of fire</p>"+
-            "<p>Currently <code>5e:</code> and <code>pf2:</code> will link to their respective compendiums." + 
+            "<p>Currently <code>5e:</code> and <code>pf2:</code> will link to their respective compendiums.</p>" + 
+            "<p><b>Handout Header linking:</b>" + 
+            "<p>To link to specific headers in a handout uses the # character." + 
+            "<p><code>[Dungeon of Doom#6. The Zombie Chorus|See Room 6]</code> will link the header '6. The Zombie Chorus'. in the handout 'Dungeon of Doom', with the display text 'See Room 6'" + 
+            "<p>If the link goes to a header in the same handout, you do not need to specify the handout:" + 
+            "<p><code>[#6. The Zombie Chorus|See Room 6]</code> will link the header '6. The Zombie Chorus'. in same handout, with the display text 'See Room 6'" + 
+            "<p>If you do not need the display text of the link to be different from the text of the header, you can omit that part as well:" + 
+            "<p><code>[#6. The Zombie Chorus]</code> will link the header '6. The Zombie Chorus'. in same handout, with the display text '6. The Zombie Chorus'" + 
             makeBackButton()
             ,
             tablesAndMacros: () => "<p>Typing in all table entries and formulating their macros is tedious to do within the Roll20 VTT. The TableExport script has been added to Prod Wiz in its entirety from the Roll20 script repository. The script turns formatted API commands into rollable tables. A Google Sheet helper doc is highly recommended for formatting the commands. You can open it up and make a copy for this project by clicking the link button below. Complete instructions for using it to create tables and macros are included with the google sheet.<p>"+
@@ -528,98 +537,202 @@ const Roll20Pro = (() => {
         
         
 ///===========AUTOLINKER========================
-        autolink = function (str){            
-            let regex = /\[(?:([^\]|]*)|([^|]*)\|([^\]|]*))\]/g;
-            let newStr = "";
-            if (str == null) {
-                str = ""
-            };
-            return str.replace(regex, (all, oneWord, link, text) => {
-                log("All: " + all + " oneWord: " + oneWord + " link: " + link + " text: " + text);
+autolink = function (str, obj){            
+    let regex = /\[(?:([^\]|]*)|([^|]*)\|([^\]|]*))\]/g;
 
-                //Testing if the result is a spell (has : in it)
-                if (oneWord && oneWord.includes(":")) {
-                    let spell = oneWord.split(":");
-                    switch (spell[0]) {
+    if (str == null) {
+        str = "";
+    }
+
+    /* ============================================================
+     * INTERNAL: Resolve Handout Header Link
+     * Returns URL string or null if not valid
+     * ============================================================ */
+    const resolveHeaderLink = function(linkText) {
+
+        if (!obj || obj.get("_type") !== "handout") {
+            return null;
+        }
+
+        if (!linkText.includes("#")) {
+            return null;
+        }
+
+        let parts = linkText.split("#");
+        let handoutName = parts[0].trim();
+        let headerText = parts[1] ? parts[1].trim() : "";
+
+        if (!headerText) {
+            return null;
+        }
+
+        let targetID = null;
+
+        // Same handout
+        if (handoutName === "") {
+            targetID = obj.get("id");
+        }
+        // Named handout
+        else {
+            let found = findObjs({
+                _type: "handout",
+                name: handoutName
+            }, {
+                caseInsensitive: true
+            });
+
+            if (found && found[0]) {
+                targetID = found[0].get("id");
+            } else {
+                return null;
+            }
+        }
+
+        let cleanHeader = headerText.replace(/<[^>]*>/g, "");
+        let encodedHeader = cleanHeader.replace(/ /g, "%20");
+
+        return {
+            url: "http://journal.roll20.net/handout/" + targetID + "/#" + encodedHeader,
+            display: cleanHeader
+        };
+    };
+
+    return str.replace(regex, (all, oneWord, link, text) => {
+
+        log("All: " + all + " oneWord: " + oneWord + " link: " + link + " text: " + text);
+
+        /* ============================================================
+         * HEADER LINK WITHOUT PIPE
+         * [Handout#Header]
+         * ============================================================ */
+        if (oneWord && oneWord.includes("#")) {
+            let resolved = resolveHeaderLink(oneWord);
+
+            if (resolved) {
+                return "<a href='" + resolved.url + "'>" + resolved.display + "</a>";
+            }
+        }
+
+        /* ============================================================
+         * SINGLE WORD MODE  (unchanged)
+         * ============================================================ */
+        if (oneWord && oneWord.includes(":")) {
+            let spell = oneWord.split(":");
+            switch (spell[0]) {
+                default:
+                    log("Spell not found.");
+                    return all;
+
+                case "5e":
+                    return "<i><a href='https://roll20.net/compendium/dnd5e/" + spell[1] + "'>" + spell[1] + "</a></i>";
+
+                case "pf2":
+                    return "<i><a href='https://roll20.net/compendium/pf2/" + spell[1] + "'>" + spell[1] + "</a></i>";
+
+                case "gr": 
+                    return '<a href="`/gmroll ' + spell[1] + '">' + spell[1] + "</a>";
+
+                case "r": 
+                    return '<a href="`/roll ' + spell[1] + '">' + spell[1] + "</a>";
+
+                case "sot-quote":
+                    return `<div style="` + styles.sot.quote + `">` + spell[1] + `</div>`;
+            }
+        }
+
+        /* ============================================================
+         * PIPE MODE
+         * ============================================================ */
+        if (link && text) {
+
+            /* ============================================================
+             * HANDOUT CROSS-REFERENCE WITH PIPE
+             * [Handout#Header|Text]
+             * ============================================================ */
+            if (link.includes("#")) {
+                let resolved = resolveHeaderLink(link);
+
+                if (resolved) {
+                    return "<a href='" + resolved.url + "'>" + text + "</a>";
+                }
+            }
+
+            /* ============================================================
+             * EXISTING NAMESPACE LINK MODE (unchanged)
+             * ============================================================ */
+            if (link.includes(":")) {
+                let spell = link.split(":");
+                switch (spell[0]) {
                     default:
                         log("Spell not found.");
                         return all;
-                        break; //This might be unnecessary?
+
                     case "5e":
-                        return "<i><a href='https://roll20.net/compendium/dnd5e/" + spell[1] + "'>" + spell[1] + "</a></i>"
-                        break;
+                        return "<i><a href='https://roll20.net/compendium/dnd5e/" + spell[1] + "'>" + text + "</a></i>";
+
                     case "pf2":
-                        return "<i><a href='https://roll20.net/compendium/pf2/" + spell[1] + "'>" + spell[1] + "</a></i>"
-                        break;
-                    case "gr": 
-                        return '<a href="`/gmroll ' + spell[1] + '">' + spell[1] + "</a>";
-                        break;
-                    case "r": 
-                        return '<a href="`/roll ' + spell[1] + '">' + spell[1] + "</a>";
-                        break;
-                    case "sot-quote":
-                        return `<div style="` + styles.sot.quote + `">` + spell[1] + `</div>`
-                        break;
-                    
-                    }
+                        return "<i><a href='https://roll20.net/compendium/pf2/" + spell[1] + "'>" + text + "</a></i>";
                 }
+            }
 
-                if (link && text) {
-                    if (link.includes(":")) {
-                        let spell = link.split(":");
-                        switch (spell[0]) {
-                        default:
-                            log("Spell not found.");
-                            return all;
-                            break; //This might be unnecessary?
-                        case "5e":
-                            return "<i><a href='https://roll20.net/compendium/dnd5e/" + spell[1] + "'>" + text + "</a></i>"
-                            break;
-                        case "pf2":
-                            return "<i><a href='https://roll20.net/compendium/pf2/" + spell[1] + "'>" + text + "</a></i>"
-                            break;
-                        }
-
-                    }
-
-                    let targetObj = findObjs({
-                        name: link
-                    }, {
-                        caseInsensitive: true
-                    });
-
-                    if (targetObj[0]) {
-                        let targetID = targetObj[0].get("id");
-                        let targetType = targetObj[0].get("type");
-                        if (targetType == "handout") {
-                            return "<a href='http://journal.roll20.net/handout/" + targetID + "'>" + text + "</a>"
-                        } else if (targetType == "character") {
-                            return "<a href='http://journal.roll20.net/character/" + targetID + "'>" + text + "</a>"
-                        }
-                    }
-                }
-                return all;
-
+            /* ============================================================
+             * EXISTING JOURNAL LINK MODE (unchanged)
+             * ============================================================ */
+            let targetObj = findObjs({
+                name: link
+            }, {
+                caseInsensitive: true
             });
 
-        },
+            if (targetObj[0]) {
+                let targetID = targetObj[0].get("id");
+                let targetType = targetObj[0].get("type");
 
-        runAutolink = function(obj, field) {
-            if (!eventLockout){
-                eventLockout = true;
-               
-                let type = obj.get("_type");
-                let name = obj.get("name");
-                log("Auto Linker running on: " + name + " - " + field);
-                obj.get(field, function(str){
-                    let newText = autolink(str, name);
-                    obj.set(field, newText);
-                })
-            } else {
-                eventLockout = false;
+                if (targetType == "handout") {
+                    return "<a href='http://journal.roll20.net/handout/" + targetID + "'>" + text + "</a>";
+                } 
+                else if (targetType == "character") {
+                    return "<a href='http://journal.roll20.net/character/" + targetID + "'>" + text + "</a>";
+                }
             }
-        },
-        
+        }
+
+        return all;
+    });
+},
+
+runAutolink = function(obj, field) {
+    if (!eventLockout){
+        eventLockout = true;
+
+        let type = obj.get("_type");
+        let name = obj.get("name");
+        log("Auto Linker running on: " + name + " - " + field);
+
+        obj.get(field, function(str){
+            let newText = autolink(str, obj);
+
+            if (newText !== str) {
+                obj.set(field, newText, {silent: true}); // update GMNotes/Notes
+
+                // ====== OPTIONAL VISUAL REFRESH FOR GMNOTES ======
+                if (field === "gmnotes" && obj.get("_type") === "handout") {
+                    // toggle a dummy attribute to force redraw
+                    let currentName = obj.get("name");
+                    obj.set("name", currentName + " "); // add space
+                    obj.set("name", currentName);       // revert immediately
+                }
+                // =================================================
+            }
+
+            // Release lock AFTER processing
+            eventLockout = false;
+        });
+
+    } else {
+        log("Event skipped due to lockout: " + obj.get("name") + " - " + field);
+    }
+};        
 ///===============TOKEN TOOLS==================
 
         report = function(selected){
@@ -1737,11 +1850,11 @@ handoutHTML = {
             
             on("change:graphic", updateBuddyLight);
 
-            on('change:handout:notes', function (obj, prev) {
-                runAutolink(obj, "notes")
-            });
-            on('change:handout:gmnotes', function (obj, prev) {
+             on('change:handout:gmnotes', function (obj, prev) {
                 runAutolink(obj, "gmnotes")
+            });
+           on('change:handout:notes', function (obj, prev) {
+                runAutolink(obj, "notes")
             });
             on('change:character:bio', function (obj, prev) {
                 runAutolink(obj, "bio")
