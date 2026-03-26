@@ -1,7 +1,9 @@
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
-//       PRODWIZ 0.9.21
+//       PRODWIZ 0.9.22
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
 // Changelog
+// 0.9.22
+// Header Link tool can now handle multiple simultaneous users.
 // 0.9.21
 // Token Action Builder added. Beware. It is still quirky.
 // 0.9.20
@@ -54,7 +56,7 @@ const Roll20Pro = (() => {
     }
     
     const scriptName = "Roll20 Production Wizard",
-        version = "0.9.21",
+        version = "0.9.22",
         
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -16693,7 +16695,7 @@ if(cmd === "--library")
 // ==================================================
 // Script:   ListHeaderLinks
 // Author:   Keith Curtis
-// Version:  0.0.1
+// Version:  0.1.0
 // ==================================================
 
 var API_Meta = API_Meta || {};
@@ -16704,14 +16706,13 @@ on("ready", () => {
 "use strict";
 
 const scriptName = "ListHeaderLinks";
-const version = "0.0.1";
+const version = "0.1.0";
     //Changelog
+    //0.1.0 Removed state dependency, added user-specific handouts, GM-only access, refresh button
     //0.0.1 Added GMnotes/Notes toggle
     //0.0.0 Initial script
 
 log(`-=> ${scriptName} v${version} is loaded.`);
-
-state.ListHeaderLinks = state.ListHeaderLinks || { headers: {} };
 
 /* =========================================================
 CSS OBJECT
@@ -16724,45 +16725,13 @@ const getCSS = () => ({
     messageContainer: `background:#bbb; padding:12px; border-radius:10px; border:2px solid #888; color:#111;`,
     messageTitle: `font-weight:bold; font-size:20px; margin-bottom:6px;`,
     scrollPanel: `max-height:630px; overflow-y:auto; padding-right:4px;`,
-    headerContainer: `
-width:100%;
-`,
-
-headerScroll: `
-max-height:600px;
-overflow-y:auto;
-padding-right:4px;
-`,
-    
-    headerFilterRow: `
-width:100%;
-white-space:nowrap;
-margin-bottom:4px;
-`,
-
-headerFilterButton: `
-display:inline-block;
-text-align:center;
-padding:4px 0;
-color:black;
-text-decoration:none;
-font-weight:bold;
-margin-right:1px;
-border:1px solid #777;
-`,
-
-headerHandoutButton: `
-display:inline-block;
-text-align:center;
-padding:4px 0;
-background:#e2c69c;
-color:#111;
-text-decoration:none;
-font-weight:bold;
-margin-right:6px;
-border:0px solid transparent;`,
-
-    messageButton: `display:inline-block; padding:4px 8px; background:#444; color:white; border-radius:4px; text-decoration:none; margin-top:6px;`
+    headerContainer: `width:100%;`,
+    headerScroll: `max-height:600px; overflow-y:auto; padding-right:4px;`,
+    headerFilterRow: `width:100%; white-space:nowrap; margin-bottom:4px;`,
+    headerFilterButton: `display:inline-block; text-align:center; padding:4px 0; color:black; text-decoration:none; font-weight:bold; margin-right:1px; border:1px solid #777;`,
+    headerHandoutButton: `display:inline-block; text-align:center; padding:4px 0; background:#e2c69c; color:#111; text-decoration:none; font-weight:bold; margin-right:6px; border:0px solid transparent;`,
+    messageButton: `display:inline-block; padding:4px 8px; background:#444; color:white; border-radius:4px; text-decoration:none; margin-top:6px;`,
+    headerLink: `font-weight:bold; text-decoration:none; color:#111!important;`
 });
 
 /* =========================================================
@@ -16808,9 +16777,10 @@ const sendStyledMessage = (titleOrMessage, messageOrUndefined, isPublic=false) =
 /* =========================================================
 HANDOUT MANAGEMENT
 ========================================================= */
-const getOrCreateIndexHandout = () => {
-    let handout = findObjs({_type:"handout", name:"!HeaderLinks"})[0];
-    if(!handout) handout = createObj("handout",{name:"!HeaderLinks"});
+const getOrCreateUserHandout = (username) => {
+    const handoutName = `!HeaderLinks-${username}`;
+    let handout = findObjs({_type:"handout", name:handoutName})[0];
+    if(!handout) handout = createObj("handout",{name:handoutName});
     return handout;
 };
 
@@ -16818,10 +16788,9 @@ const getOrCreateIndexHandout = () => {
 /* =========================================================
 BUILD HANDOUT QUERY
 ========================================================= */
-const buildHandoutQuery = () => {
-
+const buildHandoutQuery = (username) => {
     const handouts = findObjs({_type:"handout"})
-        .filter(h => h.get("name") !== "!HeaderLinks")
+        .filter(h => !h.get("name").startsWith("!HeaderLinks-"))
         .sort((a,b)=>a.get("name").localeCompare(b.get("name")));
 
     const options = handouts.map(h =>
@@ -16853,6 +16822,7 @@ const parseHeaders = (html, handoutID) => {
 HEADER LIST (RENDER)
 ========================================================= */
 const renderHeaderListForSection = (headers) => {
+    const css = getCSS();
     const rightPadding = 4;
     return headers.map(h => {
         const nbspCount = (h.level - 1);
@@ -16864,23 +16834,23 @@ const renderHeaderListForSection = (headers) => {
             width:32px;
             background:${color};
             text-align:left;
-            color:#111;
+            color:#111!important;
             font-weight:bold;
             margin-right:5px;
             padding-right:${rightPadding}px;
         ">
             ${nbspIndent}H${h.level}
         </div>
-        <a href="${h.url}">${h.text}</a>
+        <a href="${h.url}" style="${css.headerLink}">${h.text}</a>
         <br>
         `;
     }).join("");
 };
 
 /* =========================================================
-HEADER FILTER ROW WITH NOTES/GMNOTES
+HEADER FILTER ROW WITH NOTES/GMNOTES AND REFRESH
 ========================================================= */
-const renderHeaderFilterRow = (handoutID, currentLevel=4, currentSection="gmnotes") => {
+const renderHeaderFilterRow = (handoutID, currentLevel=4, currentSection="gmnotes", username) => {
 
     const css = getCSS();
 
@@ -16893,10 +16863,10 @@ const renderHeaderFilterRow = (handoutID, currentLevel=4, currentSection="gmnote
     let row = `<div style="${css.headerFilterRow}">`;
 
     /* Handout Name Button (40%) */
-const query = buildHandoutQuery();
+    const query = buildHandoutQuery(username);
 
-row += `
-<a style="${css.headerHandoutButton} width:50%;"
+    row += `
+<a style="${css.headerHandoutButton} width:40%;"
    href="!headerlinks --show ${query} --level 4 --section=${currentSection}">
     ${handoutName}
 </a>
@@ -16912,7 +16882,7 @@ row += `
 
         row += `
             <a style="${css.headerFilterButton}
-                width:10%;
+                width:14%;
                 color:${textColor};
                 background:${bgColor};
                 border:0px solid ${borderColor};
@@ -16923,9 +16893,9 @@ row += `
         `;
     });
 
-row += `\u00A0\u00A0`;
+    row += `\u00A0\u00A0`;
 
-    /* H1–H4 buttons (8% each) */
+    /* H1–H4 buttons */
     for(let i=1; i<=4; i++) {
 
         const isActive = (i <= currentLevel);
@@ -16935,7 +16905,7 @@ row += `\u00A0\u00A0`;
 
         row += `
             <a style="${css.headerFilterButton}
-                width:5%;
+                width:4.5%;
                 background:${bgColor};
                 border:0px solid ${borderColor};
             "
@@ -16945,6 +16915,19 @@ row += `\u00A0\u00A0`;
         `;
     }
 
+    /* Refresh button */
+    row += `
+        <a style="${css.headerFilterButton}
+            width:4%;
+            background:#e2c69c;
+            border:0px solid transparent;
+            margin-left:2px;
+        "
+        href="!headerlinks --show ${handoutID} --level ${currentLevel} --section=${currentSection}">
+            <span style = font-family:Pictos">1</span>
+        </a>
+    `;
+
     row += `</div>`;
 
     return row;
@@ -16953,11 +16936,11 @@ row += `\u00A0\u00A0`;
 /* =========================================================
 HANDOUT BUTTON LIST
 ========================================================= */
-const buildHandoutList = () => {
+const buildHandoutList = (username) => {
     const css = getCSS();
     let handouts = findObjs({_type:"handout"});
     handouts = handouts
-        .filter(h => h.get("name") !== "!HeaderLinks")
+        .filter(h => !h.get("name").startsWith("!HeaderLinks-"))
         .sort((a,b)=>a.get("name").localeCompare(b.get("name")));
 
     let html = "";
@@ -16972,9 +16955,9 @@ const buildHandoutList = () => {
 /* =========================================================
 PAGE RENDERER
 ========================================================= */
-const renderIndexPage = (selectedHeadersHTML={}) => {
+const renderIndexPage = (selectedHeadersHTML={}, username) => {
     const css = getCSS();
-    const left = buildHandoutList();
+    const left = buildHandoutList(username);
     return `
     <div style="${css.handoutButton}font-size:14px;">Select a handout to display its header links. Once the filter bar appears, you can click the handout name there to select a different handout from a dropdown list.<br>To copy a link, RIGHT CLICK THE LINK AND COPY ITS URL. Do NOT copy and paste the formatted link text. Use the top-row buttons to limit the max header level.</div>
     <table style="${css.tableLayout}">
@@ -16996,74 +16979,70 @@ const renderIndexPage = (selectedHeadersHTML={}) => {
 };
 
 /* =========================================================
-REBUILD INDEX HANDOUT
+BUILD HEADER INDEX (FRESH PARSE)
 ========================================================= */
-const rebuildIndexHandout = () => {
-    const indexHandout = getOrCreateIndexHandout();
-    const page = renderIndexPage();
-    indexHandout.set("notes", page);
-};
-
-/* =========================================================
-SHOW HEADERS (WITH SECTION)
-========================================================= */
-const showHeaders = (handoutID, level=4, section="gmnotes") => {
-    const indexHandout = getOrCreateIndexHandout();
-    const filterRow = renderHeaderFilterRow(handoutID, level, section);
-    const headers = ((state.ListHeaderLinks.headers[handoutID] || {})[section]) || [];
-    const filtered = headers.filter(h => h.level <= level);
-    const headersHTML = filtered.length
-        ? renderHeaderListForSection(filtered)
-        : "No headers found.";
-    const page = renderIndexPage({
-        headerRow: filterRow,
-        headerList: headersHTML
-    });
-
-    indexHandout.set("notes", page);
-};
-
-/* =========================================================
-CACHE BUILD (notes & gmnotes)
-========================================================= */
-const buildInitialCache = () => {
+const buildHeaderIndex = () => {
     const handouts = findObjs({_type:"handout"});
+    const index = {};
+    
     handouts.forEach(h => {
+        if(h.get("name").startsWith("!HeaderLinks-")) return;
+        
         h.get("notes", notes => {
             h.get("gmnotes", gmnotes => {
-                state.ListHeaderLinks.headers[h.id] = {
+                index[h.id] = {
                     notes: parseHeaders(notes || "", h.id),
                     gmnotes: parseHeaders(gmnotes || "", h.id)
                 };
             });
         });
     });
+    
+    return index;
 };
 
 /* =========================================================
-HANDOUT CHANGE HANDLER
+SHOW HEADERS (WITH SECTION)
 ========================================================= */
-const handleHandoutChange = (handout) => {
-    if(handout.get("name") === "!HeaderLinks") return;
-    handout.get("notes", notes => {
-        handout.get("gmnotes", gmnotes => {
-            state.ListHeaderLinks.headers[handout.id] = {
-                notes: parseHeaders(notes || "", handout.id),
-                gmnotes: parseHeaders(gmnotes || "", handout.id)
-            };
-            rebuildIndexHandout();
-        });
-    });
+const showHeaders = (handoutID, level=4, section="gmnotes", username) => {
+    const userHandout = getOrCreateUserHandout(username);
+    const headerIndex = buildHeaderIndex();
+    
+    // Wait for async parsing to complete
+    setTimeout(() => {
+        const filterRow = renderHeaderFilterRow(handoutID, level, section, username);
+        const headers = ((headerIndex[handoutID] || {})[section]) || [];
+        const filtered = headers.filter(h => h.level <= level);
+        const headersHTML = filtered.length
+            ? renderHeaderListForSection(filtered)
+            : "No headers found.";
+        const page = renderIndexPage({
+            headerRow: filterRow,
+            headerList: headersHTML
+        }, username);
+
+        userHandout.set("notes", page);
+    }, 100);
 };
 
 /* =========================================================
 INITIAL COMMAND
 ========================================================= */
-const initializeIndex = () => {
-    const indexHandout = getOrCreateIndexHandout();
-    rebuildIndexHandout();
-    const link = `http://journal.roll20.net/handout/${indexHandout.id}`;
+const initializeIndex = (username) => {
+    const userHandout = getOrCreateUserHandout(username);
+    const page = renderIndexPage({}, username);
+    userHandout.set("notes", page);
+    
+    const link = `http://journal.roll20.net/handout/${userHandout.id}`;
     sendStyledMessage("Header Link Index", `[Open Header Index](${link})`);
+};
+
+/* =========================================================
+GM CHECK
+========================================================= */
+const isGM = (playerid) => {
+    const player = getObj("player", playerid);
+    return player && playerIsGM(playerid);
 };
 
 /* =========================================================
@@ -17071,34 +17050,32 @@ CHAT HANDLER
 ========================================================= */
 on("chat:message", msg => {
     if(msg.type !== "api") return;
-    if(msg.content.startsWith("!headerlinks")) {
-        const args = msg.content.split(/\s+/);
-        if(args.length === 1) { initializeIndex(); return; }
-        if(args[1] === "--show") {
-            let level = 4;
-            let section = "gmnotes";
-            const levelIndex = args.indexOf("--level");
-            if(levelIndex !== -1) level = parseInt(args[levelIndex+1]) || 4;
-            const sectionIndex = args.findIndex(a => a.startsWith("--section"));
-            if(sectionIndex !== -1) section = args[sectionIndex].split("=")[1] || "gmnotes";
-            showHeaders(args[2], level, section);
-        }
+    if(!msg.content.startsWith("!headerlinks")) return;
+    
+    // GM-only check
+    if(!isGM(msg.playerid)) {
+        sendStyledMessage("Access Denied", "Only GMs can use this command.");
+        return;
+    }
+    
+    const username = msg.who.replace(/\s*\(GM\)\s*/g, "").trim();
+    const args = msg.content.split(/\s+/);
+    
+    if(args.length === 1) { 
+        initializeIndex(username); 
+        return; 
+    }
+    
+    if(args[1] === "--show") {
+        let level = 4;
+        let section = "gmnotes";
+        const levelIndex = args.indexOf("--level");
+        if(levelIndex !== -1) level = parseInt(args[levelIndex+1]) || 4;
+        const sectionIndex = args.findIndex(a => a.startsWith("--section"));
+        if(sectionIndex !== -1) section = args[sectionIndex].split("=")[1] || "gmnotes";
+        showHeaders(args[2], level, section, username);
     }
 });
-
-/* =========================================================
-EVENT REGISTRATION
-========================================================= */
-on("change:handout:notes", handleHandoutChange);
-on("change:handout:gmnotes", handleHandoutChange);
-on("add:handout", rebuildIndexHandout);
-on("destroy:handout", rebuildIndexHandout);
-on("change:handout:name", rebuildIndexHandout);
-
-/* =========================================================
-INITIALIZATION
-========================================================= */
-buildInitialCache();
 
 });
 { try { throw new Error(''); } catch (e) { API_Meta.ListHeaderLinks.lineCount = (parseInt(e.stack.split(/\n/)[1].replace(/^.*:(\d+):.*$/, '$1'), 10) - API_Meta.ListHeaderLinks.offset); } }
