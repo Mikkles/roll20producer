@@ -1,7 +1,9 @@
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
-//       PRODWIZ 0.9.23
+//       PRODWIZ 0.9.24
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
 // Changelog
+// 0.9.24
+// Updated to modern test for server version
 // 0.9.23
 // Clarified Token Action creation buttons. ADDED ALIGNMENT TOOLS
 // 0.9.22
@@ -58,7 +60,7 @@ const Roll20Pro = (() => {
     }
     
     const scriptName = "Roll20 Production Wizard",
-        version = "0.9.23",
+        version = "0.9.24",
         
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -175,7 +177,8 @@ const Roll20Pro = (() => {
             makeButton("Tables and Macros", "!prod tablesAndMacros", styles.bigButton, "This contains links and instructions for automating the creation of macros and tables. Load menu for more information.") + 
             makeButton("Confluence How-to articles", "!prod confluence", styles.bigButton, "These links will take you to the confluence dosumentation for common Jira tasks. Load menu for more information.") +
             makeButton("Admin Tools", "!prod admin", styles.bigButton, "Under consttruction. Load menu for more information.") +
-	        makeH4("Mod Server: " + (typeof $20!=="undefined"?"EXPERIMENTAL":"DEFAULT"), "Experimental Server is now preferred. This can be set on the Mods page.")
+	        makeH4("Mod Server Test is Reported as: " + typeof $20, "Experimental Server is now preferred. This can be set on the Mods page.") +
+            makeH4("Mod Server: " + Campaign().sandboxVersion.toUpperCase(), "Experimental Server is now preferred. This can be set on the Mods page.")
             ,
             autolinker: () =>makeButton("Header Link Handout", "!headerlinks", styles.bigButton, "This handout will generate header links for all handouts in the game.") +
             "<p>Creates a journal index that lists clickable links to handout headers, making it easy to quickly copy and paste header links.</p><hr>" +
