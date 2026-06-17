@@ -1,7 +1,9 @@
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
-//       PRODWIZ 0.9.24
+//       PRODWIZ 0.9.25
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
 // Changelog
+// 0.9.25
+// Added Page Audting Tools
 // 0.9.24
 // Updated to modern test for server version
 // 0.9.23
@@ -60,7 +62,7 @@ const Roll20Pro = (() => {
     }
     
     const scriptName = "Roll20 Production Wizard",
-        version = "0.9.24",
+        version = "0.9.25",
         
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -177,7 +179,6 @@ const Roll20Pro = (() => {
             makeButton("Tables and Macros", "!prod tablesAndMacros", styles.bigButton, "This contains links and instructions for automating the creation of macros and tables. Load menu for more information.") + 
             makeButton("Confluence How-to articles", "!prod confluence", styles.bigButton, "These links will take you to the confluence dosumentation for common Jira tasks. Load menu for more information.") +
             makeButton("Admin Tools", "!prod admin", styles.bigButton, "Under consttruction. Load menu for more information.") +
-	        makeH4("Mod Server Test is Reported as: " + typeof $20, "Experimental Server is now preferred. This can be set on the Mods page.") +
             makeH4("Mod Server: " + Campaign().sandboxVersion.toUpperCase(), "Experimental Server is now preferred. This can be set on the Mods page.")
             ,
             autolinker: () =>makeButton("Header Link Handout", "!headerlinks", styles.bigButton, "This handout will generate header links for all handouts in the game.") +
@@ -300,6 +301,9 @@ const Roll20Pro = (() => {
             makeH4("Dynamic Lighting Tool","This calls up a tool that will change virtually every setting regarding dynamic lighting in real time. There are preset buttons for common grid settings and Daylight Levels, and controls for  most everythign else. There are also a couple of Dynamic Lighting related tasks (Buddy and Split Path) repeated here for convenience. The DL Tool has full help links built in.") +
             makeButton("Full Report", "!dltool", styles.button, "This is the full menu for Dynamic Lighting Tool.") +
             makeButton("Page Tools", "!dltool --report|extra", styles.button,"This contains most of the commands you might need while dynamically lighting a page.") +
+            makeH4("Review Tools","Tools to aid in reviewing a page setup") +
+            makeButton("Map Review", "!pagereport", styles.button,"This reviews the page and map setup for common errors. It is not a substitute for careful review but a good first check.") +
+            makeButton("Lighting Review", "!pr-lighting", styles.button,"This reviews the page and token setup for common lighting errors. It is not a substitute for careful review but a good first check.") +
             makeBackButton()
             ,
 
@@ -18559,12 +18563,1023 @@ const updateMatchingBoxes = (msg) => {
     });
 });
 
-
-
-
 { try { throw new Error(''); } catch (e) { API_Meta.Align.lineCount = (parseInt(e.stack.split(/\n/)[1].replace(/^.*:(\d+):.*$/, '$1'), 10) - API_Meta.Align.offset); } }
 
 
 
 
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
+//  Page Report - Audit page for common errors
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+var ReviewTools = ReviewTools || {};
+
+ReviewTools.PageReport = (() => {
+    'use strict';
+
+    const SCRIPT = 'ReviewTools';
+
+const CSS = {
+    box: [
+        'background:#1f1f1f',
+        'border:1px solid #555',
+        'border-radius:8px',
+        'padding:10px',
+        'font-family:Arial,sans-serif',
+        'font-size:13px',
+        'color:#f0f0f0'
+    ].join(';'),
+
+    header: [
+        'font-size:18px',
+        'font-weight:bold',
+        'margin-bottom:10px',
+        'color:#ffd166'
+    ].join(';'),
+
+    headerRight: [
+        'float:right',
+        'color:#cccccc',
+        'background-color:transparent',
+        'border:none',
+        'text-decoration:none',
+        'font-weight:normal',
+        'margin-left:8px'
+    ].join(';'),
+
+    section: [
+        'margin-top:12px',
+        'padding-top:8px',
+        'border-top:1px solid #444'
+    ].join(';'),
+
+    sectionHeader: [
+        'font-size:15px',
+        'font-weight:bold',
+        'margin-bottom:6px',
+        'color:#87ceeb'
+    ].join(';'),
+
+    warningHeader: [
+        'font-size:15px',
+        'font-weight:bold',
+        'margin-bottom:6px',
+        'color:#ff6b6b'
+    ].join(';'),
+
+    row: [
+        'margin:3px 0'
+    ].join(';'),
+
+    redRow: [
+        'margin:3px 0',
+        'color:#ff3b3b'
+    ].join(';'),
+
+    swatch: [
+        'display:inline-block',
+        'width:14px',
+        'height:14px',
+        'border:1px solid #888',
+        'vertical-align:middle',
+        'margin:0 4px'
+    ].join(';'),
+
+    tokenWrap: [
+        'display:inline-block',
+        'vertical-align:middle',
+        'margin:4px',
+        'white-space:nowrap'
+    ].join(';'),
+
+layerIcon: [
+    'height:18px',
+    'width:auto',
+    'border:1px solid #bbb',
+    'border-radius:7px',
+    'vertical-align:middle',
+    'margin-right:6px'
+].join(';'),
+
+
+    textButton: [
+        'display:inline-block',
+        'vertical-align:middle',
+        'color:#111',
+        'background:#87ceeb',
+        'padding:2px 4px',
+        'border-radius:2px',
+        'border:1px solid #111',
+        'text-decoration:none',
+        'margin-left:6px',
+        'font-size:11px',
+        'line-height:14px'
+    ].join(';'),
+    
+    testButton: [
+        'display:inline-block',
+        'vertical-align:middle',
+        'float:right',
+        'color:#111',
+        'background:#ffd166',
+        'padding:2px 4px',
+        'border-radius:2px',
+        'border:1px solid #111',
+        'text-decoration:none',
+        'margin-left:6px',
+        'font-size:9px',
+        'line-height:14px'
+    ].join(';'),
+
+    lockButton: [
+        'display:inline-block',
+        'vertical-align:middle',
+        'width:24px',
+        'height:24px',
+        'line-height:24px',
+        'text-align:center',
+        'margin-right:3px',
+        'background:#444',
+        'border:1px solid #888',
+        'border-radius:4px',
+        'color:#fff',
+        'text-decoration:none',
+        'font-size:14px',
+        'padding:0',
+        'box-sizing:border-box'
+    ].join(';'),
+
+    imageButton: [
+        'display:inline-block',
+        'vertical-align:middle',
+        'border:1px solid #666',
+        'border-radius:6px',
+        'overflow:hidden',
+        'background:#888',
+        'text-decoration:none',
+        'padding:0',
+        'line-height:0'
+    ].join(';'),
+
+    image: [
+        'display:block',
+        'max-width:70px',
+        'max-height:70px',
+        'border:none',
+        'margin:0',
+        'padding:0'
+    ].join(';')
+};
+
+
+
+        const LAYER_ICONS = {
+    'GM Layer':
+        'https://files.d20.io/images/488597890/dRq-MbqD4sfgPhlvTQfTqQ/original.webp?1779939476',
+
+    'Lighting Layer':
+        'https://files.d20.io/images/488597891/-EkI2AQCRG5L0VsR2QdECQ/original.webp?1779939474',
+        
+    'Dynamic Lighting Layer':
+    'https://files.d20.io/images/488597891/-EkI2AQCRG5L0VsR2QdECQ/original.webp?1779939474',
+
+    'Token Layer':
+        'https://files.d20.io/images/488597892/hPh25qnVfDLFuC-f04VTJw/original.webp?1779939477',
+
+    'Foreground Layer':
+        'https://files.d20.io/images/488597888/1UHiDgEb2nHkL2s_pQsufQ/original.webp?1779939474',
+
+    'Map Layer':
+        'https://files.d20.io/images/488597889/mA9xnUDvZAN0psaZAULgQQ/original.webp?1779939474'
+};
+
+    const styledDiv = (content) =>
+        `<div style="${CSS.box}">${content}</div>`;
+
+    const makeSwatch = (color) =>
+        `<span style="${CSS.swatch};background:${color};"></span>`;
+
+    const makeTokenButton = (token) => {
+        const img = token.get('imgsrc');
+        const id = token.id;
+
+        return (
+            `<div style="${CSS.tokenWrap}">` +
+                `<a style="${CSS.lockButton}" href="!pr-locktoken ${id}">🔒︎</a>` +
+                `<a style="${CSS.imageButton}" href="!pr-pingtoken ${id}">` +
+                    `<img style="${CSS.image}" src="${img}">` +
+                `</a>` +
+            `</div>`
+        );
+    };
+
+    const buildPageInfo = (page) => {
+        const name = page.get('name');
+
+        const scaleNumber = page.get('scale_number');
+        const scaleUnits = page.get('scale_units');
+        const snapping = page.get('snapping_increment');
+
+        const width = page.get('width');
+        const height = page.get('height');
+
+        const gridColor = page.get('gridcolor');
+        const gridOpacity = page.get('grid_opacity');
+        const showGrid = (page.get('showgrid') ? "On" : "Off" );
+
+        const background = page.get('background_color');
+const useAutoWrapper =
+    page.get('useAutoWrapper');
+
+const wrapperColor =
+    useAutoWrapper
+        ? page.get('_wrapperAutoColor')
+        : page.get('wrapperColor');        
+        
+        
+        
+        
+
+        let scaleLine = `Scale: ${scaleNumber}/${scaleUnits}`;
+        if (snapping !== 1) scaleLine += `, Cell Size: ${snapping}`;
+
+        return (
+            `<div style="${CSS.sectionHeader}">${name}</div>` +
+            `<div style="${CSS.row}">${scaleLine}</div>` +
+            `<div style="${CSS.row}">Dimensions: ${width} × ${height} squares</div>` +
+            `<div style="${CSS.row}">Grid: ${showGrid}</div>` +
+(showGrid === 'On'
+    ? `<div style="${CSS.row}">Grid Color: ${makeSwatch(gridColor)} ${gridColor}, Opacity: ${gridOpacity}</div>`
+    : ''
+) +            `<div style="${CSS.row}">Background: ${makeSwatch(background)} ${background}</div>` +
+`<div style="${CSS.row}">` +
+    `Backdrop: ` +
+    `${makeSwatch(wrapperColor)} ` +
+    `${wrapperColor}` +
+    `${useAutoWrapper ? ' auto' : ''}` +
+`</div>`        );
+    };
+
+
+const makeLayerHeader = (title) => {
+
+    const icon = LAYER_ICONS[title];
+
+    return (
+        `<div style="${CSS.sectionHeader}">` +
+
+            (
+                icon
+                ? `<img style="${CSS.layerIcon}" src="${icon}">`
+                : ''
+            ) +
+
+            title +
+
+        `</div>`
+    );
+};
+
+
+const buildLayerReport = (tokens, title) => {
+
+    const tokenGraphics = [];
+    const plainGraphics = [];
+
+    tokens.forEach(t => {
+        if (t.get('represents')) {
+            tokenGraphics.push(t);
+        } else {
+            plainGraphics.push(t);
+        }
+    });
+
+    const lockedTokens = tokenGraphics.filter(t => t.get('lockMovement'));
+    const unlockedGraphics = plainGraphics.filter(t => !t.get('lockMovement'));
+
+    const lockedTokenCount = lockedTokens.length;
+    const unlockedGraphicCount = unlockedGraphics.length;
+
+    const tokenAlertStyle =
+        lockedTokenCount > 0 ? CSS.redRow : CSS.row;
+
+    const graphicAlertStyle =
+        unlockedGraphicCount > 0 ? CSS.redRow : CSS.row;
+
+    const lockedTokenButtons = lockedTokens.map(t =>
+        `<div style="${CSS.tokenWrap}">` +
+            `<a style="${CSS.lockButton}" href="!pr-unlocktoken ${t.id}">🔓</a>` +
+            `<a style="${CSS.imageButton}" href="!pr-pingtoken ${t.id}">` +
+                `<img style="${CSS.image}" src="${t.get('imgsrc')}">` +
+            `</a>` +
+        `</div>`
+    ).join('');
+
+    const unlockedGraphicButtons = unlockedGraphics.map(t =>
+        `<div style="${CSS.tokenWrap}">` +
+            `<a style="${CSS.lockButton}" href="!pr-locktoken ${t.id}">🔒</a>` +
+            `<a style="${CSS.imageButton}" href="!pr-pingtoken ${t.id}">` +
+                `<img style="${CSS.image}" src="${t.get('imgsrc')}">` +
+            `</a>` +
+        `</div>`
+    ).join('');
+
+    return (
+        `<div style="${CSS.section}">` +
+
+            makeLayerHeader(title) +
+
+`<div style="${(tokens.length > 1 && title === "Map Layer") ? CSS.redRow : CSS.row}">Total: ${tokens.length}</div>` +
+
+            (
+                tokenGraphics.length
+                ? `<div style="${tokenAlertStyle}">` +
+                    `Tokens: ${tokenGraphics.length} ` +
+                    `(${lockedTokenCount} locked)` +
+                  `</div>`
+                : ''
+            ) +
+
+            (
+                lockedTokenCount > 0
+                ? `<div>${lockedTokenButtons}</div>`
+                : ''
+            ) +
+
+            `<div style="${graphicAlertStyle}">` +
+                `Graphics: ${plainGraphics.length} ` +
+                `(${unlockedGraphicCount} unlocked)` +
+            `</div>` +
+
+            (
+                unlockedGraphicCount > 0
+                ? `<div>${unlockedGraphicButtons}</div>`
+                : ''
+            ) +
+
+        `</div>`
+    );
+};
+
+const buildLightingReport = (tokens) => {
+    if (!tokens || tokens.length === 0) return '';
+
+const unlitGraphics = [];
+const lightingTokens = [];
+
+let lit = 0;
+
+tokens.forEach(t => {
+
+    if (t.get('represents')) {
+        lightingTokens.push(t);
+        return;
+    }
+
+    const bright = t.get('emits_bright_light');
+    const dim = t.get('emits_low_light');
+
+    if (bright || dim) {
+        lit++;
+    } else {
+        unlitGraphics.push(t);
+    }
+});
+
+const unlitCount = unlitGraphics.length;
+const unlitStyle = unlitCount > 0 ? CSS.redRow : CSS.row;
+
+const pingButtons = unlitGraphics.map(t =>
+`<div style="${CSS.tokenWrap}">` +
+            `<a style="${CSS.imageButton}" href="!pr-pingtoken ${t.id}">` +
+                `<img style="${CSS.image}" src="${t.get('imgsrc')}">` +
+            `</a>` +
+        `</div>`
+    ).join('');
+
+return (
+    `<div style="${CSS.section}">` +
+
+        makeLayerHeader('Lighting Layer') +
+
+        `<div style="${CSS.row}">Total: ${tokens.length}</div>` +
+        `<div style="${CSS.row}">Lit: ${lit}</div>` +
+        `<div style="${unlitStyle}">Unlit: ${unlitCount}</div>` +
+
+        (
+            unlitCount > 0
+            ? `<div>${pingButtons}</div>`
+            : ''
+        ) +
+
+        (
+            lightingTokens.length > 0
+            ? `<div style="${CSS.redRow}">Tokens on Lighting Layer: ${lightingTokens.length}</div>` +
+              `<div>` +
+                lightingTokens.map(t =>
+                    `<div style="${CSS.tokenWrap}">` +
+                        `<a style="${CSS.imageButton}" href="!pr-pingtoken ${t.id}">` +
+                            `<img style="${CSS.image}" src="${t.get('imgsrc')}">` +
+                        `</a>` +
+                    `</div>`
+                ).join('') +
+              `</div>`
+            : ''
+        ) +
+
+    `</div>`
+);
+};
+
+const buildTokenLayerAudit = (tokens) => {
+
+    const nonTokens = tokens.filter(t => !t.get('represents'));
+
+    if (nonTokens.length === 0) return '';
+
+    return (
+        `<div style="${CSS.section}">` +
+
+            makeLayerHeader('Token Layer') +
+
+            `<div style="${CSS.redRow}">` +
+                `Non-token graphics on token layer: ${nonTokens.length}` +
+
+                `<a style="${CSS.textButton}" ` +
+                    `href="!pr-tokenlayerreport">` +
+                    `See List` +
+                `</a>` +
+
+            `</div>` +
+
+        `</div>`
+    );
+};
+
+const buildLightingReviewSection = (tokens, title, redLightCount = false) => {
+
+    const visionTokens = [];
+    const lightTokens = [];
+    const rows = [];
+
+    tokens.forEach(t => {
+
+        const hasVision = t.get('has_bright_light_vision');
+
+        const emitsLight =
+            t.get('emits_bright_light') ||
+            t.get('emits_low_light');
+
+        if (!hasVision && !emitsLight) return;
+
+        if (hasVision) {
+            visionTokens.push(t);
+        }
+
+        if (emitsLight) {
+            lightTokens.push(t);
+        }
+
+        const parts = [];
+
+if (hasVision) {
+
+    const nightVision =
+        t.get('night_vision_distance') || 0;
+
+    parts.push(
+
+        `<div style="${CSS.row}">` +
+            `👀 Vision: on, night: ${nightVision}` +
+
+
+
+            `<a style="${CSS.textButton}" ` +
+                `href="!pr-visionoff ${t.id}">` +
+                `Turn off vision` +
+            `</a>` +
+
+        `</div>`
+    );
+}
+
+if (emitsLight) {
+
+    const brightEnabled =
+        t.get('emits_bright_light');
+
+    const dimEnabled =
+        t.get('emits_low_light');
+
+    const bright =
+        t.get('bright_light_distance') || 0;
+
+    const dim =
+        t.get('low_light_distance') || 0;
+
+    const lightColor =
+        t.get('lightColor');
+
+    const brightLabel =
+        brightEnabled ? bright : '—';
+
+    const dimLabel =
+        dimEnabled ? dim : '—';
+
+    parts.push(
+
+        `<div style="${CSS.row}">` +
+
+            `💡 ` +
+
+            `<a style="${CSS.textButton}" ` +
+                `href="!pr-setlight bright ${t.id} ?{Supply a new value or leave blank to turn bright light off|${brightEnabled ? bright : ''}}">` +
+                `bright ${brightLabel}` +
+            `</a>` +
+
+            `<a style="${CSS.textButton}" ` +
+                `href="!pr-setlight dim ${t.id} ?{Supply a new value or leave blank to turn dim light off|${dimEnabled ? dim : ''}}">` +
+                `dim ${dimLabel}` +
+            `</a>` +
+
+            `<a style="${CSS.textButton}" ` +
+                `href="!pr-lightoff all ${t.id}">` +
+                `off` +
+            `</a>` +
+
+           (
+    lightColor &&
+    lightColor !== 'transparent'
+    ? `<span style="` +
+        `display:inline-block;` +
+        `vertical-align:middle;` +
+        `width:30px;` +
+        `height:18px;` +
+        `margin-left:6px;` +
+        `border:1px solid #888;` +
+        `border-radius:2px;` +
+        `background:${lightColor};` +
+      `"></span>`
+    : ''
+) +
+
+        `</div>`
+    );
+}
+
+rows.push(
+            `<div style="${CSS.row}">` +
+
+                `<div style="${CSS.tokenWrap}">` +
+
+                    `<a style="${CSS.imageButton}" href="!pr-pingtoken ${t.id}">` +
+                        `<img style="${CSS.image}" src="${t.get('imgsrc')}">` +
+                    `</a>` +
+
+                `</div> ` +
+
+                parts.join('') +
+
+            `</div>`
+        );
+    });
+
+    if (!rows.length) return '';
+
+    const visionStyle =
+        visionTokens.length > 0
+            ? CSS.redRow
+            : CSS.row;
+
+    const lightStyle =
+        (redLightCount && lightTokens.length > 0)
+            ? CSS.redRow
+            : CSS.row;
+
+    return (
+        `<div style="${CSS.section}">` +
+
+            makeLayerHeader(title) +
+
+
+            `<div style="${lightStyle}">` +
+                `Light Emitters: ${lightTokens.length}` +
+            `</div>` +
+
+            `<div style="${visionStyle}">` +
+                `Vision Enabled: ${visionTokens.length}` +
+            `</div>` +
+
+            rows.join('') +
+
+        `</div>`
+    );
+};
+
+
+
+
+    const getPageForPlayer = (playerid) => {
+        const player = getObj('player', playerid);
+        if (!player) return null;
+
+        if (playerIsGM(playerid)) {
+            return getObj('page', player.get('lastpage'));
+        }
+
+        const campaign = Campaign();
+        const psp = campaign.get('playerspecificpages');
+
+        if (psp && psp[playerid]) {
+            return getObj('page', psp[playerid]);
+        }
+
+        return getObj('page', campaign.get('playerpageid'));
+    };
+
+    const sendReport = (playerid) => {
+        const page = getPageForPlayer(playerid);
+        if (!page) return;
+
+        const graphics = findObjs({
+            _type: 'graphic',
+            _pageid: page.id
+        });
+
+        const fgLayer = graphics.filter(g => g.get('layer') === 'foreground');
+        const gmLayer = graphics.filter(g => g.get('layer') === 'gmlayer');
+        const mapLayer = graphics.filter(g => g.get('layer') === 'map');
+        const lightingLayer = graphics.filter(g => g.get('layer') === 'walls');
+        const tokenLayer = graphics.filter(g => g.get('layer') === 'objects');
+
+       const content =
+`<div style="${CSS.header}">` +
+    `Map Review` +
+            `<a style="${CSS.testButton}" href="!prod map">Tools</a>` +
+            `<a style="${CSS.testButton}" href="!pr-lighting">Light</a>` +
+            `<a style="${CSS.testButton}" href="!pagereport">Map</a>` +
+`</div>` +
+    buildPageInfo(page) +
+    (fgLayer.length ? buildLayerReport(fgLayer, 'Foreground') : '') +
+    buildTokenLayerAudit(tokenLayer) +
+    buildLayerReport(gmLayer, 'GM Layer') +
+    buildLayerReport(mapLayer, 'Map Layer') +
+    buildLightingReport(lightingLayer);
+
+sendChat(
+        '',
+        `/w gm ${styledDiv(content)}`,
+        null,
+        { noarchive: true }
+    );
+    };
+
+const sendTokenLayerReport = (playerid) => {
+
+    const page = getPageForPlayer(playerid);
+    if (!page) return;
+
+    const graphics = findObjs({
+        _type: 'graphic',
+        _pageid: page.id,
+        layer: 'objects'
+    });
+
+    const nonTokens = graphics.filter(t => !t.get('represents'));
+
+    const buttons = nonTokens.map(t =>
+        `<div style="${CSS.tokenWrap}">` +
+            `<a style="${CSS.imageButton}" href="!pr-pingtoken ${t.id}">` +
+                `<img style="${CSS.image}" src="${t.get('imgsrc')}">` +
+            `</a>` +
+        `</div>`
+    ).join('');
+
+    const content =
+        `<div style="${CSS.header}">` +
+            `Token Layer Non-Tokens` +
+            `<a style="${CSS.headerRight}" href="!pagereport">&#x21BB;</a>` +
+        `</div>` +
+
+        `<div style="${CSS.redRow}">` +
+            `${nonTokens.length} non-token graphics on token layer` +
+        `</div>` +
+
+        `<div>${buttons}</div>`;
+
+    sendChat(
+        '',
+        `/w gm ${styledDiv(content)}`,
+        null,
+        { noarchive: true }
+    );
+};
+
+
+const sendLightingReview = (playerid) => {
+
+    const page = getPageForPlayer(playerid);
+    if (!page) return;
+
+    const graphics = findObjs({
+        _type: 'graphic',
+        _pageid: page.id
+    });
+
+    const foreground =
+        graphics.filter(g => g.get('layer') === 'foreground');
+
+    const objects =
+        graphics.filter(g => g.get('layer') === 'objects');
+
+    const map =
+        graphics.filter(g => g.get('layer') === 'map');
+
+    const walls =
+        graphics.filter(g => g.get('layer') === 'walls');
+
+    const visionCount = graphics.filter(g =>
+        g.get('has_bright_light_vision')
+    ).length;
+
+    const dlEnabled =
+        page.get('dynamic_lighting_enabled');
+
+    const daylightEnabled =
+        page.get('daylight_mode_enabled');
+
+    const daylightOpacity =
+        page.get('daylightModeOpacity') || 1;
+
+    const daylightText =
+        daylightEnabled
+            ? `on ${Math.round(daylightOpacity * 100)}%`
+            : 'off';
+
+    const content =
+
+        `<div style="${CSS.header}">` +
+            `Light Review` +
+            `<a style="${CSS.testButton}" href="!prod map">Tools</a>` +
+            `<a style="${CSS.testButton}" href="!pr-lighting">Light</a>` +
+            `<a style="${CSS.testButton}" href="!pagereport">Map</a>` +
+        `</div>` +
+
+        `<div style="${CSS.sectionHeader}">${page.get('name')}</div>` +
+
+        `<div style="${CSS.row}">` +
+            `Dynamic Lighting: ${dlEnabled ? 'on' : 'off'}` +
+        `</div>` +
+
+        `<div style="${CSS.row}">` +
+            `Daylight Mode: ${daylightText}` +
+        `</div>` +
+
+(visionCount > 0
+    ? `<div style="${CSS.row}">` +
+
+        `<a style="${CSS.textButton}" ` +
+            `href="!pr-visionoffall">` +
+            `Disable All Vision` +
+        `</a>` +
+
+      `</div>`
+    : ''
+) +
+
+
+        buildLightingReviewSection(
+            foreground,
+            'Foreground Layer',
+            true
+        ) +
+
+        buildLightingReviewSection(
+            objects,
+            'Token Layer'
+        ) +
+
+        buildLightingReviewSection(
+            map,
+            'Map Layer'
+        ) +
+
+        buildLightingReviewSection(
+            walls,
+            'Dynamic Lighting Layer'
+        );
+
+    sendChat(
+        '',
+        `/w gm ${styledDiv(content)}`,
+        null,
+        { noarchive: true }
+    );
+};
+
+
+
+    on('chat:message', (msg) => {
+        if (msg.type !== 'api') return;
+
+        if (msg.content.startsWith('!pr-pingtoken ')) {
+            const id = msg.content.split(' ')[1];
+            const token = getObj('graphic', id);
+            if (!token) return;
+
+            sendPing(
+                token.get('left'),
+                token.get('top'),
+                token.get('pageid'),
+                null,
+                true
+            );
+            return;
+        }
+
+        if (msg.content.startsWith('!pr-locktoken ')) {
+            const id = msg.content.split(' ')[1];
+            const token = getObj('graphic', id);
+            if (!token) return;
+
+            token.set('lockMovement', true);
+
+            sendReport(msg.playerid);
+            return;
+        }
+        
+        
+        if (msg.content.startsWith('!pr-unlocktoken ')) {
+
+    const id = msg.content.split(' ')[1];
+    const token = getObj('graphic', id);
+
+    if (!token) return;
+
+    token.set('lockMovement', false);
+
+    sendReport(msg.playerid);
+    return;
+}
+
+if (msg.content === '!pr-tokenlayerreport') {
+
+    sendTokenLayerReport(msg.playerid);
+    return;
+}
+
+if (msg.content.startsWith('!pr-visionoff ')) {
+
+    const id = msg.content.split(' ')[1];
+
+    const token = getObj('graphic', id);
+    if (!token) return;
+
+    token.set({
+        has_bright_light_vision: false
+    });
+
+    sendLightingReview(msg.playerid);
+    return;
+}
+
+if (msg.content.startsWith('!pr-lightoff ')) {
+
+    const parts = msg.content.split(' ');
+
+    const mode = parts[1];
+    const id = parts[2];
+
+    const token = getObj('graphic', id);
+    if (!token) return;
+
+    if (mode === 'all') {
+
+        token.set({
+            emits_bright_light: false,
+            emits_low_light: false
+        });
+    }
+
+    sendLightingReview(msg.playerid);
+    return;
+}
+
+
+if (msg.content.startsWith('!pr-setlight ')) {
+
+    const parts = msg.content.split(' ');
+
+    const mode = parts[1];
+    const id = parts[2];
+
+    const rawValue =
+        parts.slice(3).join(' ').trim();
+
+    const token = getObj('graphic', id);
+    if (!token) return;
+
+    // blank / whitespace / zero = off
+    if (
+        rawValue === '' ||
+        rawValue === '0'
+    ) {
+
+        if (mode === 'bright') {
+
+            token.set({
+                emits_bright_light: false
+            });
+        }
+
+        else if (mode === 'dim') {
+
+            token.set({
+                emits_low_light: false
+            });
+        }
+
+        sendLightingReview(msg.playerid);
+        return;
+    }
+
+    const value = Number(rawValue);
+
+    if (isNaN(value)) {
+
+        sendChat(
+            SCRIPT,
+            `/w gm Invalid ${mode} light value: "${rawValue}"`
+        );
+
+        sendLightingReview(msg.playerid);
+        return;
+    }
+
+    if (mode === 'bright') {
+
+        token.set({
+            emits_bright_light: true,
+            bright_light_distance: value
+        });
+    }
+
+    else if (mode === 'dim') {
+
+        token.set({
+            emits_low_light: true,
+            low_light_distance: value
+        });
+    }
+
+    sendLightingReview(msg.playerid);
+    return;
+}
+
+if (msg.content === '!pr-lighting') {
+
+    sendLightingReview(msg.playerid);
+    return;
+}
+
+if (msg.content === '!pr-visionoffall') {
+
+    const page = getPageForPlayer(msg.playerid);
+    if (!page) return;
+
+    const graphics = findObjs({
+        _type: 'graphic',
+        _pageid: page.id
+    });
+
+    graphics.forEach(g => {
+
+        if (g.get('has_bright_light_vision')) {
+
+            g.set({
+                has_bright_light_vision: false
+            });
+        }
+    });
+
+    sendLightingReview(msg.playerid);
+    return;
+}
+
+
+        if (msg.content !== '!pagereport') return;
+
+        sendReport(msg.playerid);
+    });
+
+    return {
+        init: () => {
+            log(`${SCRIPT} Ready`);
+        }
+    };
+
+})();
+
+on('ready', () => {
+    ReviewTools.PageReport.init();
+});
