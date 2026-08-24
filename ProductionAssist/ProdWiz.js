@@ -1,7 +1,11 @@
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
-//       PRODWIZ 0.9.26
+//       PRODWIZ 0.9.28
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@
 // Changelog
+// 0.9.28
+// Improved Macro and Rollable table automation to account for split tables, caught outlier for percentile tables.
+// 0.9.27
+// Fixed Math on Map Scale Setting (DLTool)
 // 0.9.26
 // Added Macro and Rollable table automation
 // 0.9.25
@@ -64,7 +68,7 @@ const Roll20Pro = (() => {
     }
     
     const scriptName = "Roll20 Production Wizard",
-        version = "0.9.26",
+        version = "0.9.87",
         
         styles = {
             reset: 'padding: 0; margin: 0;',
@@ -10243,11 +10247,14 @@ on('ready', () => {
 
 
                         //Set Map from scale
-                        scaleInfo =
+scaleInfo =
                             openSection +
                             openSubhead + 'Set Scale from Printed Measurement</div>' +
                             'Often a map will have a printed scale that does not correspond to a grid setting. This is typically true of city and overland maps. To set the page scale to correspond to the printed scale, first use the Measurement Tool to measure the printed scale. You may need to hold down the alt/opt key to avoid snapping and get a precise measurement. Remember this number, then press the button below and enter that number into the dialog box.  <BR>' +
-                            dlButton("set scale", "!dltool-mod --scale_number|&#91;&#91;(round((" + pageData.get("scale_number") + "/?{Input value measured from printed scale})&#42;?{Input value as displayed on printed scale}&#42;100))/100&#93;&#93;") + "&nbsp;" + setValue(pageData.get("scale_units"), "scale_units", "!dltool-mod --scale_units|?&#123;Input type of unit, example: mi for miles|mi}") + '&nbsp;' +
+                            dlButton("set scale", "!dltool-mod --scale_number|&#91;&#91;(round((" + pageData.get("scale_number") + "&#42;?{Input value as displayed on printed scale}/?{Input value measured from printed scale})&#42;100))/100&#93;&#93;") +
+                            "&nbsp;" +
+                            setValue(pageData.get("scale_units"), "scale_units", "!dltool-mod --scale_units|?&#123;Input type of unit, example: mi for miles|mi}") +
+                            '&nbsp;' +
                             `</div>`;
 
 
@@ -20134,7 +20141,12 @@ const TableMacroBuilder = (() => {
       const rangeMatch = text.match(/^(\d+)\s*[-\u2013\u2014]\s*(\d+)$/);
       if (rangeMatch) {
         const lo = parseInt(rangeMatch[1], 10);
-        const hi = parseInt(rangeMatch[2], 10);
+        let hi = parseInt(rangeMatch[2], 10);
+        // d100 percentile convention: "00" means 100, not 0 (e.g. "97-00"
+        // means 97-100). Only applies when the high side is literally "00"
+        // and the low side is a positive number, so a genuine "0-5" range
+        // elsewhere isn't affected.
+        if (rangeMatch[2] === '00' && lo > 0) hi = 100;
         if (!isNaN(lo) && !isNaN(hi) && hi >= lo) {
           const values = [];
           for (let v = lo; v <= hi; v++) values.push(v);
@@ -20142,7 +20154,11 @@ const TableMacroBuilder = (() => {
         }
       }
 
-      // single integer
+      // single integer — "00" alone also means 100 under the same d100
+      // percentile convention
+      if (text === '00') {
+        return { type: 'single', values: [100] };
+      }
       const singleMatch = text.match(/^\d+$/);
       if (singleMatch) {
         return { type: 'single', values: [parseInt(text, 10)] };
@@ -20178,6 +20194,19 @@ const TableMacroBuilder = (() => {
       const headerRow = rows[0];
       const dataRows = rows.slice(1);
 
+      // Split Table detection: a single physical <table> that actually
+      // contains two or more side-by-side rollable groups — e.g. columns
+      // 1-2 are one d10 table, columns 4-5 are a second d10 table, maybe
+      // separated by a blank spacer column. Signal: 2+ header cells (not
+      // just the first) each independently parse as a dice expression.
+      const diceHeaderIndices = headerRow
+        .map((c, i) => (DiceEngine.parseNotation(c.text) ? i : -1))
+        .filter(i => i >= 0);
+
+      if (diceHeaderIndices.length >= 2) {
+        return TableExtractor.parseSplitTable(headerRow, dataRows, title, anchorHeading, diceHeaderIndices);
+      }
+
       const dieNotation = headerRow && headerRow.length ? headerRow[0].text : null;
       const headerLabels = headerRow ? headerRow.slice(1).map(c => c.text) : [];
 
@@ -20187,7 +20216,7 @@ const TableMacroBuilder = (() => {
       // (2) every data row's first column parses as a roll result (a
       //     single number, a number range, or comma-separated numbers) —
       // otherwise this is some other kind of table and should be excluded.
-      if (!DiceEngine.parseNotation(dieNotation)) return null;
+      if (diceHeaderIndices.length !== 1 || diceHeaderIndices[0] !== 0) return null;
       const looksRollable = dataRows.every(cells => {
         const idx = cells[0] ? cells[0].text : '';
         const range = RangeParser.parse(idx);
@@ -20200,6 +20229,7 @@ const TableMacroBuilder = (() => {
       const colCount = dataRows.length ? Math.max(dataRows[0].length - 1, 0) : 0;
 
       return {
+        type: 'normal',
         title,
         anchorHeading,
         dieNotation,
@@ -20210,7 +20240,52 @@ const TableMacroBuilder = (() => {
           cells: cells.slice(1).map(c => c.text)
         }))
       };
-    }
+    },
+
+    // Splits the header row into groups by dice-expression anchor column.
+    // Each group's result columns are every non-blank header cell between
+    // this anchor and the next (or the end of the row) — blank spacer
+    // columns are simply skipped, not treated as a boundary.
+    parseSplitTable: (headerRow, dataRows, title, anchorHeading, diceHeaderIndices) => {
+      const groups = diceHeaderIndices.map((startIdx, g) => {
+        const endIdx = (g + 1 < diceHeaderIndices.length) ? diceHeaderIndices[g + 1] : headerRow.length;
+        const resultIndices = [];
+        for (let i = startIdx + 1; i < endIdx; i++) {
+          if (headerRow[i] && headerRow[i].text && headerRow[i].text.trim() !== '') resultIndices.push(i);
+        }
+        return {
+          dieIndex: startIdx,
+          dieNotation: headerRow[startIdx].text,
+          resultIndices,
+          resultLabels: resultIndices.map(i => headerRow[i].text)
+        };
+      });
+
+      // Every group's index cell on every row must either be blank (that
+      // group simply has no entry on this row) or parse as a real roll
+      // result — otherwise this isn't actually a rollable split table.
+      const looksRollable = dataRows.every(cells =>
+        groups.every(g => {
+          const raw = cells[g.dieIndex] ? cells[g.dieIndex].text : '';
+          if (!raw || !raw.trim()) return true;
+          const range = RangeParser.parse(raw);
+          return range.type === 'single' || range.type === 'range' || range.type === 'discrete';
+        })
+      );
+      if (!looksRollable) return null;
+
+      return {
+        type: 'split',
+        title,
+        anchorHeading,
+        dieNotation: groups[0].dieNotation,
+        headerLabels: groups.map(g => g.resultLabels.join(' / ')),
+        colCount: groups.length,
+        groups,
+        headerRowCells: headerRow.map(c => c.text),
+        dataRows: dataRows.map(cells => cells.map(c => c.text || ''))
+      };
+    },
   };
 
   // ==================================================
@@ -20255,6 +20330,48 @@ const TableMacroBuilder = (() => {
       });
 
       return { items, errors, distribution: dist };
+    },
+
+    // Split Table: flattens every group's per-row entries into one combined
+    // items list for a single rollable table. Each group computes weight
+    // against its own dice distribution (typically the same expression
+    // across groups, but computed independently for correctness). A blank
+    // index cell for a given group on a given row just means that group
+    // has no entry there — it's skipped, not an error.
+    computeSplitItems: (tableObj) => {
+      const items = [];
+      const errors = [];
+
+      const groupDists = tableObj.groups.map(g => {
+        const parsed = DiceEngine.parseNotation(g.dieNotation);
+        return parsed ? DiceEngine.buildDistribution(parsed) : null;
+      });
+
+      tableObj.dataRows.forEach(cells => {
+        tableObj.groups.forEach((g, gi) => {
+          const raw = cells[g.dieIndex] !== undefined ? cells[g.dieIndex] : '';
+          if (!raw || !raw.trim()) return;
+
+          const range = RangeParser.parse(raw);
+          if (range.type === 'unrecognized' || range.type === 'none') {
+            errors.push(`Could not parse result index "${raw}" — skipped.`);
+            return;
+          }
+
+          const dist = groupDists[gi];
+          let weight = 0;
+          if (dist) range.values.forEach(v => { weight += DiceEngine.waysFor(dist, v); });
+          if (weight === 0) weight = range.values.length;
+
+          const text = g.resultIndices
+            .map(i => (cells[i] !== undefined ? cells[i] : ''))
+            .filter(t => t)
+            .join(', ');
+          if (text) items.push({ text, weight });
+        });
+      });
+
+      return { items, errors };
     }
   };
 
@@ -20519,6 +20636,21 @@ const TableMacroBuilder = (() => {
       const tableObj = loaded.tableObj;
       const retitleHref = `${commandName} --set-title ${loaded.handoutId} --index ${loaded.tableIndex} --title ?{New title for this table|${tableObj.title || ''}}`;
       let html = `<div style="${CSS.sectionTitle}">${tableObj.title || '(untitled table)'} <a style="${CSS.button}float:right;" href="${retitleHref}">Retitle</a></div>`;
+
+      if (tableObj.type === 'split') {
+        html += `<table style="${CSS.previewTable}"><tr>`;
+        tableObj.headerRowCells.forEach(h => { html += `<th style="${CSS.previewHeadCell}">${h || '&nbsp;'}</th>`; });
+        html += '</tr>';
+        tableObj.dataRows.forEach(cells => {
+          html += '<tr>';
+          cells.forEach(c => { html += `<td style="${CSS.previewCell}">${c}</td>`; });
+          html += '</tr>';
+        });
+        html += '</table>';
+        html += `<div style="${CSS.note}">This table has ${tableObj.colCount} columns. Split Table: this is a single rollable table split across multiple columns.</div>`;
+        return html;
+      }
+
       html += `<div>Die: <b>${tableObj.dieNotation || '(not found — check header row)'}</b></div>`;
       html += `<table style="${CSS.previewTable}">`;
       html += `<tr><th style="${CSS.previewHeadCell}">${tableObj.dieNotation || '#'}</th>`;
@@ -20784,6 +20916,25 @@ const TableMacroBuilder = (() => {
     _currentModeItems: (loaded) => {
       const cache = State.cache();
       const modeKey = `${loaded.handoutId}::${loaded.tableIndex}`;
+
+      if (loaded.tableObj.type === 'split') {
+        const result = WeightEngine.computeSplitItems(loaded.tableObj);
+        if (!result.items.length) return null;
+        // columnLabel: use the shared result label across all groups when
+        // they all agree (e.g. every group's result column is "Type");
+        // otherwise fall back to the table's own title.
+        const allLabels = loaded.tableObj.groups.map(g => g.resultLabels.join(' / '));
+        const uniqueLabels = [...new Set(allLabels)].filter(Boolean);
+        const columnLabel = uniqueLabels.length === 1 ? uniqueLabels[0] : loaded.tableObj.title;
+        return [{
+          label: loaded.tableObj.title,
+          columnLabel,
+          items: result.items,
+          errors: result.errors,
+          slug: TableBuilder.slugify(loaded.tableObj.title)
+        }];
+      }
+
       const mode = loaded.tableObj.colCount > 1 ? (cache.columnModes[modeKey] || 'concat') : 'concat';
 
       if (mode === 'concat') {
